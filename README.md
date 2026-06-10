@@ -11,7 +11,21 @@ the pressure slowly ramping up.
 No external assets — everything is low-poly placeholder geometry and
 procedurally generated WebAudio sound.
 
-## Running the game
+## ▶ Play online (no install needed)
+
+The game auto-deploys to GitHub Pages on every push:
+
+**https://creativedexy.github.io/endless-game/**
+
+Open that link on your phone, rotate to landscape, and play. Tip: use
+"Add to Home Screen" in Safari's share menu for a fullscreen experience
+without the address bar.
+
+Deployment is handled by `.github/workflows/deploy.yml` — GitHub Actions
+builds the project in the cloud and publishes `dist/` to Pages, so you never
+need to run npm yourself.
+
+## Running the game locally (optional)
 
 ```bash
 npm install
