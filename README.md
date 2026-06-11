@@ -22,6 +22,7 @@ Both games auto-deploy to GitHub Pages on every push:
 - **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
 - **V3 (portrait, chokepoint map):** https://creativedexy.github.io/endless-game/v3/
 - **V4 (portrait, frontier map + mines & villages):** https://creativedexy.github.io/endless-game/v4/
+- **V5 (portrait, sealed fortress — no build menus at all):** https://creativedexy.github.io/endless-game/v5/
 
 Open the link on your phone and play. V2 is designed for portrait, V1 for
 landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
@@ -72,6 +73,25 @@ npx playwright install chromium   # one-time browser download
 npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
+
+## How to play — V5 · Aurora Down: Sealed Fortress (portrait)
+
+V4's map, redesigned around one idea: **the map is the build menu**. The
+blueprint bar is gone — every glowing socket is typed and builds exactly one
+thing when you stand on it (ring colours tell you what).
+
+- **Shield fences** span the two ridge gaps: aliens must chew through them,
+  you and your drones walk straight through. Their floating health bars are
+  readable from across the map. Both gaps start with a free Lv1 fence (and
+  one turret) already standing.
+- **Turrets are invincible** — aliens ignore them. All the pressure lands on
+  the fences and the hull; energy grows your guns, salvage maintains your
+  walls.
+- **Economy lives at home**: both ore deposits are tucked safely behind the
+  defence line, next to the village plots and support buildings.
+- **Gentler ramp**: slower threat levels, a "swarm regroups" build lull after
+  each rise, one front at a time early on, +3 energy per kill, and the hull
+  slowly self-repairs when no aliens are near it.
 
 ## How to play — V4 · Aurora Down: Frontier (portrait)
 

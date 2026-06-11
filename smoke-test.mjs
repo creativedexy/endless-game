@@ -157,6 +157,34 @@ await run(
   },
 );
 
+// ----------------------------------------------------------------- V5
+
+const v5 = new URL('v5/', base).href;
+
+await run('v5-desktop', v5, { viewport: { width: 1280, height: 720 } }, async (page) => {
+  await page.keyboard.down('a');
+  await page.keyboard.down('s');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('s');
+  await page.keyboard.press('Shift');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('a');
+  await page.waitForTimeout(8000); // dwell-builds + combat tick over
+});
+
+await run(
+  'v5-mobile',
+  v5,
+  { ...devices['iPhone 13'], hasTouch: true },
+  async (page) => {
+    const size = page.viewportSize();
+    await page.touchscreen.tap(size.width * 0.22, size.height * 0.82);
+    await page.waitForTimeout(300);
+    await page.touchscreen.tap(size.width - 78, size.height - 94);
+    await page.waitForTimeout(2500);
+  },
+);
+
 if (errors.length) {
   console.error('SMOKE TEST FAILED:');
   for (const e of errors) console.error('  ' + e);
