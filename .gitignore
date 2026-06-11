@@ -3,3 +3,7 @@ dist/
 screenshot-*.png
 *.local
 .DS_Store
+v*verify.mjs
+v*check.mjs
+v*long.mjs
+v*shot.mjs
