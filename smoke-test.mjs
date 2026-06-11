@@ -94,6 +94,36 @@ await run(
   },
 );
 
+// ----------------------------------------------------------------- V3
+
+const v3 = new URL('v3/', base).href;
+
+// Desktop: run toward the ridge, dash, let combat and gap-funnelling tick.
+await run('v3-desktop', v3, { viewport: { width: 1280, height: 720 } }, async (page) => {
+  await page.keyboard.down('w');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('w');
+  await page.keyboard.down('d');
+  await page.keyboard.press('Shift');
+  await page.waitForTimeout(900);
+  await page.keyboard.up('d');
+  await page.waitForTimeout(7000);
+});
+
+// Mobile portrait: joystick + dash tap.
+await run(
+  'v3-mobile',
+  v3,
+  { ...devices['iPhone 13'], hasTouch: true },
+  async (page) => {
+    const size = page.viewportSize();
+    await page.touchscreen.tap(size.width * 0.22, size.height * 0.82);
+    await page.waitForTimeout(300);
+    await page.touchscreen.tap(size.width - 78, size.height - 94);
+    await page.waitForTimeout(2500);
+  },
+);
+
 if (errors.length) {
   console.error('SMOKE TEST FAILED:');
   for (const e of errors) console.error('  ' + e);

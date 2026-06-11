@@ -20,6 +20,7 @@ Both games auto-deploy to GitHub Pages on every push:
 
 - **V1 (landscape):** https://creativedexy.github.io/endless-game/
 - **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
+- **V3 (portrait, chokepoint map):** https://creativedexy.github.io/endless-game/v3/
 
 Open the link on your phone and play. V2 is designed for portrait, V1 for
 landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
@@ -70,6 +71,16 @@ npx playwright install chromium   # one-time browser download
 npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
+
+## How to play — V3 · Aurora Down: Hold the Gaps (portrait)
+
+Same loop as V2, new battlefield: the wreck sits inside an **impassable ring
+of crags** with three **glowing gaps**. Alien waves pour through the gaps, so
+walls and turrets placed on the pads flanking each gap form a real line of
+defence — while you sprint between fronts (and out through the gaps for
+pickups). V3 also has a **3D-model pipeline**: drop low-poly `.glb` files
+into `v3/src/models/` (see the README there) and the game swaps them in for
+the procedural placeholder shapes automatically.
 
 ## How to play — V2 · Aurora Down (portrait)
 
