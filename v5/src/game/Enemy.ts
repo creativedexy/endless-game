@@ -42,6 +42,7 @@ export class Enemy {
   hp: number;
   maxHp: number;
   dead = false;
+  dashHit = false; // already clipped by the current dash
 
   private material: THREE.MeshStandardMaterial;
   private attackTimer = Math.random() * 0.4;

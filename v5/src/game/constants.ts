@@ -41,8 +41,8 @@ export const START_SALVAGE = 30;
 export const ENERGY_PICKUP_VALUE = 10;
 export const SALVAGE_PICKUP_VALUE = 8;
 export const DROP_VALUE = 5; // resources dropped by slain aliens
-export const DROP_CHANCE = 0.35;
-export const KILL_REWARD = 2; // guaranteed energy per kill — fighting funds building
+export const DROP_CHANCE = 0.3;
+export const KILL_REWARD = 1; // guaranteed energy per kill — fighting funds building
 export const MAX_PICKUPS = 10;
 export const INITIAL_PICKUPS = 6; // scattered at game start so second 1 is active
 export const PICKUP_SPAWN_INTERVAL = 2.6;
@@ -60,20 +60,24 @@ export const STRUCTURE_REPAIR_COST = 10; // salvage per repair cycle
 export const STRUCTURE_REPAIR_AMOUNT = 60;
 
 export const GUN_RANGE = 10; // auto-aim acquisition range
-export const GUN_DAMAGE = 9;
-export const GUN_FIRE_INTERVAL = 0.22;
+export const GUN_DAMAGE = 14;
+export const GUN_FIRE_INTERVAL = 0.16;
 export const PROJECTILE_SPEED = 26;
+export const GUN_SPLASH_RADIUS = 1.5; // player bolts splash into the horde
+export const GUN_SPLASH_FACTOR = 0.5; // splash deals this fraction of damage
+export const DASH_DAMAGE = 15; // dashing through aliens hurts them
+export const DASH_HIT_RADIUS = 1.1;
 
-export const PLAYER_MAX_SPEED = 9.2;
+export const PLAYER_MAX_SPEED = 9.6;
 export const PLAYER_ACCEL = 48;
 export const PLAYER_FRICTION = 14;
 export const DASH_SPEED = 26;
 export const DASH_DURATION = 0.16;
-export const DASH_COOLDOWN = 1.0;
+export const DASH_COOLDOWN = 0.8;
 
-export const THREAT_INTERVAL = 35; // seconds per threat level
+export const THREAT_INTERVAL = 30; // seconds per threat level
 export const THREAT_LULL = 6; // spawn pause after each threat rise — breathe, build
-export const MAX_ENEMIES = 55;
+export const MAX_ENEMIES = 90;
 
 export const HULL_REGEN = 1.0; // hp/s the ship self-repairs when no aliens are near
 export const HULL_REGEN_SAFE_RADIUS = 11;
@@ -259,10 +263,10 @@ export const MAX_LEVEL = 4;
 
 // Per-level structure stats (index = level - 1).
 export const TURRET_STATS = [
-  { range: 8.0, damage: 8, fireRate: 1.4, maxHp: 70 },
-  { range: 9.5, damage: 13, fireRate: 2.0, maxHp: 105 },
-  { range: 11.0, damage: 20, fireRate: 2.7, maxHp: 150 },
-  { range: 12.5, damage: 30, fireRate: 3.4, maxHp: 150 },
+  { range: 8.0, damage: 5, fireRate: 1.4, maxHp: 70 },
+  { range: 9.5, damage: 9, fireRate: 2.0, maxHp: 105 },
+  { range: 11.0, damage: 14, fireRate: 2.7, maxHp: 150 },
+  { range: 12.5, damage: 21, fireRate: 3.4, maxHp: 150 },
 ];
 
 // Shield fences span their whole gap: aliens must chew through, but the

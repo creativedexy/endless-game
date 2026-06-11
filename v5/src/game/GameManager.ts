@@ -25,6 +25,10 @@ import { Village } from './Village';
 import {
   BUILD_DWELL,
   COLORS,
+  DASH_DAMAGE,
+  DASH_HIT_RADIUS,
+  GUN_SPLASH_FACTOR,
+  GUN_SPLASH_RADIUS,
   DROP_CHANCE,
   DROP_VALUE,
   ENERGY_PICKUP_VALUE,
@@ -224,9 +228,33 @@ export class GameManager {
       this.ui.hideIntro();
     }
 
-    if (this.input.dashPressed && this.player.tryDash()) this.sound.dash();
+    if (this.input.dashPressed && this.player.tryDash()) {
+      this.sound.dash();
+      for (const e of this.enemies) e.dashHit = false;
+    }
     this.player.update(dt, this.input);
     clampToRidge(this.player.position);
+
+    // Dashing through aliens knocks them around and hurts them.
+    if (this.player.isDashing) {
+      for (const e of this.enemies) {
+        if (e.dead || e.dashHit) continue;
+        if (
+          e.position.distanceTo(this.player.position) <
+          DASH_HIT_RADIUS + e.radius
+        ) {
+          e.dashHit = true;
+          const knock = e.position
+            .clone()
+            .sub(this.player.position)
+            .setY(0)
+            .normalize()
+            .multiplyScalar(0.8);
+          e.takeDamage(DASH_DAMAGE, knock);
+          this.effects.burst(e.position.clone().setY(0.7), 0x9dfff0, 5, 5);
+        }
+      }
+    }
 
     this.updateGun(dt);
 
@@ -342,6 +370,7 @@ export class GameManager {
     const p = this.projectiles.find((pr) => !pr.active);
     if (!p) return;
     p.fire(from, direction, speed, damage, color, homingTarget);
+    p.fromPlayer = fromPlayer;
     if (!fromPlayer) this.sound.turretShoot();
   }
 
@@ -372,6 +401,18 @@ export class GameManager {
           e.takeDamage(p.damage, knock);
           this.effects.burst(e.position.clone().setY(0.7), 0xbfe9ff, 4, 4);
           this.sound.hit();
+          // Player bolts splash into the horde around the impact.
+          if (p.fromPlayer) {
+            for (const other of this.enemies) {
+              if (other === e || other.dead) continue;
+              if (
+                other.position.distanceTo(e.position) <
+                GUN_SPLASH_RADIUS + other.radius
+              ) {
+                other.takeDamage(p.damage * GUN_SPLASH_FACTOR);
+              }
+            }
+          }
           p.deactivate();
           break;
         }

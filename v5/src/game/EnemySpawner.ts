@@ -12,10 +12,10 @@ import type { EnemyStats } from './Enemy';
 import type { GameManager } from './GameManager';
 
 const BASE_STATS: Record<EnemyKind, { hp: number; speed: number; damage: number }> = {
-  crawler: { hp: 22, speed: 2.2, damage: 8 },
-  skitterer: { hp: 10, speed: 4.4, damage: 5 },
+  crawler: { hp: 18, speed: 2.3, damage: 6 },
+  skitterer: { hp: 9, speed: 4.5, damage: 4 },
   brute: { hp: 90, speed: 1.5, damage: 22 },
-  spitter: { hp: 18, speed: 1.9, damage: 9 },
+  spitter: { hp: 16, speed: 1.9, damage: 7 },
 };
 
 /**
@@ -43,8 +43,8 @@ export class EnemySpawner {
   }
 
   private get spawnInterval(): number {
-    // 2.6s between spawns at threat 1, shrinking ~7% per level, floor 0.5s.
-    return Math.max(0.5, 2.6 * Math.pow(0.93, this.threatLevel - 1));
+    // 1.7s between spawns at threat 1, shrinking ~7% per level, floor 0.35s.
+    return Math.max(0.35, 1.7 * Math.pow(0.93, this.threatLevel - 1));
   }
 
   private pickKind(): EnemyKind {
@@ -96,12 +96,12 @@ export class EnemySpawner {
     // Higher threat occasionally sends small packs from one direction;
     // a pending surge arrives as one big one.
     let packSize =
-      1 +
-      (Math.random() < Math.min(0.5, this.threatLevel * 0.06) ? 1 : 0) +
-      (this.threatLevel >= 6 && Math.random() < 0.3 ? 1 : 0);
+      2 +
+      (Math.random() < Math.min(0.6, this.threatLevel * 0.08) ? 1 : 0) +
+      (this.threatLevel >= 5 && Math.random() < 0.35 ? 1 : 0);
     if (this.surgePending) {
       this.surgePending = false;
-      packSize = Math.min(9, 5 + Math.floor(this.threatLevel / 2));
+      packSize = Math.min(14, 7 + this.threatLevel);
     }
 
     // Until threat 4, waves alternate fronts (west edge feeds the west

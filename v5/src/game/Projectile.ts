@@ -12,6 +12,7 @@ export class Projectile {
   readonly velocity = new THREE.Vector3();
   damage = 0;
   active = false;
+  fromPlayer = false; // player bolts splash into the horde
   private homingTarget: Enemy | null = null;
   private speed = 0;
   private life = 0;
