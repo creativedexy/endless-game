@@ -21,6 +21,7 @@ Both games auto-deploy to GitHub Pages on every push:
 - **V1 (landscape):** https://creativedexy.github.io/endless-game/
 - **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
 - **V3 (portrait, chokepoint map):** https://creativedexy.github.io/endless-game/v3/
+- **V4 (portrait, frontier map + mines & villages):** https://creativedexy.github.io/endless-game/v4/
 
 Open the link on your phone and play. V2 is designed for portrait, V1 for
 landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
@@ -71,6 +72,23 @@ npx playwright install chromium   # one-time browser download
 npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
+
+## How to play — V4 · Aurora Down: Frontier (portrait)
+
+The biggest map: your wreck sits in the **corner of a frozen valley**,
+backed by cliffs, with a crag defence line and two glowing gaps guarding the
+open quadrant. New in V4:
+
+- **⛏ Ore deposits** out in the wilds are the only places a **Mine** can be
+  built — it pays both resources every tick, but you have to defend it out
+  there. Mine sites glow amber.
+- **🏘 Village plots** (green) inside the base house villagers who run
+  around auto-collecting nearby drops while you fight at the front.
+- **Threat arrows** at the screen edge point at gaps under attack (and turn
+  red when something is chewing the ship itself).
+- **Sprint**: keep running for a moment and you speed up — the frontier is
+  big. Node pads build their own building regardless of the armed blueprint;
+  ordinary pads still use the selector.
 
 ## How to play — V3 · Aurora Down: Hold the Gaps (portrait)
 

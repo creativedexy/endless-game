@@ -9,11 +9,12 @@ export default defineConfig({
   assetsInclude: ['**/*.glb'],
   build: {
     rollupOptions: {
-      // Three games, one repo: V1 at /, V2 at /v2/, V3 at /v3/.
+      // Four games, one repo: V1 at /, V2 at /v2/, V3 at /v3/, V4 at /v4/.
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         v2: fileURLToPath(new URL('./v2/index.html', import.meta.url)),
         v3: fileURLToPath(new URL('./v3/index.html', import.meta.url)),
+        v4: fileURLToPath(new URL('./v4/index.html', import.meta.url)),
       },
     },
   },

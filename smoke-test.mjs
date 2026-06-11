@@ -124,6 +124,39 @@ await run(
   },
 );
 
+// ----------------------------------------------------------------- V4
+
+const v4 = new URL('v4/', base).href;
+
+// Desktop: build on the base cluster, then run out toward a gap.
+await run('v4-desktop', v4, { viewport: { width: 1280, height: 720 } }, async (page) => {
+  await page.keyboard.down('w');
+  await page.keyboard.down('a');
+  await page.waitForTimeout(600);
+  await page.keyboard.up('w');
+  await page.keyboard.up('a');
+  await page.waitForTimeout(1200); // dwell-build wherever we stopped
+  await page.keyboard.down('a');
+  await page.keyboard.press('Shift');
+  await page.waitForTimeout(1500);
+  await page.keyboard.up('a');
+  await page.waitForTimeout(7000);
+});
+
+// Mobile portrait: joystick + dash tap.
+await run(
+  'v4-mobile',
+  v4,
+  { ...devices['iPhone 13'], hasTouch: true },
+  async (page) => {
+    const size = page.viewportSize();
+    await page.touchscreen.tap(size.width * 0.22, size.height * 0.82);
+    await page.waitForTimeout(300);
+    await page.touchscreen.tap(size.width - 78, size.height - 94);
+    await page.waitForTimeout(2500);
+  },
+);
+
 if (errors.length) {
   console.error('SMOKE TEST FAILED:');
   for (const e of errors) console.error('  ' + e);
