@@ -21,9 +21,14 @@ export const PICKUP_SPAWN_INTERVAL = 2.2;
 export const PICKUP_MAGNET_RANGE = 2.4; // pickups drift toward the player
 export const PICKUP_COLLECT_RANGE = 1.1;
 
-export const INTERACT_RANGE = 2.4; // distance to a build pad to open its menu
+export const INTERACT_RANGE = 2.4; // distance to a build pad to interact
 
-export const STRUCTURE_REPAIR_COST = 10; // salvage
+// Hover-to-act: standing on a spot fills a progress ring, then acts.
+export const BUILD_DWELL = 0.7; // seconds standing on an empty pad to build
+export const UPGRADE_DWELL = 1.1; // longer, so upgrades never happen by accident
+export const REPAIR_DWELL = 0.55; // one repair "cycle" while standing nearby
+
+export const STRUCTURE_REPAIR_COST = 10; // salvage per repair cycle
 export const STRUCTURE_REPAIR_AMOUNT = 60;
 
 export const GUN_RANGE = 10; // auto-aim acquisition range
@@ -46,7 +51,13 @@ export interface ResourceCost {
   salvage: number;
 }
 
-export type StructureKind = 'turret' | 'wall' | 'extractor' | 'beacon';
+export type StructureKind =
+  | 'turret'
+  | 'wall'
+  | 'extractor'
+  | 'forge'
+  | 'beacon'
+  | 'factory';
 
 export interface StructureDef {
   kind: StructureKind;
@@ -87,6 +98,16 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
       { energy: 70, salvage: 25 },
     ],
   },
+  forge: {
+    kind: 'forge',
+    name: 'Salvage Forge',
+    icon: '⚒',
+    buildCost: { energy: 25, salvage: 20 },
+    upgradeCost: [
+      { energy: 35, salvage: 25 },
+      { energy: 60, salvage: 40 },
+    ],
+  },
   beacon: {
     kind: 'beacon',
     name: 'Repair Beacon',
@@ -95,6 +116,16 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 35, salvage: 20 },
       { energy: 60, salvage: 35 },
+    ],
+  },
+  factory: {
+    kind: 'factory',
+    name: 'Drone Factory',
+    icon: '⚙',
+    buildCost: { energy: 50, salvage: 40 },
+    upgradeCost: [
+      { energy: 60, salvage: 40 },
+      { energy: 90, salvage: 60 },
     ],
   },
 };
@@ -122,6 +153,29 @@ export const BEACON_STATS = [
   { maxHp: 160, healPerSecond: 8, radius: 8 },
 ];
 
+export const FORGE_STATS = [
+  { maxHp: 85, salvagePerTick: 3, tickInterval: 5 },
+  { maxHp: 115, salvagePerTick: 5, tickInterval: 5 },
+  { maxHp: 155, salvagePerTick: 8, tickInterval: 5 },
+];
+
+export const FACTORY_STATS = [
+  { maxHp: 110, maxArchers: 1 },
+  { maxHp: 150, maxArchers: 2 },
+  { maxHp: 200, maxArchers: 3 },
+];
+export const ARCHER_REBUILD_TIME = 8; // seconds to replace a lost drone
+export const MAX_ARCHERS = 4; // global cap across all factories
+
+export const ARCHER_STATS = {
+  hp: 40,
+  range: 8.5,
+  damage: 5,
+  fireInterval: 0.5,
+  speed: 10.5,
+  projectileSpeed: 20,
+};
+
 export type EnemyKind = 'crawler' | 'skitterer' | 'brute';
 
 export const COLORS = {
@@ -145,7 +199,10 @@ export const COLORS = {
   turretHead: 0x4d9df0,
   wall: 0x7e8aa3,
   extractor: 0x35f0d0,
+  forge: 0xffa94d,
   beacon: 0x7dff9a,
+  factory: 0xffd166,
+  archer: 0x8fd3ff,
   projectile: 0x8cf6ff,
   playerProjectile: 0x5cffd9,
   enemyCrawler: 0x9b4df0,

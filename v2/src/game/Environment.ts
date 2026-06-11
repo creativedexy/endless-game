@@ -90,6 +90,40 @@ export class Environment {
       scene.add(spire);
     }
 
+    // Spilled cargo crates and a half-buried escape pod near the wreck.
+    const crateMat = new THREE.MeshStandardMaterial({
+      color: 0x8a6a3c,
+      flatShading: true,
+      roughness: 0.85,
+    });
+    const crateGlow = new THREE.MeshStandardMaterial({
+      color: 0xffa94d,
+      emissive: 0xffa94d,
+      emissiveIntensity: 0.5,
+      flatShading: true,
+    });
+    for (let i = 0; i < 3; i++) {
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), crateMat);
+      crate.position.set(7 + i * 1.6 + rand(), 0.3, 4.5 + rand() * 1.6);
+      crate.rotation.y = rand() * 1.5;
+      crate.rotation.z = (rand() - 0.5) * 0.4;
+      crate.castShadow = true;
+      scene.add(crate);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.1, 0.74), crateGlow);
+      stripe.position.copy(crate.position);
+      stripe.rotation.copy(crate.rotation);
+      scene.add(stripe);
+    }
+    const pod = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.55, 1.0, 2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x6a7a8e, flatShading: true }),
+    );
+    pod.position.set(-3.5, 0.35, 6.5);
+    pod.rotation.z = Math.PI / 2.3;
+    pod.rotation.y = 0.8;
+    pod.castShadow = true;
+    scene.add(pod);
+
     // Torn hull plates along the crash trench.
     for (let i = 0; i < 8; i++) {
       const plate = new THREE.Mesh(

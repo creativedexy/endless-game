@@ -141,75 +141,66 @@ body {
   color: #ff8d7a;
 }
 
-/* ---------------------------------------------------------------- build menu */
+/* ---------------------------------------------------------------- blueprint selector */
 
-#build-menu {
+#blueprint-bar {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
-  width: min(92vw, 420px);
-  padding: 10px 12px 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 88px);
+  display: flex;
+  gap: 5px;
+  padding: 6px 7px;
+  border-radius: 18px;
   z-index: 12;
-  transition: opacity 0.15s ease;
 }
 
-body:not(.touch) #build-menu {
-  bottom: 90px;
-}
-
-#build-menu.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#build-menu-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.8;
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-#build-menu-buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
-  gap: 8px;
-}
-
-.menu-option {
+.bp-btn {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 4px 7px;
+  gap: 1px;
+  width: 50px;
+  padding: 5px 2px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 13px;
+  background: rgba(180, 215, 255, 0.06);
+  color: #eaf2ff;
   font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
-.menu-option.disabled {
-  opacity: 0.4;
-  cursor: default;
+.bp-btn.selected {
+  background: rgba(122, 235, 255, 0.2);
+  border-color: rgba(140, 246, 255, 0.8);
+  box-shadow: 0 0 14px rgba(82, 245, 255, 0.45);
 }
 
-.opt-icon {
-  font-size: 21px;
+.bp-btn.dim {
+  opacity: 0.45;
+}
+
+.bp-icon {
+  font-size: 18px;
   line-height: 1.1;
   text-shadow: 0 0 10px rgba(82, 245, 255, 0.6);
+  pointer-events: none;
 }
 
-.opt-label {
-  font-size: 10.5px;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1.15;
-}
-
-.opt-cost {
-  font-size: 11px;
+.bp-cost {
+  font-size: 8.5px;
   font-weight: 700;
+  line-height: 1.1;
+  pointer-events: none;
+}
+
+.bp-cost i {
+  font-style: normal;
 }
 
 .cost-energy {
@@ -220,16 +211,41 @@ body:not(.touch) #build-menu {
   color: #ffba6b;
 }
 
-.opt-key {
+.bp-key {
   position: absolute;
-  top: 4px;
-  right: 7px;
-  font-size: 9px;
-  opacity: 0.55;
+  top: 2px;
+  right: 5px;
+  font-size: 8px;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
-body.touch .opt-key {
+body.touch .bp-key {
   display: none;
+}
+
+/* One-line status for the current hover action. */
+#context-hint {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 14px;
+  white-space: nowrap;
+  z-index: 12;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+body:not(.touch) #context-hint {
+  bottom: 64px;
+}
+
+#context-hint.hidden {
+  opacity: 0;
 }
 
 /* ---------------------------------------------------------------- touch controls */

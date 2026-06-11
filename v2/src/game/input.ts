@@ -68,7 +68,7 @@ export class KeyboardControls {
     }
     if (e.code.startsWith('Digit')) {
       const n = Number(e.code.slice(5));
-      if (n >= 1 && n <= 4) this.input.menuKey = n;
+      if (n >= 1 && n <= 6) this.input.menuKey = n;
     }
   };
 

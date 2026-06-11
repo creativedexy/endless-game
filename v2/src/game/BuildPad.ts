@@ -13,9 +13,13 @@ export class BuildPad {
 
   private ring: THREE.Mesh;
   private ringMat: THREE.MeshBasicMaterial;
+  private progressRing: THREE.Mesh;
+  private progressMat: THREE.MeshBasicMaterial;
+  private progressShown = 0;
   private pulse = Math.random() * 10;
   private near = false;
   private affordable = false;
+  private denyPulse = 0;
 
   constructor(scene: THREE.Scene, x: number, z: number) {
     this.position = new THREE.Vector3(x, 0, z);
@@ -39,6 +43,48 @@ export class BuildPad {
     this.ring.rotation.x = -Math.PI / 2;
     this.ring.position.set(x, 0.2, z);
     scene.add(this.ring);
+
+    // Dwell progress: an arc that sweeps around the pad while the player
+    // stands on it. Geometry is rebuilt only when the fraction changes.
+    this.progressMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.progressRing = new THREE.Mesh(new THREE.BufferGeometry(), this.progressMat);
+    this.progressRing.rotation.x = -Math.PI / 2;
+    this.progressRing.position.set(x, 0.24, z);
+    this.progressRing.visible = false;
+    scene.add(this.progressRing);
+  }
+
+  /** Show the dwell arc (0..1). Pass 0 to hide. */
+  setProgress(fraction: number, color: number) {
+    if (fraction <= 0) {
+      if (this.progressRing.visible) this.progressRing.visible = false;
+      this.progressShown = 0;
+      return;
+    }
+    this.progressMat.color.setHex(color);
+    this.progressRing.visible = true;
+    if (Math.abs(fraction - this.progressShown) < 0.02) return;
+    this.progressShown = fraction;
+    this.progressRing.geometry.dispose();
+    this.progressRing.geometry = new THREE.RingGeometry(
+      1.45,
+      1.7,
+      32,
+      1,
+      Math.PI / 2,
+      -fraction * Math.PI * 2,
+    );
+  }
+
+  /** Brief red flare when the player dwells but can't afford the action. */
+  pulseDenied() {
+    this.denyPulse = 0.5;
   }
 
   get isEmpty() {
@@ -53,7 +99,14 @@ export class BuildPad {
   update(dt: number) {
     this.pulse += dt * 3;
     this.ring.rotation.z += dt * 0.4;
+    if (this.denyPulse > 0) {
+      this.denyPulse -= dt;
+      this.ringMat.color.setHex(0xff5346);
+      this.ringMat.opacity = 0.5 + Math.sin(this.denyPulse * 25) * 0.3;
+      return;
+    }
     if (!this.isEmpty) {
+      this.ringMat.color.setHex(COLORS.padRing);
       this.ringMat.opacity = 0.08;
       return;
     }

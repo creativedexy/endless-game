@@ -32,6 +32,7 @@ export class CrashedShip {
   private emitTimer = 0;
   private flashTimer = 0;
   private flicker = 0;
+  private beaconTip!: THREE.Mesh;
 
   // Fire emitter points in local ship space (filled in by buildWreck).
   private emitters: THREE.Vector3[] = [];
@@ -152,6 +153,45 @@ export class CrashedShip {
       this.group.add(w);
     }
 
+    // Cracked cockpit canopy over the buried nose.
+    const canopy = new THREE.Mesh(
+      new THREE.SphereGeometry(0.85, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.MeshStandardMaterial({
+        color: 0x1d2c44,
+        emissive: COLORS.shipGlow,
+        emissiveIntensity: 0.3,
+        flatShading: true,
+      }),
+    );
+    canopy.position.set(-2.5, 1.15, -1.0);
+    canopy.rotation.z = 0.5;
+    this.group.add(canopy);
+
+    // Bent comms mast with a blinking warning tip.
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 2.0, 5), this.hullMat);
+    mast.position.set(1.4, 3.0, -0.4);
+    mast.rotation.z = 0.45;
+    mast.rotation.x = -0.2;
+    this.group.add(mast);
+    this.beaconTip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 6, 6),
+      new THREE.MeshBasicMaterial({ color: COLORS.fire }),
+    );
+    this.beaconTip.position.set(2.0, 3.85, -0.6);
+    this.group.add(this.beaconTip);
+
+    // Torn structural ribs poking out of the hull breach.
+    for (let i = 0; i < 3; i++) {
+      const rib = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.7 + i * 0.15, 0.16),
+        new THREE.MeshStandardMaterial({ color: COLORS.shipDark, flatShading: true }),
+      );
+      rib.position.set(0.7 + i * 0.5, 2.15, -0.55 + (i % 2) * 0.3);
+      rib.rotation.z = -0.5 + i * 0.4;
+      rib.rotation.x = 0.3;
+      this.group.add(rib);
+    }
+
     // Where the fires burn (local space): hull breach + engine + wing root.
     this.emitters.push(
       new THREE.Vector3(1.2, 2.0, -0.6),
@@ -207,6 +247,9 @@ export class CrashedShip {
     const burn = 0.65 + (1 - this.healthFraction) * 0.8;
     this.fireLight.intensity = (24 + Math.sin(this.flicker) * 7 + Math.random() * 6) * burn;
     this.glowLight.intensity = 10 + Math.sin(this.flicker * 0.21) * 3;
+
+    // Slow distress blink on the comms mast.
+    this.beaconTip.visible = Math.sin(this.flicker * 0.14) > -0.1;
 
     // Emit fire and smoke. More emitters join as health drops.
     const activeEmitters = this.healthFraction > 0.7 ? 1 : this.healthFraction > 0.4 ? 2 : 3;

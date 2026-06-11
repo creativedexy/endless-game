@@ -81,13 +81,20 @@ zero, the game ends. The threat level climbs forever.
   Slain aliens sometimes drop resources too.
 - You carry a **blaster**: hold FIRE (or Space / mouse on desktop) and it
   auto-aims at the nearest alien.
-- Stand on a **build pad** and a glass menu pops up with four structures:
+- Building is **hover-to-build**: pick a blueprint from the glass selector at
+  the top, then just **stand on a pad** — a progress ring fills and the
+  structure builds itself. Six blueprints:
   - **⌖ Blaster Turret** (energy) — automatic defence tower
   - **⬡ Barrier Node** (salvage) — chunky wall that blocks and soaks damage
   - **⚡ Power Relay** (mixed) — trickles energy into your reserves
+  - **⚒ Salvage Forge** (mixed) — trickles salvage into your reserves
   - **✚ Repair Beacon** (mixed) — slowly heals nearby structures and the hull
-- Stand near an existing structure to **upgrade** (2 levels) or **repair** it.
-- Stand near the ship to **repair the hull** with salvage.
+  - **⚙ Drone Factory** (mixed) — builds **archer drones** that fly in
+    formation behind you and shoot at whatever you're fighting (more drones
+    per level; lost drones are rebuilt)
+- Standing on an existing structure auto-**repairs** it if damaged, otherwise
+  auto-**upgrades** it (2 levels, slightly longer dwell so it's deliberate).
+- Stand near the ship to auto-**repair the hull** with salvage.
 - **Dash** to escape danger or reposition.
 
 Enemy types: purple **crawlers** head for the ship, pink **skitterers** are
@@ -99,7 +106,8 @@ and the hull extra hard (they join as threat rises).
 | Move | `WASD` / arrows | left-thumb glass joystick |
 | Shoot | `Space` / mouse click | large FIRE button |
 | Dash | `Shift` | DASH button |
-| Build / upgrade / repair | keys `1`-`4` | tap the pop-up glass menu |
+| Select blueprint | keys `1`-`6` | tap the glass selector bar |
+| Build / upgrade / repair | stand on the spot (hover-to-act) | same |
 | Restart (after game over) | `R` | Restart button |
 
 ## How to play — V1 · Outpost Zero (landscape)
@@ -145,7 +153,8 @@ v2/
       constants.ts         all balance/tuning numbers in one place
       CrashedShip.ts       the burning wreck: health, fire/smoke emitters
       Structure.ts         base class for buildables (health, levels, repair)
-      Turret.ts / Wall.ts / Extractor.ts / RepairBeacon.ts
+      Turret.ts / Wall.ts / Extractor.ts / Forge.ts / RepairBeacon.ts / Factory.ts
+      Archer.ts             companion drones built by the Drone Factory
       Enemy.ts             crawler / skitterer / brute AI
       EnemySpawner.ts      endless spawning + threat ramp + enemy mix
       Pickup.ts            energy crystals + salvage scrap (with magnet)

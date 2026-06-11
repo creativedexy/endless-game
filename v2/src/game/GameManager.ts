@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Archer } from './Archer';
 import { BuildPad } from './BuildPad';
 import { CameraController } from './CameraController';
 import { CrashedShip } from './CrashedShip';
@@ -7,6 +8,8 @@ import { Enemy, type EnemyStats } from './Enemy';
 import { EnemySpawner } from './EnemySpawner';
 import { Environment } from './Environment';
 import { Extractor } from './Extractor';
+import { Factory } from './Factory';
+import { Forge } from './Forge';
 import { MobileControls } from './MobileControls';
 import { Pickup, type PickupType } from './Pickup';
 import { PlayerController } from './PlayerController';
@@ -15,10 +18,11 @@ import { RepairBeacon } from './RepairBeacon';
 import { Sound } from './Sound';
 import { Structure } from './Structure';
 import { Turret } from './Turret';
-import { UIManager, type MenuOption } from './UIManager';
+import { UIManager } from './UIManager';
 import { Wall } from './Wall';
 import {
   ARENA_RADIUS,
+  BUILD_DWELL,
   COLORS,
   DROP_CHANCE,
   DROP_VALUE,
@@ -32,6 +36,7 @@ import {
   PICKUP_MAGNET_RANGE,
   PICKUP_SPAWN_INTERVAL,
   PROJECTILE_SPEED,
+  REPAIR_DWELL,
   SALVAGE_PICKUP_VALUE,
   SHIP_INTERACT_RANGE,
   SHIP_REPAIR_AMOUNT,
@@ -41,6 +46,7 @@ import {
   STRUCTURE_DEFS,
   STRUCTURE_REPAIR_AMOUNT,
   STRUCTURE_REPAIR_COST,
+  UPGRADE_DWELL,
   type ResourceCost,
   type StructureKind,
 } from './constants';
@@ -67,11 +73,12 @@ export class GameManager {
   readonly pads: BuildPad[] = [];
   readonly structures: Structure[] = [];
   readonly enemies: Enemy[] = [];
+  readonly archers: Archer[] = [];
   private pickups: Pickup[] = [];
   private projectiles: Projectile[] = [];
 
   // Systems
-  private player: PlayerController;
+  readonly player: PlayerController;
   private spawner = new EnemySpawner();
   private effects: Effects;
   private sound = new Sound();
@@ -88,6 +95,12 @@ export class GameManager {
   private gunTimer = 0;
   private pickupTimer = PICKUP_SPAWN_INTERVAL;
   private introHidden = false;
+
+  // Hover-to-act: which blueprint is armed and how long we've dwelled.
+  private blueprintDefs = Object.values(STRUCTURE_DEFS);
+  private selectedBlueprint = 0;
+  private dwellKey = '';
+  private dwellTimer = 0;
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -118,7 +131,11 @@ export class GameManager {
     this.ship = new CrashedShip(this.scene);
     this.player = new PlayerController(this.scene);
     this.effects = new Effects(this.scene, this.cameraCtl.camera);
-    this.ui = new UIManager(() => this.restart());
+    this.ui = new UIManager(
+      this.blueprintDefs,
+      (i) => this.selectBlueprint(i),
+      () => this.restart(),
+    );
 
     this.keyboard = new KeyboardControls(this.input);
     this.mobile = new MobileControls(this.input, this.keyboard);
@@ -203,9 +220,23 @@ export class GameManager {
 
     this.updateProjectiles(dt);
     this.updatePickups(dt);
-    this.updateMenuAndPads();
 
-    if (this.input.menuKey > 0) this.ui.selectMenuOption(this.input.menuKey - 1);
+    if (this.input.menuKey > 0 && this.input.menuKey <= this.blueprintDefs.length) {
+      this.selectBlueprint(this.input.menuKey - 1);
+    }
+    this.updateBuildContext(dt);
+
+    // Archer drones fly in formation and fight alongside the player.
+    let slot = 0;
+    for (const a of this.archers) if (!a.dead) a.update(dt, this, slot++);
+    for (let i = this.archers.length - 1; i >= 0; i--) {
+      const a = this.archers[i];
+      if (!a.dead) continue;
+      this.effects.burst(a.position.clone().setY(1.2), COLORS.archer, 10, 6);
+      this.sound.structureDestroyed();
+      a.dispose(this.scene);
+      this.archers.splice(i, 1);
+    }
 
     // Bury the dead.
     for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -353,6 +384,22 @@ export class GameManager {
     this.effects.floatText(extractor.position.clone().setY(2.4), `+${amount} ◆`, '#35f0d0');
   }
 
+  /** Reward from a Salvage Forge tick. */
+  forgeTick(forge: Forge, amount: number) {
+    this.salvage += amount;
+    this.effects.floatText(forge.position.clone().setY(2.2), `+${amount} ▣`, '#ffa94d');
+  }
+
+  /** Called by a Drone Factory when it finishes assembling an archer. */
+  spawnArcher(at: THREE.Vector3): Archer {
+    const archer = new Archer(this.scene, at);
+    this.archers.push(archer);
+    this.sound.build();
+    this.effects.burst(at.clone().setY(1.2), COLORS.archer, 8, 5);
+    this.ui.flashMessage('Archer drone online');
+    return archer;
+  }
+
   private updatePickups(dt: number) {
     this.pickupTimer -= dt;
     if (this.pickupTimer <= 0) {
@@ -418,8 +465,14 @@ export class GameManager {
       case 'extractor':
         s = new Extractor(this.scene, pad.position);
         break;
+      case 'forge':
+        s = new Forge(this.scene, pad.position);
+        break;
       case 'beacon':
         s = new RepairBeacon(this.scene, pad.position);
+        break;
+      case 'factory':
+        s = new Factory(this.scene, pad.position);
         break;
     }
     pad.structure = s;
@@ -468,91 +521,125 @@ export class GameManager {
     );
   }
 
-  /** Decide what the in-world menu shows based on where the player stands. */
-  private updateMenuAndPads() {
-    // Highlight pads: near + affordability glow.
-    const anyAffordable = Object.values(STRUCTURE_DEFS).some((d) =>
-      this.canAfford(d.buildCost),
+  private selectBlueprint(index: number) {
+    if (index === this.selectedBlueprint) return;
+    this.selectedBlueprint = index;
+    this.dwellKey = ''; // re-evaluate the spot we're standing on
+  }
+
+  /**
+   * Hover-to-act: standing on a spot fills a progress ring, then the
+   * action fires automatically — build the selected blueprint on an empty
+   * pad, repair a damaged structure, upgrade a healthy one, or patch the
+   * hull next to the ship. Walking away cancels.
+   */
+  private updateBuildContext(dt: number) {
+    const selectedDef = this.blueprintDefs[this.selectedBlueprint];
+    this.ui.setBlueprintState(
+      this.selectedBlueprint,
+      this.blueprintDefs.map((d) => this.canAfford(d.buildCost)),
     );
 
     let nearestPad: BuildPad | null = null;
     let nearestDist = INTERACT_RANGE;
     for (const pad of this.pads) {
       const d = pad.position.distanceTo(this.player.position);
-      pad.setState(d < INTERACT_RANGE, anyAffordable);
+      pad.setState(d < INTERACT_RANGE, this.canAfford(selectedDef.buildCost));
       if (d < nearestDist) {
         nearestDist = d;
         nearestPad = pad;
       }
     }
 
-    if (nearestPad) {
-      const pad = nearestPad; // const binding so closures keep the narrowed type
+    let key = '';
+    let need = 0;
+    let color = 0x52f5ff;
+    let hint: string | null = null;
+    let perform: (() => void) | null = null;
+    const pad = nearestPad;
+
+    if (pad) {
       const padIndex = this.pads.indexOf(pad);
       if (pad.isEmpty) {
-        const defs = Object.values(STRUCTURE_DEFS);
-        const affordBits = defs.map((d) => (this.canAfford(d.buildCost) ? 1 : 0)).join('');
-        const options: MenuOption[] = defs.map((d) => ({
-          icon: d.icon,
-          label: d.name,
-          cost: d.buildCost,
-          enabled: this.canAfford(d.buildCost),
-          onSelect: () => this.buildOn(pad, d.kind),
-        }));
-        this.ui.showMenu(`build:${padIndex}:${affordBits}`, 'Build structure', options);
+        if (this.canAfford(selectedDef.buildCost)) {
+          key = `build:${padIndex}:${selectedDef.kind}`;
+          need = BUILD_DWELL;
+          hint = `Building ${selectedDef.name}…`;
+          perform = () => this.buildOn(pad, selectedDef.kind);
+        } else {
+          key = `deny-build:${padIndex}:${selectedDef.kind}`;
+          hint = `Need ${costText(selectedDef.buildCost)} for ${selectedDef.name}`;
+        }
       } else {
         const s = pad.structure!;
-        const options: MenuOption[] = [];
-        const upCost = s.nextUpgradeCost;
-        if (upCost) {
-          options.push({
-            icon: '▲',
-            label: `Upgrade to Lv ${s.level + 1}`,
-            cost: upCost,
-            enabled: this.canAfford(upCost),
-            onSelect: () => this.upgradeStructure(s),
-          });
-        }
         if (s.isDamaged) {
-          options.push({
-            icon: '🔧',
-            label: 'Repair',
-            cost: { energy: 0, salvage: STRUCTURE_REPAIR_COST },
-            enabled: this.salvage >= STRUCTURE_REPAIR_COST,
-            onSelect: () => this.repairStructure(s),
-          });
-        }
-        if (options.length > 0) {
-          const key = `struct:${padIndex}:${s.level}:${s.isDamaged ? 'd' : 'ok'}:${options
-            .map((o) => (o.enabled ? 1 : 0))
-            .join('')}`;
-          this.ui.showMenu(key, `${s.def.name} · Lv ${s.level}`, options);
+          if (this.salvage >= STRUCTURE_REPAIR_COST) {
+            key = `repair:${padIndex}`;
+            need = REPAIR_DWELL;
+            color = 0x7dff9a;
+            hint = `Repairing ${s.def.name}…`;
+            perform = () => this.repairStructure(s);
+          } else {
+            key = `deny-repair:${padIndex}`;
+            hint = `Need ▣${STRUCTURE_REPAIR_COST} to repair`;
+          }
+        } else if (s.canUpgrade) {
+          const cost = s.nextUpgradeCost!;
+          if (this.canAfford(cost)) {
+            key = `upgrade:${padIndex}:${s.level}`;
+            need = UPGRADE_DWELL;
+            color = 0xffe066;
+            hint = `Upgrading ${s.def.name} to Lv ${s.level + 1}…`;
+            perform = () => this.upgradeStructure(s);
+          } else {
+            key = `deny-upgrade:${padIndex}:${s.level}`;
+            hint = `Need ${costText(cost)} to upgrade ${s.def.name}`;
+          }
         } else {
-          this.ui.hideMenu();
+          key = `max:${padIndex}`;
+          hint = `${s.def.name} · max level`;
         }
       }
-      return;
-    }
-
-    // Near the wreck and it needs patching?
-    if (
+    } else if (
       this.ship.isDamaged &&
       this.player.position.distanceTo(this.ship.position) < SHIP_INTERACT_RANGE
     ) {
-      const enabled = this.salvage >= SHIP_REPAIR_COST;
-      this.ui.showMenu(`ship:${enabled ? 1 : 0}`, 'The Aurora', [
-        {
-          icon: '🔧',
-          label: 'Repair hull',
-          cost: { energy: 0, salvage: SHIP_REPAIR_COST },
-          enabled,
-          onSelect: () => this.repairShip(),
-        },
-      ]);
-      return;
+      if (this.salvage >= SHIP_REPAIR_COST) {
+        key = 'ship-repair';
+        need = REPAIR_DWELL;
+        color = 0x7dff9a;
+        hint = 'Repairing hull…';
+        perform = () => this.repairShip();
+      } else {
+        key = 'deny-ship';
+        hint = `Need ▣${SHIP_REPAIR_COST} to repair hull`;
+      }
     }
 
-    this.ui.hideMenu();
+    if (key !== this.dwellKey) {
+      this.dwellKey = key;
+      this.dwellTimer = 0;
+      if (key.startsWith('deny') && pad) pad.pulseDenied();
+    }
+
+    if (perform && need > 0) {
+      this.dwellTimer += dt;
+      pad?.setProgress(Math.min(1, this.dwellTimer / need), color);
+      if (this.dwellTimer >= need) {
+        this.dwellTimer = 0;
+        this.dwellKey = ''; // re-evaluate next frame (repairs repeat, builds change context)
+        pad?.setProgress(0, color);
+        perform();
+      }
+    } else {
+      pad?.setProgress(0, color);
+    }
+
+    for (const p of this.pads) {
+      if (p !== pad) p.setProgress(0, 0xffffff);
+    }
+
+    this.ui.setContextHint(hint);
   }
 
   // ---------------------------------------------------------------- enemies
@@ -603,18 +690,23 @@ export class GameManager {
         9,
       );
     }
-    this.ui.hideMenu();
+    this.ui.setContextHint(null);
     this.ui.showGameOver(this.spawner.elapsed, this.kills, this.spawner.threatLevel);
   }
 
   private restart() {
     for (const e of this.enemies) e.dispose(this.scene);
     this.enemies.length = 0;
+    for (const a of this.archers) a.dispose(this.scene);
+    this.archers.length = 0;
     for (const pk of this.pickups) pk.dispose(this.scene);
     this.pickups.length = 0;
     for (const s of this.structures) s.dispose(this.scene);
     this.structures.length = 0;
-    for (const pad of this.pads) pad.structure = null;
+    for (const pad of this.pads) {
+      pad.structure = null;
+      pad.setProgress(0, 0xffffff);
+    }
     for (const p of this.projectiles) p.deactivate();
 
     this.ship.reset();
@@ -629,8 +721,17 @@ export class GameManager {
     this.pickupTimer = PICKUP_SPAWN_INTERVAL;
 
     this.ui.hideGameOver();
-    this.ui.invalidateMenu();
+    this.ui.setContextHint(null);
+    this.dwellKey = '';
+    this.dwellTimer = 0;
     this.cameraCtl.snapTo(this.player.position);
     this.state = 'playing';
   }
+}
+
+function costText(cost: ResourceCost): string {
+  const parts: string[] = [];
+  if (cost.energy > 0) parts.push(`◆${cost.energy}`);
+  if (cost.salvage > 0) parts.push(`▣${cost.salvage}`);
+  return parts.join(' ');
 }
