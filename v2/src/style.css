@@ -344,26 +344,15 @@ body.touch #touch-controls {
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
-#btn-fire {
+#btn-dash {
   right: 26px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 42px);
   width: 104px;
   height: 104px;
 }
 
-#btn-fire span {
-  font-size: 16px;
-}
-
-#btn-dash {
-  right: 142px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 110px);
-  width: 64px;
-  height: 64px;
-}
-
 #btn-dash span {
-  font-size: 11px;
+  font-size: 16px;
 }
 
 #btn-dash .cooldown {

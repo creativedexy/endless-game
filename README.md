@@ -79,8 +79,8 @@ zero, the game ends. The threat level climbs forever.
 
 - Run over **◆ energy crystals** and **▣ salvage scrap** to collect them.
   Slain aliens sometimes drop resources too.
-- You carry a **blaster**: hold FIRE (or Space / mouse on desktop) and it
-  auto-aims at the nearest alien.
+- You carry a **blaster** that **fires by itself** at the nearest alien in
+  range — just keep moving. (Desktop: Space/click also force-fires ahead.)
 - Building is **hover-to-build**: pick a blueprint from the glass selector at
   the top, then just **stand on a pad** — a progress ring fills and the
   structure builds itself. Six blueprints:
@@ -104,8 +104,8 @@ and the hull extra hard (they join as threat rises).
 | | Desktop | Mobile (touch) |
 |---|---|---|
 | Move | `WASD` / arrows | left-thumb glass joystick |
-| Shoot | `Space` / mouse click | large FIRE button |
-| Dash | `Shift` | DASH button |
+| Shoot | automatic (`Space`/click to force) | automatic |
+| Dash | `Shift` | large DASH button |
 | Select blueprint | keys `1`-`6` | tap the glass selector bar |
 | Build / upgrade / repair | stand on the spot (hover-to-act) | same |
 | Restart (after game over) | `R` | Restart button |

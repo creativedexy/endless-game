@@ -20,7 +20,7 @@ const BASE_STATS: Record<EnemyKind, { hp: number; speed: number; damage: number 
  * brutes at threat 4.
  */
 export class EnemySpawner {
-  private spawnTimer = 3.0; // small grace period at the start
+  private spawnTimer = 2.0; // small grace period at the start
 
   elapsed = 0;
 
@@ -30,12 +30,12 @@ export class EnemySpawner {
 
   reset() {
     this.elapsed = 0;
-    this.spawnTimer = 3.0;
+    this.spawnTimer = 2.0;
   }
 
   private get spawnInterval(): number {
-    // 2.5s between spawns at threat 1, shrinking ~7% per level, floor 0.5s.
-    return Math.max(0.5, 2.5 * Math.pow(0.93, this.threatLevel - 1));
+    // 2.2s between spawns at threat 1, shrinking ~7% per level, floor 0.5s.
+    return Math.max(0.5, 2.2 * Math.pow(0.93, this.threatLevel - 1));
   }
 
   private pickKind(): EnemyKind {

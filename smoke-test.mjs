@@ -78,7 +78,7 @@ await run('v2-desktop', v2, { viewport: { width: 1280, height: 720 } }, async (p
   await page.waitForTimeout(6000);
 });
 
-// Mobile portrait (the V2 default): drag the joystick, hold FIRE.
+// Mobile portrait (the V2 default): drag the joystick, tap DASH.
 await run(
   'v2-mobile',
   v2,
@@ -88,7 +88,7 @@ await run(
     // Touch the joystick zone bottom-left.
     await page.touchscreen.tap(size.width * 0.22, size.height * 0.82);
     await page.waitForTimeout(300);
-    // Tap the FIRE button bottom-right.
+    // Tap the DASH button bottom-right (shooting is automatic).
     await page.touchscreen.tap(size.width - 78, size.height - 94);
     await page.waitForTimeout(2500);
   },

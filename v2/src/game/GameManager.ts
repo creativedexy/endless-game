@@ -28,6 +28,8 @@ import {
   DROP_VALUE,
   ENERGY_PICKUP_VALUE,
   GUN_DAMAGE,
+  INITIAL_PICKUPS,
+  KILL_REWARD,
   GUN_FIRE_INTERVAL,
   GUN_RANGE,
   INTERACT_RANGE,
@@ -155,6 +157,9 @@ export class GameManager {
       this.projectiles.push(new Projectile(this.scene));
     }
 
+    // Scatter pickups from second one so the opening is grab-grab-grab.
+    for (let i = 0; i < INITIAL_PICKUPS; i++) this.spawnAmbientPickup();
+
     this.cameraCtl.snapTo(this.player.position);
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -254,10 +259,9 @@ export class GameManager {
 
   private updateGun(dt: number) {
     this.gunTimer -= dt;
-    if (!this.input.fireHeld || this.gunTimer > 0) return;
-    this.gunTimer = GUN_FIRE_INTERVAL;
+    if (this.gunTimer > 0) return;
 
-    // Auto-aim: nearest living enemy in range, otherwise shoot straight ahead.
+    // Auto-aim at the nearest living enemy in range.
     let best: Enemy | null = null;
     let bestDist = GUN_RANGE;
     for (const e of this.enemies) {
@@ -268,6 +272,11 @@ export class GameManager {
         best = e;
       }
     }
+
+    // The blaster fires by itself whenever something is in range — the
+    // player just moves. Holding fire (desktop) also shoots straight ahead.
+    if (!best && !this.input.fireHeld) return;
+    this.gunTimer = GUN_FIRE_INTERVAL;
 
     const from = this.player.muzzleWorldPos;
     const dir = best
@@ -328,9 +337,13 @@ export class GameManager {
   private onEnemyKilled(e: Enemy) {
     this.kills++;
     this.sound.enemyDie();
-    this.effects.burst(e.position.clone().setY(0.6), 0x9b4df0, 12, 7);
+    this.effects.burst(e.position.clone().setY(0.6), e.colorHex, 12, 7);
 
-    // Aliens sometimes drop a resource chunk.
+    // Every kill pays a little energy, so fighting always funds building.
+    this.energy += KILL_REWARD;
+    this.effects.floatText(e.position.clone().setY(1), `+${KILL_REWARD} ◆`, '#35f0d0');
+
+    // Aliens often drop a bigger resource chunk on top.
     if (Math.random() < DROP_CHANCE) {
       const type: PickupType = Math.random() < 0.5 ? 'energy' : 'salvage';
       this.pickups.push(new Pickup(this.scene, e.position.x, e.position.z, type, DROP_VALUE));
@@ -719,6 +732,7 @@ export class GameManager {
     this.kills = 0;
     this.gunTimer = 0;
     this.pickupTimer = PICKUP_SPAWN_INTERVAL;
+    for (let i = 0; i < INITIAL_PICKUPS; i++) this.spawnAmbientPickup();
 
     this.ui.hideGameOver();
     this.ui.setContextHint(null);

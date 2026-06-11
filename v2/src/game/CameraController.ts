@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const OFFSET = new THREE.Vector3(0, 21, 10.5);
+const OFFSET = new THREE.Vector3(0, 19, 9.5);
 const FOLLOW_SPEED = 5;
 const LOOK_AHEAD = 0.5; // seconds of player velocity to lead the camera
 

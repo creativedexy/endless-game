@@ -2,10 +2,11 @@ import type { InputState } from './input';
 import type { KeyboardControls } from './input';
 
 /**
- * Touch UI: a dynamic left-thumb joystick plus FIRE/DASH buttons on the
- * right, all styled as translucent frosted glass. Only fully shown on
- * touch devices (body gets a `touch` class). A faint resting joystick
- * ring is always visible so the control area reads as a control.
+ * Touch UI: a dynamic left-thumb joystick plus a big DASH button on the
+ * right (shooting is automatic), all styled as translucent frosted
+ * glass. Only fully shown on touch devices (body gets a `touch` class).
+ * A faint resting joystick ring is always visible so the control area
+ * reads as a control.
  */
 export class MobileControls {
   private joyPointerId: number | null = null;
@@ -35,7 +36,6 @@ export class MobileControls {
         <div class="stick-knob"></div>
       </div>
       <div class="touch-btn glass" id="btn-dash"><span>DASH</span><div class="cooldown" style="transform: scaleY(0)"></div></div>
-      <div class="touch-btn glass" id="btn-fire"><span>FIRE</span></div>
       <div id="rotate-hint" class="glass">Rotate your phone to portrait for the best view 📱</div>
     `;
     document.body.appendChild(root);
@@ -48,7 +48,6 @@ export class MobileControls {
     if (this.isTouchDevice) document.body.classList.add('touch');
 
     this.bindJoystick(root.querySelector('#joystick-zone')!);
-    this.bindFireButton(root.querySelector('#btn-fire')!);
     this.bindDashButton(root.querySelector('#btn-dash')!);
   }
 
@@ -94,22 +93,6 @@ export class MobileControls {
     };
     zone.addEventListener('pointerup', release);
     zone.addEventListener('pointercancel', release);
-  }
-
-  private bindFireButton(btn: HTMLElement) {
-    btn.addEventListener('pointerdown', (e) => {
-      this.input.firePressed = true;
-      this.keyboard.touchFireHeld = true;
-      btn.classList.add('pressed');
-      e.preventDefault();
-    });
-    const release = () => {
-      this.keyboard.touchFireHeld = false;
-      btn.classList.remove('pressed');
-    };
-    btn.addEventListener('pointerup', release);
-    btn.addEventListener('pointercancel', release);
-    btn.addEventListener('pointerleave', release);
   }
 
   private bindDashButton(btn: HTMLElement) {

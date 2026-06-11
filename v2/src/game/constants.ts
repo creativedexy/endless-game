@@ -9,24 +9,26 @@ export const SHIP_INTERACT_RANGE = SHIP_RADIUS + 2.6;
 export const SHIP_REPAIR_COST = 15; // salvage
 export const SHIP_REPAIR_AMOUNT = 60;
 
-export const START_ENERGY = 50;
+export const START_ENERGY = 60;
 export const START_SALVAGE = 40;
 
 export const ENERGY_PICKUP_VALUE = 10;
 export const SALVAGE_PICKUP_VALUE = 8;
 export const DROP_VALUE = 6; // resources dropped by slain aliens
-export const DROP_CHANCE = 0.35;
+export const DROP_CHANCE = 0.45;
+export const KILL_REWARD = 2; // guaranteed energy per kill — fighting funds building
 export const MAX_PICKUPS = 14;
-export const PICKUP_SPAWN_INTERVAL = 2.2;
+export const INITIAL_PICKUPS = 8; // scattered at game start so second 1 is active
+export const PICKUP_SPAWN_INTERVAL = 2.0;
 export const PICKUP_MAGNET_RANGE = 2.4; // pickups drift toward the player
 export const PICKUP_COLLECT_RANGE = 1.1;
 
 export const INTERACT_RANGE = 2.4; // distance to a build pad to interact
 
 // Hover-to-act: standing on a spot fills a progress ring, then acts.
-export const BUILD_DWELL = 0.7; // seconds standing on an empty pad to build
-export const UPGRADE_DWELL = 1.1; // longer, so upgrades never happen by accident
-export const REPAIR_DWELL = 0.55; // one repair "cycle" while standing nearby
+export const BUILD_DWELL = 0.55; // seconds standing on an empty pad to build
+export const UPGRADE_DWELL = 0.9; // longer, so upgrades never happen by accident
+export const REPAIR_DWELL = 0.5; // one repair "cycle" while standing nearby
 
 export const STRUCTURE_REPAIR_COST = 10; // salvage per repair cycle
 export const STRUCTURE_REPAIR_AMOUNT = 60;
@@ -36,12 +38,12 @@ export const GUN_DAMAGE = 9;
 export const GUN_FIRE_INTERVAL = 0.22;
 export const PROJECTILE_SPEED = 26;
 
-export const PLAYER_MAX_SPEED = 8.5;
-export const PLAYER_ACCEL = 42;
+export const PLAYER_MAX_SPEED = 9.2;
+export const PLAYER_ACCEL = 48;
 export const PLAYER_FRICTION = 14;
-export const DASH_SPEED = 25;
+export const DASH_SPEED = 26;
 export const DASH_DURATION = 0.16;
-export const DASH_COOLDOWN = 1.3;
+export const DASH_COOLDOWN = 1.1;
 
 export const THREAT_INTERVAL = 25; // seconds per threat level
 export const MAX_ENEMIES = 55;

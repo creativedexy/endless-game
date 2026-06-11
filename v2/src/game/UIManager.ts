@@ -77,12 +77,13 @@ export class UIManager {
     this.introEl.className = 'glass';
     this.introEl.innerHTML = `
       <h1>Aurora Down</h1>
-      Your ship crashed on a frozen world — and the locals are coming.<br/>
+      Your ship crashed on a frozen world — and the locals are coming.
+      Your blaster <b>fires by itself</b> — just keep moving.<br/>
       Grab <b style="color:#35f0d0">◆ energy</b> and
       <b style="color:#ffa94d">▣ salvage</b>. Pick a blueprint below, then just
       <b>stand on a pad</b> to build it. Stand on your buildings to upgrade
       them, or near anything damaged to repair it.<br/>
-      <small>Desktop: WASD move · Space/click shoot · Shift dash · 1-6 blueprint · R restart</small>
+      <small>Desktop: WASD move · Shift dash · 1-6 blueprint · R restart</small>
     `;
     document.body.appendChild(this.introEl);
 

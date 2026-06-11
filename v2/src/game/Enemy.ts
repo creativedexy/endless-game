@@ -33,6 +33,7 @@ export class Enemy {
   readonly mesh: THREE.Mesh;
   readonly position: THREE.Vector3;
   readonly radius: number;
+  readonly colorHex: number;
   hp: number;
   maxHp: number;
   dead = false;
@@ -60,9 +61,13 @@ export class Enemy {
 
     const vis = KIND_VISUALS[stats.kind];
     this.radius = vis.radius;
+    this.colorHex = vis.color;
     this.hopHeight = vis.hop;
+    // Faint self-glow so aliens read clearly against the pale snow.
     this.material = new THREE.MeshStandardMaterial({
       color: vis.color,
+      emissive: vis.color,
+      emissiveIntensity: 0.25,
       flatShading: true,
       roughness: 0.5,
     });
@@ -188,8 +193,8 @@ export class Enemy {
       this.material.emissiveIntensity = 0.9;
     } else {
       this.material.color.setHex(vis.color);
-      this.material.emissive.setHex(0x000000);
-      this.material.emissiveIntensity = 0;
+      this.material.emissive.setHex(vis.color);
+      this.material.emissiveIntensity = 0.25;
     }
   }
 
