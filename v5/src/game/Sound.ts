@@ -85,6 +85,15 @@ export class Sound {
     this.tone(500, 0.08, 'triangle', 0.4, 700);
   }
 
+  spit() {
+    this.tone(260, 0.12, 'sawtooth', 0.2, 90);
+  }
+
+  surge() {
+    this.tone(180, 0.35, 'sawtooth', 0.4, 320);
+    this.tone(120, 0.5, 'triangle', 0.35, 60);
+  }
+
   dash() {
     this.tone(160, 0.14, 'sawtooth', 0.3, 600);
   }

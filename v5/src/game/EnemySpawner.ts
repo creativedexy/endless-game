@@ -15,6 +15,7 @@ const BASE_STATS: Record<EnemyKind, { hp: number; speed: number; damage: number 
   crawler: { hp: 22, speed: 2.2, damage: 8 },
   skitterer: { hp: 10, speed: 4.4, damage: 5 },
   brute: { hp: 90, speed: 1.5, damage: 22 },
+  spitter: { hp: 18, speed: 1.9, damage: 9 },
 };
 
 /**
@@ -26,6 +27,7 @@ const BASE_STATS: Record<EnemyKind, { hp: number; speed: number; damage: number 
 export class EnemySpawner {
   private spawnTimer = 2.5; // small grace period at the start
   private lastThreat = 1;
+  private surgePending = false;
 
   elapsed = 0;
 
@@ -37,6 +39,7 @@ export class EnemySpawner {
     this.elapsed = 0;
     this.spawnTimer = 2.5;
     this.lastThreat = 1;
+    this.surgePending = false;
   }
 
   private get spawnInterval(): number {
@@ -46,8 +49,13 @@ export class EnemySpawner {
 
   private pickKind(): EnemyKind {
     const t = this.threatLevel;
-    const roll = Math.random();
-    if (t >= 5 && roll < Math.min(0.22, 0.06 + t * 0.018)) return 'brute';
+    let roll = Math.random();
+    if (t >= 5) {
+      const p = Math.min(0.2, 0.05 + t * 0.015);
+      if (roll < p) return 'brute';
+      roll -= p;
+    }
+    if (t >= 4 && roll < 0.18) return 'spitter';
     if (t >= 3 && roll < 0.45) return 'skitterer';
     return 'crawler';
   }
@@ -67,10 +75,16 @@ export class EnemySpawner {
     this.elapsed += dt;
 
     // Each threat rise grants a lull — the swarm regroups, you build.
+    // Every third level the regrouping ends in a surge: one big pack.
     if (this.threatLevel !== this.lastThreat) {
       this.lastThreat = this.threatLevel;
       this.spawnTimer = Math.max(this.spawnTimer, THREAT_LULL);
-      game.onSwarmLull();
+      if (this.threatLevel % 3 === 0) {
+        this.surgePending = true;
+        game.onSurge();
+      } else {
+        game.onSwarmLull();
+      }
     }
 
     this.spawnTimer -= dt;
@@ -79,11 +93,16 @@ export class EnemySpawner {
 
     if (game.enemies.length >= MAX_ENEMIES) return;
 
-    // Higher threat occasionally sends small packs from one direction.
-    const packSize =
+    // Higher threat occasionally sends small packs from one direction;
+    // a pending surge arrives as one big one.
+    let packSize =
       1 +
       (Math.random() < Math.min(0.5, this.threatLevel * 0.06) ? 1 : 0) +
       (this.threatLevel >= 6 && Math.random() < 0.3 ? 1 : 0);
+    if (this.surgePending) {
+      this.surgePending = false;
+      packSize = Math.min(9, 5 + Math.floor(this.threatLevel / 2));
+    }
 
     // Until threat 4, waves alternate fronts (west edge feeds the west
     // gap, north edge the north gap) so the early game is one fight at a

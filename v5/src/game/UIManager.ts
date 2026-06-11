@@ -162,11 +162,22 @@ export class UIManager {
     );
   }
 
-  showGameOver(survivedSeconds: number, kills: number, threat: number) {
-    const mins = Math.floor(survivedSeconds / 60);
-    const secs = Math.floor(survivedSeconds % 60);
+  showGameOver(
+    survivedSeconds: number,
+    kills: number,
+    threat: number,
+    best: number | null,
+    isRecord: boolean,
+  ) {
+    const fmt = (s: number) =>
+      `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const recordLine = isRecord
+      ? `<span style="color:#ffe066">★ New record!</span>`
+      : best && best > 0
+        ? `Best: <b>${fmt(best)}</b>`
+        : '';
     this.gameoverStats.innerHTML = `
-      Survived <b>${mins}:${String(secs).padStart(2, '0')}</b><br/>
+      Survived <b>${fmt(survivedSeconds)}</b> ${recordLine}<br/>
       Aliens destroyed: <b>${kills}</b> · Peak threat: <b>${threat}</b>
     `;
     this.gameoverEl.classList.add('show');

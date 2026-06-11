@@ -65,8 +65,9 @@ export class Turret extends Structure {
   }
 
   protected onUpgrade() {
-    // Level 3 turrets get a distinctive violet head.
-    if (this.level >= 3) this.headMat.color.setHex(0xa46bff);
+    // Level 3 turrets get a violet head; level 4 goes gold.
+    if (this.level >= 4) this.headMat.color.setHex(0xffd166);
+    else if (this.level >= 3) this.headMat.color.setHex(0xa46bff);
   }
 
   protected markerHeight() {

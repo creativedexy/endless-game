@@ -89,9 +89,14 @@ thing when you stand on it (ring colours tell you what).
   walls.
 - **Economy lives at home**: both ore deposits are tucked safely behind the
   defence line, next to the village plots and support buildings.
-- **Gentler ramp**: slower threat levels, a "swarm regroups" build lull after
-  each rise, one front at a time early on, +3 energy per kill, and the hull
-  slowly self-repairs when no aliens are near it.
+- **Gentler ramp, harder economy**: slower threat levels, a "swarm regroups"
+  build lull after each rise, one front at a time early on, and slow hull
+  self-repair — but resources are tight, so every build is a real choice.
+- **Four enemy types**: green **spitters** (threat 4+) stand off and lob acid
+  globs over your fences — you have to sally out through your own fence to
+  kill them. Every third threat level ends its lull with a ☣ **SURGE** pack.
+- **Four upgrade tiers** on everything (gold Lv4 turrets), and your **best
+  survival time** is tracked on the game-over screen.
 
 ## How to play — V4 · Aurora Down: Frontier (portrait)
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { COLORS, RIDGE_RADIUS, type EnemyKind } from './constants';
+import { COLORS, RIDGE_RADIUS, SPIT_RANGE, type EnemyKind } from './constants';
 import type { GameManager } from './GameManager';
 import { angleFromBase, distFromBase, inArc, inGap, nearestGapPoint } from './ridge';
 import type { Structure } from './Structure';
@@ -12,6 +12,7 @@ export interface EnemyStats {
 }
 
 const ATTACK_INTERVAL = 0.9;
+const SPIT_INTERVAL = 1.8;
 const RETARGET_INTERVAL = 1.0;
 
 const KIND_VISUALS: Record<
@@ -21,6 +22,7 @@ const KIND_VISUALS: Record<
   crawler: { color: COLORS.enemyCrawler, size: 0.5, radius: 0.5, hop: 0.18 },
   skitterer: { color: COLORS.enemySkitterer, size: 0.36, radius: 0.38, hop: 0.3 },
   brute: { color: COLORS.enemyBrute, size: 0.95, radius: 0.85, hop: 0.08 },
+  spitter: { color: COLORS.enemySpitter, size: 0.45, radius: 0.45, hop: 0.12 },
 };
 
 /**
@@ -28,7 +30,9 @@ const KIND_VISUALS: Record<
  * - crawlers head straight for the ship
  * - skitterers harass the nearest structure
  * - brutes lumber at the ship and hit walls/hull extra hard
- * Any enemy that bumps into a structure on the way stops to chew on it.
+ * - spitters stand off and lob acid at structures from range — fences
+ *   don't stop their globs, so you have to sally out and kill them
+ * Melee enemies that bump into a structure on the way stop to chew on it.
  */
 export class Enemy {
   readonly mesh: THREE.Mesh;
@@ -77,7 +81,9 @@ export class Enemy {
         ? new THREE.DodecahedronGeometry(vis.size, 0)
         : stats.kind === 'skitterer'
           ? new THREE.TetrahedronGeometry(vis.size * 1.4, 0)
-          : new THREE.IcosahedronGeometry(vis.size, 0);
+          : stats.kind === 'spitter'
+            ? new THREE.ConeGeometry(vis.size, vis.size * 2.2, 5)
+            : new THREE.IcosahedronGeometry(vis.size, 0);
     this.mesh = new THREE.Mesh(geo, this.material);
     this.mesh.position.set(x, vis.size, z);
     this.mesh.castShadow = true;
@@ -100,9 +106,9 @@ export class Enemy {
   private retarget(game: GameManager) {
     this.targetStructure = null;
 
-    if (this.stats.kind === 'skitterer') {
-      // Skitterers harass the nearest vulnerable structure (turrets are
-      // hardened and ignored); fall back to the ship.
+    if (this.stats.kind === 'skitterer' || this.stats.kind === 'spitter') {
+      // Skitterers and spitters go for the nearest vulnerable structure
+      // (turrets are hardened and ignored); fall back to the ship.
       let bestDist = Infinity;
       for (const s of game.structures) {
         if (s.destroyed || s.invincible) continue;
@@ -166,7 +172,11 @@ export class Enemy {
 
     const toTarget = moveTarget.clone().sub(this.position).setY(0);
     const dist = toTarget.length();
-    const reach = this.targetRadius + this.radius + 0.25;
+    // Spitters stand off at lobbing range; everyone else gets in close.
+    const reach =
+      this.stats.kind === 'spitter'
+        ? this.targetRadius + SPIT_RANGE
+        : this.targetRadius + this.radius + 0.25;
 
     if (dist > reach || !atTarget) {
       toTarget.normalize();
@@ -174,7 +184,8 @@ export class Enemy {
       this.mesh.rotation.y = Math.atan2(toTarget.x, toTarget.z);
 
       // Bump into any vulnerable structure en route -> start chewing on it.
-      if (!this.bumpedStructure) {
+      // (Spitters never melee; they stop at range instead.)
+      if (!this.bumpedStructure && this.stats.kind !== 'spitter') {
         for (const s of game.structures) {
           if (s.destroyed || s.invincible || s === this.targetStructure) continue;
           const d = this.position.distanceTo(s.position);
@@ -187,8 +198,13 @@ export class Enemy {
     } else {
       this.attackTimer -= dt;
       if (this.attackTimer <= 0) {
-        this.attackTimer = ATTACK_INTERVAL;
-        game.enemyAttack(this);
+        if (this.stats.kind === 'spitter') {
+          this.attackTimer = SPIT_INTERVAL;
+          game.enemySpit(this);
+        } else {
+          this.attackTimer = ATTACK_INTERVAL;
+          game.enemyAttack(this);
+        }
       }
     }
 

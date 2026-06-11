@@ -32,20 +32,20 @@ export const SPRINT_MULT = 1.25;
 export const SHIP_MAX_HP = 500;
 export const SHIP_RADIUS = 3.4; // attack / collision radius of the wreck
 export const SHIP_INTERACT_RANGE = SHIP_RADIUS + 2.6;
-export const SHIP_REPAIR_COST = 15; // salvage
+export const SHIP_REPAIR_COST = 20; // salvage
 export const SHIP_REPAIR_AMOUNT = 60;
 
-export const START_ENERGY = 60;
-export const START_SALVAGE = 40;
+export const START_ENERGY = 50;
+export const START_SALVAGE = 30;
 
 export const ENERGY_PICKUP_VALUE = 10;
 export const SALVAGE_PICKUP_VALUE = 8;
-export const DROP_VALUE = 6; // resources dropped by slain aliens
-export const DROP_CHANCE = 0.45;
-export const KILL_REWARD = 3; // guaranteed energy per kill — fighting funds building
-export const MAX_PICKUPS = 14;
-export const INITIAL_PICKUPS = 8; // scattered at game start so second 1 is active
-export const PICKUP_SPAWN_INTERVAL = 2.0;
+export const DROP_VALUE = 5; // resources dropped by slain aliens
+export const DROP_CHANCE = 0.35;
+export const KILL_REWARD = 2; // guaranteed energy per kill — fighting funds building
+export const MAX_PICKUPS = 10;
+export const INITIAL_PICKUPS = 6; // scattered at game start so second 1 is active
+export const PICKUP_SPAWN_INTERVAL = 2.6;
 export const PICKUP_MAGNET_RANGE = 2.4; // pickups drift toward the player
 export const PICKUP_COLLECT_RANGE = 1.1;
 
@@ -75,7 +75,7 @@ export const THREAT_INTERVAL = 35; // seconds per threat level
 export const THREAT_LULL = 6; // spawn pause after each threat rise — breathe, build
 export const MAX_ENEMIES = 55;
 
-export const HULL_REGEN = 1.5; // hp/s the ship self-repairs when no aliens are near
+export const HULL_REGEN = 1.0; // hp/s the ship self-repairs when no aliens are near
 export const HULL_REGEN_SAFE_RADIUS = 11;
 
 export interface ResourceCost {
@@ -110,7 +110,7 @@ export interface PadSpot {
  * rocks and spires clear of them.
  *
  * Per gap: two turret sockets flanking inside, one forward socket
- * outside, and two barrier slots (inner prebuilt) spanning the gap.
+ * outside, and a single prebuilt barrier slot spanning the gap.
  * By the base: economy plots, village plots, and the ore deposits.
  */
 export const PAD_LAYOUT: PadSpot[] = (() => {
@@ -131,18 +131,13 @@ export const PAD_LAYOUT: PadSpot[] = (() => {
       z: BASE_Z + Math.sin(gap) * (RIDGE_RADIUS + 3.2),
       kind: 'turret',
     });
-    for (const [off, prebuilt] of [
-      [-0.8, true],
-      [0.8, false],
-    ] as const) {
-      pads.push({
-        x: BASE_X + Math.cos(gap) * (RIDGE_RADIUS + off),
-        z: BASE_Z + Math.sin(gap) * (RIDGE_RADIUS + off),
-        kind: 'barrier',
-        angle: gap,
-        prebuilt,
-      });
-    }
+    pads.push({
+      x: BASE_X + Math.cos(gap) * RIDGE_RADIUS,
+      z: BASE_Z + Math.sin(gap) * RIDGE_RADIUS,
+      kind: 'barrier',
+      angle: gap,
+      prebuilt: true, // one fence per gap, already standing
+    });
   }
   // Economy and support plots in the base ring.
   const ring: Array<[number, StructureKind]> = [
@@ -166,7 +161,7 @@ export interface StructureDef {
   name: string;
   icon: string;
   buildCost: ResourceCost;
-  upgradeCost: [ResourceCost, ResourceCost]; // level 1 -> 2, level 2 -> 3
+  upgradeCost: ResourceCost[]; // cost of level n -> n+1 at index n-1
 }
 
 export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
@@ -178,6 +173,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 55, salvage: 0 },
       { energy: 95, salvage: 0 },
+      { energy: 170, salvage: 0 },
     ],
   },
   barrier: {
@@ -188,6 +184,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 0, salvage: 30 },
       { energy: 0, salvage: 50 },
+      { energy: 0, salvage: 85 },
     ],
   },
   extractor: {
@@ -198,6 +195,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 40, salvage: 15 },
       { energy: 70, salvage: 25 },
+      { energy: 110, salvage: 40 },
     ],
   },
   forge: {
@@ -208,6 +206,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 35, salvage: 25 },
       { energy: 60, salvage: 40 },
+      { energy: 95, salvage: 65 },
     ],
   },
   beacon: {
@@ -218,6 +217,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 35, salvage: 20 },
       { energy: 60, salvage: 35 },
+      { energy: 95, salvage: 55 },
     ],
   },
   factory: {
@@ -228,16 +228,18 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 60, salvage: 40 },
       { energy: 90, salvage: 60 },
+      { energy: 140, salvage: 95 },
     ],
   },
   mine: {
     kind: 'mine',
     name: 'Mine',
     icon: '⛏',
-    buildCost: { energy: 30, salvage: 30 },
+    buildCost: { energy: 35, salvage: 35 },
     upgradeCost: [
-      { energy: 45, salvage: 35 },
-      { energy: 70, salvage: 55 },
+      { energy: 50, salvage: 40 },
+      { energy: 80, salvage: 60 },
+      { energy: 120, salvage: 95 },
     ],
   },
   village: {
@@ -248,62 +250,75 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
     upgradeCost: [
       { energy: 30, salvage: 35 },
       { energy: 50, salvage: 55 },
+      { energy: 80, salvage: 85 },
     ],
   },
 };
 
-export const MAX_LEVEL = 3;
+export const MAX_LEVEL = 4;
 
 // Per-level structure stats (index = level - 1).
 export const TURRET_STATS = [
   { range: 8.0, damage: 8, fireRate: 1.4, maxHp: 70 },
   { range: 9.5, damage: 13, fireRate: 2.0, maxHp: 105 },
   { range: 11.0, damage: 20, fireRate: 2.7, maxHp: 150 },
+  { range: 12.5, damage: 30, fireRate: 3.4, maxHp: 150 },
 ];
 
 // Shield fences span their whole gap: aliens must chew through, but the
 // player (and drones) pass freely.
-export const BARRIER_STATS = [{ maxHp: 250 }, { maxHp: 450 }, { maxHp: 700 }];
+export const BARRIER_STATS = [
+  { maxHp: 250 },
+  { maxHp: 450 },
+  { maxHp: 700 },
+  { maxHp: 1050 },
+];
 export const BARRIER_RADIUS = 4.6; // bump/attack radius covering the gap width
 
 export const EXTRACTOR_STATS = [
   { maxHp: 80, energyPerTick: 4, tickInterval: 4 },
   { maxHp: 110, energyPerTick: 7, tickInterval: 4 },
   { maxHp: 150, energyPerTick: 11, tickInterval: 4 },
+  { maxHp: 200, energyPerTick: 16, tickInterval: 4 },
 ];
 
 export const BEACON_STATS = [
   { maxHp: 90, healPerSecond: 3, radius: 6 },
   { maxHp: 120, healPerSecond: 5, radius: 7 },
   { maxHp: 160, healPerSecond: 8, radius: 8 },
+  { maxHp: 210, healPerSecond: 12, radius: 9 },
 ];
 
 export const FORGE_STATS = [
   { maxHp: 85, salvagePerTick: 3, tickInterval: 5 },
   { maxHp: 115, salvagePerTick: 5, tickInterval: 5 },
   { maxHp: 155, salvagePerTick: 8, tickInterval: 5 },
+  { maxHp: 205, salvagePerTick: 12, tickInterval: 5 },
 ];
 
 export const FACTORY_STATS = [
   { maxHp: 110, maxArchers: 1 },
   { maxHp: 150, maxArchers: 2 },
   { maxHp: 200, maxArchers: 3 },
+  { maxHp: 260, maxArchers: 4 },
 ];
 export const ARCHER_REBUILD_TIME = 8; // seconds to replace a lost drone
-export const MAX_ARCHERS = 4; // global cap across all factories
+export const MAX_ARCHERS = 5; // global cap across all factories
 
 // Mines pay out both resources every tick — rich, but they sit out in
 // the wilds where the aliens are.
 export const MINE_STATS = [
-  { maxHp: 120, energyPerTick: 3, salvagePerTick: 3, tickInterval: 5 },
-  { maxHp: 165, energyPerTick: 5, salvagePerTick: 5, tickInterval: 5 },
-  { maxHp: 220, energyPerTick: 8, salvagePerTick: 8, tickInterval: 5 },
+  { maxHp: 120, energyPerTick: 2, salvagePerTick: 2, tickInterval: 5 },
+  { maxHp: 165, energyPerTick: 4, salvagePerTick: 4, tickInterval: 5 },
+  { maxHp: 220, energyPerTick: 6, salvagePerTick: 6, tickInterval: 5 },
+  { maxHp: 290, energyPerTick: 9, salvagePerTick: 9, tickInterval: 5 },
 ];
 
 export const VILLAGE_STATS = [
   { maxHp: 100, survivors: 1 },
   { maxHp: 140, survivors: 2 },
   { maxHp: 190, survivors: 3 },
+  { maxHp: 250, survivors: 4 },
 ];
 export const SURVIVOR_SPEED = 4.4;
 export const SURVIVOR_RESPAWN_TIME = 10;
@@ -318,7 +333,10 @@ export const ARCHER_STATS = {
   projectileSpeed: 20,
 };
 
-export type EnemyKind = 'crawler' | 'skitterer' | 'brute';
+export type EnemyKind = 'crawler' | 'skitterer' | 'brute' | 'spitter';
+
+export const SPIT_RANGE = 7; // spitters shell structures from out here
+export const SPIT_FLIGHT_TIME = 0.7; // seconds an acid glob is airborne
 
 export const COLORS = {
   sky: 0x101a2e,
@@ -350,6 +368,7 @@ export const COLORS = {
   enemyCrawler: 0x9b4df0,
   enemySkitterer: 0xf04dc4,
   enemyBrute: 0xd6453a,
+  enemySpitter: 0xa4e84d,
   enemyHit: 0xffffff,
   player: 0xffc857,
   playerVisor: 0x37e6ff,

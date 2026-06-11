@@ -65,6 +65,7 @@ import {
   HULL_REGEN,
   HULL_REGEN_SAFE_RADIUS,
   PAD_LAYOUT,
+  SPIT_FLIGHT_TIME,
   RIDGE_BAND,
   RIDGE_RADIUS,
 } from './constants';
@@ -237,6 +238,7 @@ export class GameManager {
     for (const s of this.structures) s.update(dt, this);
 
     this.updateProjectiles(dt);
+    this.updateSpitBlobs(dt);
     this.updatePickups(dt);
     this.updateBuildContext(dt);
 
@@ -651,6 +653,80 @@ export class GameManager {
     this.ui.flashMessage('⚠ The swarm regroups — build!');
   }
 
+  /** Every third threat level the lull ends in one big push. */
+  onSurge() {
+    this.sound.surge();
+    this.ui.flashMessage('☣ SURGE INCOMING');
+  }
+
+  // ------------------------------------------------------------- acid globs
+
+  /** Pooled spitter projectiles: a lobbed glob that lands after a moment. */
+  private spitBlobs: Array<{
+    mesh: THREE.Mesh;
+    from: THREE.Vector3;
+    to: THREE.Vector3;
+    target: Structure | null; // null = the ship
+    damage: number;
+    t: number; // 0..1 flight progress, <0 = idle
+  }> = [];
+
+  /** Called by a spitter when its attack timer fires at range. */
+  enemySpit(enemy: Enemy) {
+    let blob = this.spitBlobs.find((b) => b.t < 0);
+    if (!blob) {
+      if (this.spitBlobs.length >= 14) return;
+      blob = {
+        mesh: new THREE.Mesh(
+          new THREE.SphereGeometry(0.24, 6, 6),
+          new THREE.MeshBasicMaterial({ color: COLORS.enemySpitter }),
+        ),
+        from: new THREE.Vector3(),
+        to: new THREE.Vector3(),
+        target: null,
+        damage: 0,
+        t: -1,
+      };
+      blob.mesh.visible = false;
+      this.scene.add(blob.mesh);
+      this.spitBlobs.push(blob);
+    }
+
+    const target = enemy.currentStructureTarget;
+    blob.target = target && !target.destroyed ? target : null;
+    blob.from.copy(enemy.position).setY(0.9);
+    blob.to.copy(blob.target ? blob.target.position : this.ship.position).setY(1.0);
+    blob.damage = enemy.attackDamage;
+    blob.t = 0;
+    blob.mesh.visible = true;
+    this.sound.spit();
+  }
+
+  private updateSpitBlobs(dt: number) {
+    for (const b of this.spitBlobs) {
+      if (b.t < 0) continue;
+      b.t += dt / SPIT_FLIGHT_TIME;
+      if (b.t >= 1) {
+        b.t = -1;
+        b.mesh.visible = false;
+        this.effects.burst(b.to.clone(), COLORS.enemySpitter, 6, 4);
+        if (b.target) {
+          if (!b.target.destroyed) {
+            b.target.takeDamage(b.damage);
+            if (b.target.destroyed) this.onStructureDestroyed(b.target);
+          }
+        } else {
+          this.ship.takeDamage(b.damage);
+          this.cameraCtl.shake(0.2);
+          this.sound.hit();
+        }
+        continue;
+      }
+      b.mesh.position.lerpVectors(b.from, b.to, b.t);
+      b.mesh.position.y += Math.sin(b.t * Math.PI) * 2.4;
+    }
+  }
+
   /**
    * Hover-to-act: standing on a spot fills a progress ring, then the
    * action fires automatically — build the selected blueprint on an empty
@@ -875,7 +951,29 @@ export class GameManager {
     }
     this.ui.setContextHint(null);
     this.ui.setThreatArrows([]);
-    this.ui.showGameOver(this.spawner.elapsed, this.kills, this.spawner.threatLevel);
+    // Track the best survival time across runs.
+    const survived = Math.floor(this.spawner.elapsed);
+    let best = 0;
+    try {
+      best = Number(localStorage.getItem('aurora-v5-best') ?? 0);
+    } catch {
+      /* private browsing */
+    }
+    const isRecord = survived > best;
+    if (isRecord) {
+      try {
+        localStorage.setItem('aurora-v5-best', String(survived));
+      } catch {
+        /* private browsing */
+      }
+    }
+    this.ui.showGameOver(
+      this.spawner.elapsed,
+      this.kills,
+      this.spawner.threatLevel,
+      isRecord ? null : best,
+      isRecord,
+    );
   }
 
   private restart() {
@@ -894,6 +992,10 @@ export class GameManager {
       pad.setProgress(0, 0xffffff);
     }
     for (const p of this.projectiles) p.deactivate();
+    for (const b of this.spitBlobs) {
+      b.t = -1;
+      b.mesh.visible = false;
+    }
 
     this.ship.reset();
     this.player.reset();
