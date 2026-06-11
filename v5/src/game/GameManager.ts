@@ -138,10 +138,10 @@ export class GameManager {
     this.scene.background = new THREE.Color(COLORS.sky);
     this.scene.fog = new THREE.Fog(COLORS.fog, 26, 62);
 
-    // Cold light: icy hemisphere + a pale blue "moon" key light.
-    const hemi = new THREE.HemisphereLight(0xbfd8ff, 0x44506b, 0.75);
+    // Smoggy dusk: warm hemisphere + a low golden-hour sun.
+    const hemi = new THREE.HemisphereLight(0xffd2a8, 0x4a3a4c, 0.9);
     this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xcfe2ff, 1.15);
+    const sun = new THREE.DirectionalLight(0xffb87a, 1.15);
     sun.position.set(14, 22, 8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -425,11 +425,11 @@ export class GameManager {
     this.sound.enemyDie();
     this.effects.burst(e.position.clone().setY(0.6), e.colorHex, 12, 7);
 
-    // Every kill pays a little energy, so fighting always funds building.
+    // Every kill pays a little cash, so fighting always funds building.
     this.energy += KILL_REWARD;
-    this.effects.floatText(e.position.clone().setY(1), `+${KILL_REWARD} ◆`, '#35f0d0');
+    this.effects.floatText(e.position.clone().setY(1), `+$${KILL_REWARD}`, '#6dff7c');
 
-    // Aliens often drop a bigger resource chunk on top.
+    // Rivals often drop a bigger resource bundle on top.
     if (Math.random() < DROP_CHANCE) {
       const type: PickupType = Math.random() < 0.5 ? 'energy' : 'salvage';
       this.pickups.push(new Pickup(this.scene, e.position.x, e.position.z, type, DROP_VALUE));
@@ -458,8 +458,8 @@ export class GameManager {
   private onStructureDestroyed(s: Structure) {
     this.sound.structureDestroyed();
     this.effects.burst(s.position.clone().setY(0.8), 0xffffff, 16, 8);
-    this.ui.flashMessage(`${s.def.name} destroyed!`);
-    // A razed village scatters its people.
+    this.ui.flashMessage(`${s.def.name} wrecked!`);
+    // A razed crib scatters its crew.
     if (s instanceof Village) {
       for (const sv of s.survivors) sv.dead = true;
     }
@@ -481,25 +481,25 @@ export class GameManager {
     this.salvage -= cost.salvage;
   }
 
-  /** Reward from a Power Relay tick — credited with a floating "+n". */
+  /** Reward from a Money Counter tick — credited with a floating "+n". */
   extractorTick(extractor: Extractor, amount: number) {
     this.energy += amount;
-    this.effects.floatText(extractor.position.clone().setY(2.4), `+${amount} ◆`, '#35f0d0');
+    this.effects.floatText(extractor.position.clone().setY(2.4), `+$${amount}`, '#6dff7c');
   }
 
-  /** Reward from a Salvage Forge tick. */
+  /** Reward from a Chop Shop tick. */
   forgeTick(forge: Forge, amount: number) {
     this.salvage += amount;
-    this.effects.floatText(forge.position.clone().setY(2.2), `+${amount} ▣`, '#ffa94d');
+    this.effects.floatText(forge.position.clone().setY(2.2), `+${amount} 🔩`, '#ffa94d');
   }
 
-  /** Reward from a Mine tick — both resources at once. */
+  /** Reward from a Corner Store tick — both resources at once. */
   mineTick(mine: Mine, energy: number, salvage: number) {
     this.energy += energy;
     this.salvage += salvage;
     this.effects.floatText(
       mine.position.clone().setY(2.6),
-      `+${energy} ◆ +${salvage} ▣`,
+      `+$${energy} +${salvage} 🔩`,
       '#ffd9a8',
     );
   }
@@ -510,7 +510,7 @@ export class GameManager {
     this.archers.push(archer);
     this.sound.build();
     this.effects.burst(at.clone().setY(1.2), COLORS.archer, 8, 5);
-    this.ui.flashMessage('Archer drone online');
+    this.ui.flashMessage('Rider on the street');
     return archer;
   }
 
@@ -528,10 +528,10 @@ export class GameManager {
     pk.collected = true;
     if (pk.type === 'energy') {
       this.energy += pk.value;
-      this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} ◆`, '#35f0d0');
+      this.effects.floatText(pk.position.clone().setY(1), `+$${pk.value}`, '#6dff7c');
     } else {
       this.salvage += pk.value;
-      this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} ▣`, '#ffa94d');
+      this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} 🔩`, '#ffa94d');
     }
   }
 
@@ -556,12 +556,12 @@ export class GameManager {
         if (pk.type === 'energy') {
           this.energy += pk.value;
           this.sound.collectEnergy();
-          this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} ◆`, '#35f0d0');
+          this.effects.floatText(pk.position.clone().setY(1), `+$${pk.value}`, '#6dff7c');
           this.effects.burst(pk.position.clone().setY(0.6), COLORS.energy, 5, 4);
         } else {
           this.salvage += pk.value;
           this.sound.collectSalvage();
-          this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} ▣`, '#ffa94d');
+          this.effects.floatText(pk.position.clone().setY(1), `+${pk.value} 🔩`, '#ffa94d');
           this.effects.burst(pk.position.clone().setY(0.6), COLORS.salvage, 5, 4);
         }
         pk.dispose(this.scene);
@@ -691,13 +691,13 @@ export class GameManager {
 
   /** The spawner calls this whenever the threat rises and grants a lull. */
   onSwarmLull() {
-    this.ui.flashMessage('⚠ The swarm regroups — build!');
+    this.ui.flashMessage('⚠ They pulled back to regroup — build!');
   }
 
   /** Every third threat level the lull ends in one big push. */
   onSurge() {
     this.sound.surge();
-    this.ui.flashMessage('☣ SURGE INCOMING');
+    this.ui.flashMessage('🚨 DRIVE-BY INCOMING');
   }
 
   // ------------------------------------------------------------- acid globs
@@ -818,7 +818,7 @@ export class GameManager {
             perform = () => this.repairStructure(s);
           } else {
             key = `deny-repair:${padIndex}`;
-            hint = `Need ▣${STRUCTURE_REPAIR_COST} to repair`;
+            hint = `Need ${STRUCTURE_REPAIR_COST} 🔩 to repair`;
           }
         } else if (s.canUpgrade) {
           const cost = s.nextUpgradeCost!;
@@ -845,11 +845,11 @@ export class GameManager {
         key = 'ship-repair';
         need = REPAIR_DWELL;
         color = 0x7dff9a;
-        hint = 'Repairing hull…';
+        hint = 'Patching up the HQ…';
         perform = () => this.repairShip();
       } else {
         key = 'deny-ship';
-        hint = `Need ▣${SHIP_REPAIR_COST} to repair hull`;
+        hint = `Need ${SHIP_REPAIR_COST} 🔩 to patch the HQ`;
       }
     }
 
@@ -1062,7 +1062,7 @@ export class GameManager {
 
 function costText(cost: ResourceCost): string {
   const parts: string[] = [];
-  if (cost.energy > 0) parts.push(`◆${cost.energy}`);
-  if (cost.salvage > 0) parts.push(`▣${cost.salvage}`);
+  if (cost.energy > 0) parts.push(`$${cost.energy}`);
+  if (cost.salvage > 0) parts.push(`${cost.salvage} 🔩`);
   return parts.join(' ');
 }

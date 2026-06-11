@@ -22,7 +22,7 @@ Both games auto-deploy to GitHub Pages on every push:
 - **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
 - **V3 (portrait, chokepoint map):** https://creativedexy.github.io/endless-game/v3/
 - **V4 (portrait, frontier map + mines & villages):** https://creativedexy.github.io/endless-game/v4/
-- **V5 (portrait, sealed fortress — no build menus at all):** https://creativedexy.github.io/endless-game/v5/
+- **V5 (portrait, "Hold the Block" — LA turf-defence reskin):** https://creativedexy.github.io/endless-game/v5/
 
 Open the link on your phone and play. V2 is designed for portrait, V1 for
 landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
@@ -74,29 +74,34 @@ npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
 
-## How to play — V5 · Aurora Down: Sealed Fortress (portrait)
+## How to play — V5 · Hold the Block (portrait)
 
-V4's map, redesigned around one idea: **the map is the build menu**. The
-blueprint bar is gone — every glowing socket is typed and builds exactly one
-thing when you stand on it (ring colours tell you what).
+The Sealed Fortress rules, reskinned: a stylised, cartoon **LA block at
+dusk**. Your crew's HQ sits in the corner behind a graffiti'd wall with two
+alley gaps; rival crews roll in down the streets in endless waves. The core
+idea is unchanged — **the map is the build menu**: every glowing spot is
+typed and builds exactly one thing when you stand on it.
 
-- **Shield fences** span the two ridge gaps: aliens must chew through them,
-  you and your drones walk straight through. Their floating health bars are
-  readable from across the map. Both gaps start with a free Lv1 fence (and
-  one turret) already standing.
-- **Turrets are invincible** — aliens ignore them. All the pressure lands on
-  the fences and the hull; energy grows your guns, salvage maintains your
-  walls.
-- **Economy lives at home**: both ore deposits are tucked safely behind the
-  defence line, next to the village plots and support buildings.
-- **Gentler ramp, harder economy**: slower threat levels, a "swarm regroups"
-  build lull after each rise, one front at a time early on, and slow hull
-  self-repair — but resources are tight, so every build is a real choice.
-- **Four enemy types**: green **spitters** (threat 4+) stand off and lob acid
-  globs over your fences — you have to sally out through your own fence to
-  kill them. Every third threat level ends its lull with a ☣ **SURGE** pack.
-- **Four upgrade tiers** on everything (gold Lv4 turrets), and your **best
-  survival time** is tracked on the game-over screen.
+- **🚧 Barricades** span the two alleys: rivals must smash through them, you
+  slip past freely. Both alleys start with a free Lv1 barricade (and one
+  shooter post) already standing.
+- **Shooter posts are untouchable** — rivals ignore them. All the pressure
+  lands on the barricades and the HQ; cash ($) grows your firepower, parts
+  (🔩) maintain your barricades and patch the HQ.
+- **Economy lives at home**: 🏪 corner-store plots pay protection in both
+  resources, 🏘 crew cribs house runners who fetch nearby drops, and the
+  money counter / chop shop / fix-it crew plots round out the base ring.
+- **Gentler ramp, harder economy**: a regroup lull after each heat rise, one
+  front at a time early on, slow HQ self-repair — but money is tight, so
+  every build is a real choice.
+- **Four rival types**, including molotov-throwers (heat 4+) that stand off
+  and lob fire over your barricades — you have to sally out to drop them.
+  Every third heat level ends its lull with a 🚨 **DRIVE-BY** pack.
+- **Four upgrade tiers** on everything, and your **best survival time** is
+  tracked on the game-over screen.
+
+*(V5's sci-fi incarnation, "Aurora Down: Sealed Fortress", lives on in git
+history; V1–V4 below are still the space game.)*
 
 ## How to play — V4 · Aurora Down: Frontier (portrait)
 

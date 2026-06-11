@@ -1,4 +1,4 @@
-/* Aurora Down — portrait mobile-first HUD in a frosted-glass style. */
+/* Hold the Block — portrait mobile-first HUD in a frosted-glass style. */
 
 * {
   margin: 0;
@@ -11,7 +11,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #101a2e;
+  background: #241430;
   font-family: 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif;
   -webkit-user-select: none;
   user-select: none;
@@ -105,8 +105,8 @@ body {
   height: 100%;
   width: 100%;
   border-radius: 6px;
-  background: linear-gradient(90deg, #37e6ff, #5cffd9);
-  box-shadow: 0 0 10px rgba(55, 230, 255, 0.7);
+  background: linear-gradient(90deg, #ffd166, #ff9a3c);
+  box-shadow: 0 0 10px rgba(255, 190, 80, 0.7);
   transition: width 0.18s ease-out;
 }
 
@@ -130,7 +130,7 @@ body {
 }
 
 #energy-display {
-  color: #5cffd9;
+  color: #7dff8a;
 }
 
 #salvage-display {
@@ -439,7 +439,7 @@ body.touch #touch-controls {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 8px;
-  background: linear-gradient(180deg, #d8f6ff, #52a8ff);
+  background: linear-gradient(180deg, #ffe9b0, #ff9a3c);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

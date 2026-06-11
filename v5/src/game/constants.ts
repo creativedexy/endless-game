@@ -1,4 +1,4 @@
-// Shared tuning values for Aurora Down. Tweak these to rebalance the game.
+// Shared tuning values for Hold the Block. Tweak these to rebalance the game.
 
 // V4 "Frontier": a big rectangular map. The base sits in the south-east
 // corner against two cliff walls; the open quadrant faces north-west.
@@ -19,8 +19,8 @@ export const ARC_END = (290 * Math.PI) / 180;
 export const GAP_ANGLES = [200, 250].map((d) => (d * Math.PI) / 180);
 export const GAP_HALF_WIDTH = 0.28; // radians (~16°) half-width of each gap
 
-// Ore deposits — V5 keeps them tucked safely behind the defence line,
-// along the cliffs beside the wreck.
+// Corner-store plots — tucked safely behind the defence line, along the
+// big buildings beside the HQ.
 export const DEPOSITS: Array<{ x: number; z: number }> = [
   { x: 16, z: 0 },
   { x: 0, z: 16 },
@@ -40,7 +40,7 @@ export const START_SALVAGE = 30;
 
 export const ENERGY_PICKUP_VALUE = 10;
 export const SALVAGE_PICKUP_VALUE = 8;
-export const DROP_VALUE = 5; // resources dropped by slain aliens
+export const DROP_VALUE = 5; // resources dropped by downed rivals
 export const DROP_CHANCE = 0.3;
 export const KILL_REWARD = 1; // guaranteed energy per kill — fighting funds building
 export const MAX_PICKUPS = 10;
@@ -79,7 +79,7 @@ export const THREAT_INTERVAL = 30; // seconds per threat level
 export const THREAT_LULL = 6; // spawn pause after each threat rise — breathe, build
 export const MAX_ENEMIES = 90;
 
-export const HULL_REGEN = 1.0; // hp/s the ship self-repairs when no aliens are near
+export const HULL_REGEN = 1.0; // hp/s the HQ self-repairs when no rivals are near
 export const HULL_REGEN_SAFE_RADIUS = 11;
 
 export interface ResourceCost {
@@ -171,7 +171,7 @@ export interface StructureDef {
 export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   turret: {
     kind: 'turret',
-    name: 'Blaster Turret',
+    name: 'Shooter Post',
     icon: '⌖',
     buildCost: { energy: 45, salvage: 0 },
     upgradeCost: [
@@ -182,8 +182,8 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   barrier: {
     kind: 'barrier',
-    name: 'Shield Fence',
-    icon: '⬡',
+    name: 'Barricade',
+    icon: '🚧',
     buildCost: { energy: 0, salvage: 20 },
     upgradeCost: [
       { energy: 0, salvage: 30 },
@@ -193,8 +193,8 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   extractor: {
     kind: 'extractor',
-    name: 'Power Relay',
-    icon: '⚡',
+    name: 'Money Counter',
+    icon: '💵',
     buildCost: { energy: 30, salvage: 15 },
     upgradeCost: [
       { energy: 40, salvage: 15 },
@@ -204,8 +204,8 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   forge: {
     kind: 'forge',
-    name: 'Salvage Forge',
-    icon: '⚒',
+    name: 'Chop Shop',
+    icon: '🔧',
     buildCost: { energy: 25, salvage: 20 },
     upgradeCost: [
       { energy: 35, salvage: 25 },
@@ -215,7 +215,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   beacon: {
     kind: 'beacon',
-    name: 'Repair Beacon',
+    name: 'Fix-It Crew',
     icon: '✚',
     buildCost: { energy: 25, salvage: 25 },
     upgradeCost: [
@@ -226,7 +226,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   factory: {
     kind: 'factory',
-    name: 'Drone Factory',
+    name: 'Bike Garage',
     icon: '⚙',
     buildCost: { energy: 50, salvage: 40 },
     upgradeCost: [
@@ -237,8 +237,8 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   mine: {
     kind: 'mine',
-    name: 'Mine',
-    icon: '⛏',
+    name: 'Corner Store',
+    icon: '🏪',
     buildCost: { energy: 35, salvage: 35 },
     upgradeCost: [
       { energy: 50, salvage: 40 },
@@ -248,7 +248,7 @@ export const STRUCTURE_DEFS: Record<StructureKind, StructureDef> = {
   },
   village: {
     kind: 'village',
-    name: 'Village',
+    name: 'Crew Crib',
     icon: '🏘',
     buildCost: { energy: 20, salvage: 35 },
     upgradeCost: [
@@ -269,8 +269,8 @@ export const TURRET_STATS = [
   { range: 12.5, damage: 21, fireRate: 3.4, maxHp: 150 },
 ];
 
-// Shield fences span their whole gap: aliens must chew through, but the
-// player (and drones) pass freely.
+// Barricades span their whole alley: rivals must smash through, but the
+// player (and riders) slip past freely.
 export const BARRIER_STATS = [
   { maxHp: 250 },
   { maxHp: 450 },
@@ -309,8 +309,7 @@ export const FACTORY_STATS = [
 export const ARCHER_REBUILD_TIME = 8; // seconds to replace a lost drone
 export const MAX_ARCHERS = 5; // global cap across all factories
 
-// Mines pay out both resources every tick — rich, but they sit out in
-// the wilds where the aliens are.
+// Corner stores pay protection in both cash and parts every tick.
 export const MINE_STATS = [
   { maxHp: 120, energyPerTick: 2, salvagePerTick: 2, tickInterval: 5 },
   { maxHp: 165, energyPerTick: 4, salvagePerTick: 4, tickInterval: 5 },
@@ -343,22 +342,22 @@ export const SPIT_RANGE = 7; // spitters shell structures from out here
 export const SPIT_FLIGHT_TIME = 0.7; // seconds an acid glob is airborne
 
 export const COLORS = {
-  sky: 0x101a2e,
-  fog: 0x2a3f5e,
-  snow: 0xdfe9f5,
-  snowDeep: 0xb8c9de,
-  ice: 0x9fe8ff,
-  energy: 0x35f0d0,
-  salvage: 0xffa94d,
+  sky: 0x241430, // smoggy LA dusk
+  fog: 0x4d3048,
+  snow: 0x59555e, // asphalt ground (key kept from the frontier days)
+  snowDeep: 0x46434c,
+  ice: 0xffd9a0, // sodium streetlight glow
+  energy: 0x6dff7c, // cash
+  salvage: 0xffa94d, // parts
   fire: 0xff7a26,
   ember: 0xffc14d,
   smoke: 0x3c4150,
-  scorch: 0x1b1f29,
-  shipHull: 0x8d99ad,
-  shipDark: 0x4a5263,
-  shipGlow: 0x37e6ff,
-  pad: 0x2e3a52,
-  padRing: 0x52f5ff,
+  scorch: 0x17161a,
+  shipHull: 0xc9a87c, // HQ stucco
+  shipDark: 0x5a4a3e,
+  shipGlow: 0xffc46b, // warm window light
+  pad: 0x2e2e36,
+  padRing: 0xffd166,
   turretBase: 0xa3b3cc,
   turretHead: 0x4d9df0,
   wall: 0x7e8aa3,
