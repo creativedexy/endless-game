@@ -1,25 +1,32 @@
-# Outpost Zero — Endless Colony Defence
+# Endless Game — two tiny 3D defence games
 
 Top down sci-fi builder non stop game 🤟🏻
 
-A tiny 3D sci-fi colony defence game that runs in the browser, built with
-**Vite + Three.js + TypeScript**. You play a small engineer sprinting around an
-alien outpost: collect energy crystals, build and upgrade turrets on build
-pads, repair the colony core, and smack aliens with your tool — forever, with
-the pressure slowly ramping up.
+Two small 3D browser games built with **Vite + Three.js + TypeScript**:
+
+- **V1 · Outpost Zero** (landscape) — defend a colony core: collect energy,
+  build/upgrade turrets, repair, melee aliens.
+- **V2 · Aurora Down** (portrait) — your ship crashed on a frozen world and
+  is on fire. Run around the wreck with a blaster: collect **energy** and
+  **salvage**, build turrets / barriers / power relays / repair beacons on
+  pads, repair the hull, and survive three kinds of alien forever.
 
 No external assets — everything is low-poly placeholder geometry and
 procedurally generated WebAudio sound.
 
 ## ▶ Play online (no install needed)
 
-The game auto-deploys to GitHub Pages on every push:
+Both games auto-deploy to GitHub Pages on every push:
 
-**https://creativedexy.github.io/endless-game/**
+- **V1 (landscape):** https://creativedexy.github.io/endless-game/
+- **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
+- **V3 (portrait, chokepoint map):** https://creativedexy.github.io/endless-game/v3/
+- **V4 (portrait, frontier map + mines & villages):** https://creativedexy.github.io/endless-game/v4/
+- **V5 (portrait, "Hold the Block" — LA turf-defence reskin):** https://creativedexy.github.io/endless-game/v5/
 
-Open that link on your phone, rotate to landscape, and play. Tip: use
-"Add to Home Screen" in Safari's share menu for a fullscreen experience
-without the address bar.
+Open the link on your phone and play. V2 is designed for portrait, V1 for
+landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
+fullscreen experience without the address bar.
 
 Deployment is handled by `.github/workflows/deploy.yml` — GitHub Actions
 builds the project in the cloud and publishes `dist/` to Pages, so you never
@@ -67,7 +74,102 @@ npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
 
-## How to play
+## How to play — V5 · Hold the Block (portrait)
+
+The Sealed Fortress rules, reskinned: a stylised, cartoon **LA block at
+dusk**. Your crew's HQ sits in the corner behind a graffiti'd wall with two
+alley gaps; rival crews roll in down the streets in endless waves. The core
+idea is unchanged — **the map is the build menu**: every glowing spot is
+typed and builds exactly one thing when you stand on it.
+
+- **🚧 Barricades** span the two alleys: rivals must smash through them, you
+  slip past freely. Both alleys start with a free Lv1 barricade (and one
+  shooter post) already standing.
+- **Shooter posts are untouchable** — rivals ignore them. All the pressure
+  lands on the barricades and the HQ; cash ($) grows your firepower, parts
+  (🔩) maintain your barricades and patch the HQ.
+- **Economy lives at home**: 🏪 corner-store plots pay protection in both
+  resources, 🏘 crew cribs house runners who fetch nearby drops, and the
+  money counter / chop shop / fix-it crew plots round out the base ring.
+- **Gentler ramp, harder economy**: a regroup lull after each heat rise, one
+  front at a time early on, slow HQ self-repair — but money is tight, so
+  every build is a real choice.
+- **Four rival types**, including molotov-throwers (heat 4+) that stand off
+  and lob fire over your barricades — you have to sally out to drop them.
+  Every third heat level ends its lull with a 🚨 **DRIVE-BY** pack.
+- **Four upgrade tiers** on everything, and your **best survival time** is
+  tracked on the game-over screen.
+
+*(V5's sci-fi incarnation, "Aurora Down: Sealed Fortress", lives on in git
+history; V1–V4 below are still the space game.)*
+
+## How to play — V4 · Aurora Down: Frontier (portrait)
+
+The biggest map: your wreck sits in the **corner of a frozen valley**,
+backed by cliffs, with a crag defence line and two glowing gaps guarding the
+open quadrant. New in V4:
+
+- **⛏ Ore deposits** out in the wilds are the only places a **Mine** can be
+  built — it pays both resources every tick, but you have to defend it out
+  there. Mine sites glow amber.
+- **🏘 Village plots** (green) inside the base house villagers who run
+  around auto-collecting nearby drops while you fight at the front.
+- **Threat arrows** at the screen edge point at gaps under attack (and turn
+  red when something is chewing the ship itself).
+- **Sprint**: keep running for a moment and you speed up — the frontier is
+  big. Node pads build their own building regardless of the armed blueprint;
+  ordinary pads still use the selector.
+
+## How to play — V3 · Aurora Down: Hold the Gaps (portrait)
+
+Same loop as V2, new battlefield: the wreck sits inside an **impassable ring
+of crags** with three **glowing gaps**. Alien waves pour through the gaps, so
+walls and turrets placed on the pads flanking each gap form a real line of
+defence — while you sprint between fronts (and out through the gaps for
+pickups). V3 also has a **3D-model pipeline**: drop low-poly `.glb` files
+into `v3/src/models/` (see the README there) and the game swaps them in for
+the procedural placeholder shapes automatically.
+
+## How to play — V2 · Aurora Down (portrait)
+
+Keep the **crashed ship** alive. Aliens spawn endlessly from the edges of the
+snowfield and chew on the hull and your structures. If hull integrity hits
+zero, the game ends. The threat level climbs forever.
+
+- Run over **◆ energy crystals** and **▣ salvage scrap** to collect them.
+  Slain aliens sometimes drop resources too.
+- You carry a **blaster** that **fires by itself** at the nearest alien in
+  range — just keep moving. (Desktop: Space/click also force-fires ahead.)
+- Building is **hover-to-build**: pick a blueprint from the glass selector at
+  the top, then just **stand on a pad** — a progress ring fills and the
+  structure builds itself. Six blueprints:
+  - **⌖ Blaster Turret** (energy) — automatic defence tower
+  - **⬡ Barrier Node** (salvage) — chunky wall that blocks and soaks damage
+  - **⚡ Power Relay** (mixed) — trickles energy into your reserves
+  - **⚒ Salvage Forge** (mixed) — trickles salvage into your reserves
+  - **✚ Repair Beacon** (mixed) — slowly heals nearby structures and the hull
+  - **⚙ Drone Factory** (mixed) — builds **archer drones** that fly in
+    formation behind you and shoot at whatever you're fighting (more drones
+    per level; lost drones are rebuilt)
+- Standing on an existing structure auto-**repairs** it if damaged, otherwise
+  auto-**upgrades** it (2 levels, slightly longer dwell so it's deliberate).
+- Stand near the ship to auto-**repair the hull** with salvage.
+- **Dash** to escape danger or reposition.
+
+Enemy types: purple **crawlers** head for the ship, pink **skitterers** are
+fast and harass your structures, red **brutes** are slow tanks that hit walls
+and the hull extra hard (they join as threat rises).
+
+| | Desktop | Mobile (touch) |
+|---|---|---|
+| Move | `WASD` / arrows | left-thumb glass joystick |
+| Shoot | automatic (`Space`/click to force) | automatic |
+| Dash | `Shift` | large DASH button |
+| Select blueprint | keys `1`-`6` | tap the glass selector bar |
+| Build / upgrade / repair | stand on the spot (hover-to-act) | same |
+| Restart (after game over) | `R` | Restart button |
+
+## How to play — V1 · Outpost Zero (landscape)
 
 Defend the **colony core** in the middle of the map. Aliens spawn endlessly
 from the edges and chew on the core and your turrets. If the core's health
@@ -97,7 +199,30 @@ can while the **threat level** keeps climbing.
 
 ## Project structure
 
+Two self-contained games share one Vite project (`vite.config.ts` builds both
+pages): V1 lives in `src/`, V2 in `v2/src/`.
+
 ```
+v2/
+  index.html               V2 entry page (served at /v2/)
+  src/
+    main.ts, style.css     entry + frosted-glass HUD styling
+    game/
+      GameManager.ts       owns the scene, loop, rules, and all entities
+      constants.ts         all balance/tuning numbers in one place
+      CrashedShip.ts       the burning wreck: health, fire/smoke emitters
+      Structure.ts         base class for buildables (health, levels, repair)
+      Turret.ts / Wall.ts / Extractor.ts / Forge.ts / RepairBeacon.ts / Factory.ts
+      Archer.ts             companion drones built by the Drone Factory
+      Enemy.ts             crawler / skitterer / brute AI
+      EnemySpawner.ts      endless spawning + threat ramp + enemy mix
+      Pickup.ts            energy crystals + salvage scrap (with magnet)
+      Environment.ts       snowfield, crash trench, rocks, falling snow
+      PlayerController.ts  movement, dash, blaster animation
+      CameraController.ts  portrait follow camera + screen shake
+      MobileControls.ts    glass joystick + FIRE/DASH buttons
+      UIManager.ts         glass HUD, build menu, game-over screen
+      Projectile.ts / Effects.ts / Sound.ts / input.ts
 src/
   main.ts                  entry point
   style.css                HUD + touch-controls styling
