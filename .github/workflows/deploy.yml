@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/colony-defence-game-demo-b3g9mc
+      - claude/crash-site-v2-b3g9mc
   workflow_dispatch:
 
 permissions:

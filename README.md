@@ -1,25 +1,29 @@
-# Outpost Zero — Endless Colony Defence
+# Endless Game — two tiny 3D defence games
 
 Top down sci-fi builder non stop game 🤟🏻
 
-A tiny 3D sci-fi colony defence game that runs in the browser, built with
-**Vite + Three.js + TypeScript**. You play a small engineer sprinting around an
-alien outpost: collect energy crystals, build and upgrade turrets on build
-pads, repair the colony core, and smack aliens with your tool — forever, with
-the pressure slowly ramping up.
+Two small 3D browser games built with **Vite + Three.js + TypeScript**:
+
+- **V1 · Outpost Zero** (landscape) — defend a colony core: collect energy,
+  build/upgrade turrets, repair, melee aliens.
+- **V2 · Aurora Down** (portrait) — your ship crashed on a frozen world and
+  is on fire. Run around the wreck with a blaster: collect **energy** and
+  **salvage**, build turrets / barriers / power relays / repair beacons on
+  pads, repair the hull, and survive three kinds of alien forever.
 
 No external assets — everything is low-poly placeholder geometry and
 procedurally generated WebAudio sound.
 
 ## ▶ Play online (no install needed)
 
-The game auto-deploys to GitHub Pages on every push:
+Both games auto-deploy to GitHub Pages on every push:
 
-**https://creativedexy.github.io/endless-game/**
+- **V1 (landscape):** https://creativedexy.github.io/endless-game/
+- **V2 (portrait):** https://creativedexy.github.io/endless-game/v2/
 
-Open that link on your phone, rotate to landscape, and play. Tip: use
-"Add to Home Screen" in Safari's share menu for a fullscreen experience
-without the address bar.
+Open the link on your phone and play. V2 is designed for portrait, V1 for
+landscape. Tip: use "Add to Home Screen" in Safari's share menu for a
+fullscreen experience without the address bar.
 
 Deployment is handled by `.github/workflows/deploy.yml` — GitHub Actions
 builds the project in the cloud and publishes `dist/` to Pages, so you never
@@ -67,7 +71,38 @@ npm run test:smoke                # loads the game headless, simulates input,
                                   # fails on console errors, saves screenshots
 ```
 
-## How to play
+## How to play — V2 · Aurora Down (portrait)
+
+Keep the **crashed ship** alive. Aliens spawn endlessly from the edges of the
+snowfield and chew on the hull and your structures. If hull integrity hits
+zero, the game ends. The threat level climbs forever.
+
+- Run over **◆ energy crystals** and **▣ salvage scrap** to collect them.
+  Slain aliens sometimes drop resources too.
+- You carry a **blaster**: hold FIRE (or Space / mouse on desktop) and it
+  auto-aims at the nearest alien.
+- Stand on a **build pad** and a glass menu pops up with four structures:
+  - **⌖ Blaster Turret** (energy) — automatic defence tower
+  - **⬡ Barrier Node** (salvage) — chunky wall that blocks and soaks damage
+  - **⚡ Power Relay** (mixed) — trickles energy into your reserves
+  - **✚ Repair Beacon** (mixed) — slowly heals nearby structures and the hull
+- Stand near an existing structure to **upgrade** (2 levels) or **repair** it.
+- Stand near the ship to **repair the hull** with salvage.
+- **Dash** to escape danger or reposition.
+
+Enemy types: purple **crawlers** head for the ship, pink **skitterers** are
+fast and harass your structures, red **brutes** are slow tanks that hit walls
+and the hull extra hard (they join as threat rises).
+
+| | Desktop | Mobile (touch) |
+|---|---|---|
+| Move | `WASD` / arrows | left-thumb glass joystick |
+| Shoot | `Space` / mouse click | large FIRE button |
+| Dash | `Shift` | DASH button |
+| Build / upgrade / repair | keys `1`-`4` | tap the pop-up glass menu |
+| Restart (after game over) | `R` | Restart button |
+
+## How to play — V1 · Outpost Zero (landscape)
 
 Defend the **colony core** in the middle of the map. Aliens spawn endlessly
 from the edges and chew on the core and your turrets. If the core's health
@@ -97,7 +132,29 @@ can while the **threat level** keeps climbing.
 
 ## Project structure
 
+Two self-contained games share one Vite project (`vite.config.ts` builds both
+pages): V1 lives in `src/`, V2 in `v2/src/`.
+
 ```
+v2/
+  index.html               V2 entry page (served at /v2/)
+  src/
+    main.ts, style.css     entry + frosted-glass HUD styling
+    game/
+      GameManager.ts       owns the scene, loop, rules, and all entities
+      constants.ts         all balance/tuning numbers in one place
+      CrashedShip.ts       the burning wreck: health, fire/smoke emitters
+      Structure.ts         base class for buildables (health, levels, repair)
+      Turret.ts / Wall.ts / Extractor.ts / RepairBeacon.ts
+      Enemy.ts             crawler / skitterer / brute AI
+      EnemySpawner.ts      endless spawning + threat ramp + enemy mix
+      Pickup.ts            energy crystals + salvage scrap (with magnet)
+      Environment.ts       snowfield, crash trench, rocks, falling snow
+      PlayerController.ts  movement, dash, blaster animation
+      CameraController.ts  portrait follow camera + screen shake
+      MobileControls.ts    glass joystick + FIRE/DASH buttons
+      UIManager.ts         glass HUD, build menu, game-over screen
+      Projectile.ts / Effects.ts / Sound.ts / input.ts
 src/
   main.ts                  entry point
   style.css                HUD + touch-controls styling
