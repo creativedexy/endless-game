@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Mars Colony — Gather & Build</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0a05; font-family: 'Segoe UI', system-ui, sans-serif; }
+  #game { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: absolute; top: 14px; left: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none; user-select: none;
+  }
+  .stat {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(20, 8, 4, 0.55);
+    border: 1px solid rgba(255, 180, 120, 0.25);
+    backdrop-filter: blur(6px);
+    border-radius: 10px; padding: 8px 14px;
+    min-width: 168px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .swatch { width: 16px; height: 16px; border-radius: 4px; flex: 0 0 auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.5); }
+  .stat .label { color: #f0d9c8; font-size: 13px; font-weight: 600; letter-spacing: .3px; flex: 1; }
+  .stat .value { color: #fff; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+
+  #carry {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(20, 8, 4, 0.55);
+    border: 1px solid rgba(255, 180, 120, 0.25);
+    backdrop-filter: blur(6px);
+    border-radius: 10px; padding: 8px 14px; text-align: right;
+    color: #f0d9c8; font-size: 13px; font-weight: 600;
+    pointer-events: none; user-select: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #carry .big { color: #fff; font-size: 20px; font-weight: 800; }
+  #carry.full { border-color: #ffcf5e; box-shadow: 0 0 18px rgba(255,207,94,.5); }
+
+  /* ---------- Base level banner ---------- */
+  #baseInfo {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    pointer-events: none; user-select: none;
+  }
+  #levelTag {
+    background: rgba(20, 8, 4, 0.6); border: 1px solid rgba(120, 255, 170, 0.4);
+    color: #9effc4; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    padding: 6px 16px; border-radius: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #progressWrap {
+    width: 280px; height: 10px; border-radius: 6px;
+    background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.12);
+    overflow: hidden;
+  }
+  #progressBar { height: 100%; width: 0%; background: linear-gradient(90deg,#5effa0,#9effc4); transition: width .25s ease; }
+  #goalText { color: #d8c4b6; font-size: 12px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+
+  /* ---------- Toast / events ---------- */
+  #toast {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(.8);
+    background: rgba(20, 8, 4, 0.85); border: 1px solid rgba(255, 207, 94, 0.6);
+    color: #ffe8b0; font-size: 22px; font-weight: 800; letter-spacing: .5px;
+    padding: 16px 32px; border-radius: 14px; text-align: center;
+    opacity: 0; pointer-events: none; user-select: none;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    transition: opacity .35s ease, transform .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  #toast .sub { display:block; font-size: 14px; font-weight: 600; color:#d8c4b6; margin-top: 6px; letter-spacing:0; }
+
+  /* ---------- Controls hint ---------- */
+  #hint {
+    position: absolute; bottom: 14px; right: 14px;
+    color: #c9a892; font-size: 12px; text-align: right; line-height: 1.6;
+    pointer-events: none; user-select: none; text-shadow: 0 1px 3px #000;
+    opacity: .85;
+  }
+  #hint b { color: #ffd9b0; }
+
+  /* ---------- Start overlay ---------- */
+  #start {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; text-align: center;
+    background: radial-gradient(circle at 50% 40%, rgba(60,20,8,.6), rgba(10,4,2,.92));
+    z-index: 10; backdrop-filter: blur(2px);
+  }
+  #start h1 {
+    color: #ffd9a8; font-size: clamp(34px, 7vw, 64px); font-weight: 900; letter-spacing: 1px;
+    text-shadow: 0 0 30px rgba(255,140,60,.5), 0 4px 10px #000;
+  }
+  #start p { color: #e0c4b0; font-size: 16px; max-width: 460px; line-height: 1.6; }
+  #start .keys { color: #ffcf7e; font-weight: 700; }
+  #playBtn {
+    margin-top: 6px; pointer-events: auto; cursor: pointer;
+    background: linear-gradient(180deg,#ff7a3c,#e0531e); color: #fff;
+    border: none; border-radius: 12px; padding: 16px 44px;
+    font-size: 20px; font-weight: 800; letter-spacing: .5px;
+    box-shadow: 0 8px 24px rgba(224,83,30,.5);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  #playBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(224,83,30,.7); }
+  #playBtn:active { transform: translateY(0); }
+
+  /* ---------- Mobile joystick ---------- */
+  #stick {
+    position: absolute; left: 24px; bottom: 24px;
+    width: 130px; height: 130px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.15);
+    display: none; touch-action: none; z-index: 5;
+  }
+  #knob {
+    position: absolute; left: 35px; top: 35px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: rgba(255,200,150,0.5); border: 2px solid rgba(255,255,255,0.4);
+  }
+  @media (pointer: coarse) { #stick { display: block; } #hint { display: none; } }
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="hud">
+  <div class="stat"><span class="swatch" style="background:#7a4a28"></span><span class="label">Regolith</span><span class="value" id="uiRegolith">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#2f7adf"></span><span class="label">Resin</span><span class="value" id="uiResin">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#46e88a"></span><span class="label">Biomass</span><span class="value" id="uiBiomass">0</span></div>
+</div>
+
+<div id="carry">
+  Carrying<br><span class="big"><span id="uiCarry">0</span>/<span id="uiCarryMax">12</span></span>
+</div>
+
+<div id="baseInfo">
+  <div id="levelTag">DOME · LEVEL 1</div>
+  <div id="progressWrap"><div id="progressBar"></div></div>
+  <div id="goalText">Deposit 20 Regolith to expand the dome</div>
+</div>
+
+<div id="toast"></div>
+
+<div id="hint">
+  <b>WASD</b> / <b>Arrows</b> to move<br>
+  Walk over resources to vacuum them up<br>
+  Return to the <b>green dome</b> to deposit<br>
+  Ram <b>black beetles</b> for Biomass
+</div>
+
+<div id="stick"><div id="knob"></div></div>
+
+<div id="start">
+  <h1>MARS COLONY</h1>
+  <p>You're the last forager on the red planet. Roll over scattered resources to suck them into your stack, haul them back to the <span class="keys">Oxygen Dome</span>, and grow your colony. Watch for <span class="keys">sand beetles</span> — ram them for rare Biomass.</p>
+  <p class="keys">Move with WASD or Arrow Keys</p>
+  <button id="playBtn">▶ LAND ON MARS</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   Mars Colony — single-file Three.js gather-and-build game
+   ============================================================ */
+
+// ---------- Constants / tuning ----------
+const WORLD = 90;                 // half-extent of the playable ground
+const PLAYER_SPEED = 18;          // units / second
+const CARRY_MAX = 12;             // how many items the player can hold
+const ITEM_H = 0.9;               // visual height of one stacked item
+const RESOURCE_TARGET = 14;       // resources kept alive on the map
+const BEETLE_INTERVAL = 4.2;      // seconds between beetle spawns
+const BEETLE_SPEED = 3.4;
+const DEPOSIT_RATE = 0.05;        // seconds between LIFO pops while depositing
+
+const COLORS = {
+  regolith: 0x7a4a28,
+  resin:    0x2f7adf,
+  biomass:  0x46e88a,
+  dome:     0x46e88a,
+  enemy:    0x101014,
+  player:   0xf2f2f2,
+};
+
+// Base expansion definitions (Level 1 is the starting state)
+const LEVELS = [
+  { domeScale: 1.0, goalType: null,       goalAmount: 0,  tag: 'DOME · LEVEL 1' },
+  { domeScale: 1.5, goalType: 'regolith', goalAmount: 20, tag: 'DOME · LEVEL 2', text: 'Deposit 20 Regolith to expand the dome' },
+  { domeScale: 2.0, goalType: 'resin',    goalAmount: 50, tag: 'DOME · LEVEL 3', text: 'Deposit 50 Resin to grow the colony' },
+  { domeScale: 2.6, goalType: 'biomass',  goalAmount: 30, tag: 'DOME · LEVEL 4', text: 'Gather 30 Biomass to terraform' },
+];
+
+// ---------- Renderer / scene / camera ----------
+const container = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a0f06);
+scene.fog = new THREE.FogExp2(0x49180a, 0.0065);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 600);
+const CAM_OFFSET = new THREE.Vector3(0, 46, 38);   // top-down-ish chase
+camera.position.copy(CAM_OFFSET);
+camera.lookAt(0, 0, 0);
+
+// ---------- Lights ----------
+scene.add(new THREE.HemisphereLight(0xffd9b0, 0x3a1505, 0.85));
+const sun = new THREE.DirectionalLight(0xfff0e0, 1.15);
+sun.position.set(40, 80, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 260;
+const sc = sun.shadow.camera;
+sc.left = -WORLD; sc.right = WORLD; sc.top = WORLD; sc.bottom = -WORLD;
+scene.add(sun);
+
+// ---------- Ground ----------
+const groundGeo = new THREE.PlaneGeometry(WORLD * 2, WORLD * 2, 60, 60);
+// gentle dune displacement for texture
+const gp = groundGeo.attributes.position;
+for (let i = 0; i < gp.count; i++) {
+  const x = gp.getX(i), y = gp.getY(i);
+  gp.setZ(i, Math.sin(x * 0.06) * Math.cos(y * 0.05) * 0.9 + Math.sin(x * 0.18 + y * 0.12) * 0.25);
+}
+groundGeo.computeVertexNormals();
+const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ color: 0xc1440e, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Boundary ring so the player can see the edge of the world
+{
+  const ringGeo = new THREE.RingGeometry(WORLD - 1.5, WORLD, 96);
+  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x6a2a12, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.05;
+  scene.add(ring);
+}
+
+// Starfield backdrop
+{
+  const starGeo = new THREE.BufferGeometry();
+  const N = 600, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 250 + Math.random() * 120;
+    const th = Math.random() * Math.PI * 2;
+    const ph = Math.random() * Math.PI * 0.5;
+    pos[i*3]   = Math.cos(th) * Math.sin(ph + 0.2) * r;
+    pos[i*3+1] = Math.cos(ph) * r * 0.9 + 30;
+    pos[i*3+2] = Math.sin(th) * Math.sin(ph + 0.2) * r;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffe8c0, size: 1.2, sizeAttenuation: true })));
+}
+
+// ---------- The Oxygen Dome (deposit zone + base) ----------
+const DOME_BASE_R = 10;
+const dome = new THREE.Group();
+scene.add(dome);
+
+const domeMat = new THREE.MeshStandardMaterial({
+  color: COLORS.dome, transparent: true, opacity: 0.32,
+  roughness: 0.2, metalness: 0.1, side: THREE.DoubleSide,
+  emissive: COLORS.dome, emissiveIntensity: 0.25,
+});
+const domeShell = new THREE.Mesh(new THREE.SphereGeometry(DOME_BASE_R, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+dome.add(domeShell);
+
+// glowing base ring of the dome
+const domeRing = new THREE.Mesh(
+  new THREE.TorusGeometry(DOME_BASE_R, 0.35, 12, 48),
+  new THREE.MeshStandardMaterial({ color: 0x9effc4, emissive: 0x46e88a, emissiveIntensity: 0.8 })
+);
+domeRing.rotation.x = Math.PI / 2;
+domeRing.position.y = 0.4;
+dome.add(domeRing);
+
+// central beacon
+const beacon = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.5, 0.9, 5, 8),
+  new THREE.MeshStandardMaterial({ color: 0xcfd8d8, metalness: 0.7, roughness: 0.3, emissive: 0x114422, emissiveIntensity: 0.3 })
+);
+beacon.position.y = 2.5; beacon.castShadow = true;
+dome.add(beacon);
+
+// Containers that appear with upgrades
+let gridFloor = null;       // appears at level 2
+const survivors = [];       // appear at level 3
+
+// ---------- Player ----------
+const player = new THREE.Group();
+player.position.set(0, 0, 24);
+scene.add(player);
+
+const body = new THREE.Mesh(
+  new THREE.CylinderGeometry(1.1, 1.3, 2.4, 16),
+  new THREE.MeshStandardMaterial({ color: COLORS.player, roughness: 0.5, metalness: 0.2 })
+);
+body.position.y = 1.2; body.castShadow = true;
+player.add(body);
+
+// helmet visor (small blue box) facing forward
+const visor = new THREE.Mesh(
+  new THREE.BoxGeometry(1.4, 0.7, 0.5),
+  new THREE.MeshStandardMaterial({ color: COLORS.resin, emissive: 0x113366, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 })
+);
+visor.position.set(0, 2.1, 0.95);
+player.add(visor);
+
+// shadow-catcher disc under player (cheap soft contact shadow)
+const blob = new THREE.Mesh(
+  new THREE.CircleGeometry(1.6, 20),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })
+);
+blob.rotation.x = -Math.PI / 2; blob.position.y = 0.08;
+player.add(blob);
+
+// The carry stack — a group attached to the player
+const stackGroup = new THREE.Group();
+stackGroup.position.y = 2.6;
+player.add(stackGroup);
+
+// ---------- Shared geometries / materials ----------
+const GEO = {
+  regolith: new THREE.BoxGeometry(1.3, 1.3, 1.3),
+  resin:    new THREE.BoxGeometry(1.1, 1.4, 1.1),
+};
+const MAT = {
+  regolith: new THREE.MeshStandardMaterial({ color: COLORS.regolith, roughness: 0.9 }),
+  resin:    new THREE.MeshStandardMaterial({ color: COLORS.resin, roughness: 0.35, metalness: 0.3, emissive: 0x0a2244, emissiveIntensity: 0.3 }),
+};
+const stackGeoScale = 0.62;   // stacked clones are a bit smaller
+
+// ---------- Game state ----------
+const state = {
+  store: { regolith: 0, resin: 0, biomass: 0 },  // banked in the dome
+  carry: [],            // array of { type, mesh } currently on the player's back
+  level: 1,             // current base level (1-indexed)
+  resources: [],        // active resource nodes in the world
+  beetles: [],          // active enemies
+  fx: [],               // transient tween effects (vacuum/pop/death)
+  depositTimer: 0,
+  beetleTimer: 2,
+  running: false,
+  shake: 0,
+};
+
+// ---------- UI refs ----------
+const ui = {
+  regolith: document.getElementById('uiRegolith'),
+  resin: document.getElementById('uiResin'),
+  biomass: document.getElementById('uiBiomass'),
+  carry: document.getElementById('uiCarry'),
+  carryMax: document.getElementById('uiCarryMax'),
+  carryBox: document.getElementById('carry'),
+  levelTag: document.getElementById('levelTag'),
+  progressBar: document.getElementById('progressBar'),
+  goalText: document.getElementById('goalText'),
+  toast: document.getElementById('toast'),
+};
+ui.carryMax.textContent = CARRY_MAX;
+
+function refreshUI() {
+  ui.regolith.textContent = state.store.regolith;
+  ui.resin.textContent = state.store.resin;
+  ui.biomass.textContent = state.store.biomass;
+  ui.carry.textContent = state.carry.length;
+  ui.carryBox.classList.toggle('full', state.carry.length >= CARRY_MAX);
+
+  const lvl = LEVELS[state.level];      // the level we're working toward
+  ui.levelTag.textContent = LEVELS[state.level - 1].tag;
+  if (lvl && lvl.goalType) {
+    const have = state.store[lvl.goalType];
+    const pct = Math.min(100, (have / lvl.goalAmount) * 100);
+    ui.progressBar.style.width = pct + '%';
+    ui.goalText.textContent = `${lvl.text}  (${Math.min(have, lvl.goalAmount)}/${lvl.goalAmount})`;
+  } else {
+    ui.progressBar.style.width = '100%';
+    ui.goalText.textContent = 'Colony fully terraformed — keep foraging!';
+  }
+}
+
+let toastTimer = null;
+function toast(main, sub) {
+  ui.toast.innerHTML = main + (sub ? `<span class="sub">${sub}</span>` : '');
+  ui.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1900);
+}
+
+// ---------- Helpers ----------
+function randSpawnPos(minFromDome) {
+  // random point on the map but outside the dome radius
+  let x, z, d, tries = 0;
+  do {
+    x = (Math.random() * 2 - 1) * (WORLD - 6);
+    z = (Math.random() * 2 - 1) * (WORLD - 6);
+    d = Math.hypot(x, z);
+    tries++;
+  } while (d < minFromDome && tries < 40);
+  return new THREE.Vector3(x, 0, z);
+}
+
+function currentDomeRadius() {
+  return DOME_BASE_R * LEVELS[state.level - 1].domeScale;
+}
+
+// ---------- Resource nodes ----------
+function spawnResource(type) {
+  const mesh = new THREE.Mesh(GEO[type], MAT[type]);
+  const p = randSpawnPos(currentDomeRadius() + 8);
+  mesh.position.set(p.x, type === 'resin' ? 0.7 : 0.65, p.z);
+  mesh.rotation.y = Math.random() * Math.PI;
+  mesh.castShadow = true;
+  mesh.userData = { type, spin: 0.3 + Math.random() * 0.6, bobOff: Math.random() * 6, baseY: mesh.position.y };
+  scene.add(mesh);
+  state.resources.push(mesh);
+}
+
+function topUpResources() {
+  while (state.resources.length < RESOURCE_TARGET) {
+    // resin is rarer than regolith
+    spawnResource(Math.random() < 0.62 ? 'regolith' : 'resin');
+  }
+}
+
+// ---------- Beetles (enemies) ----------
+function spawnBeetle() {
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(1.4, 16, 12),
+    new THREE.MeshStandardMaterial({ color: COLORS.enemy, roughness: 0.6, metalness: 0.2, emissive: 0x330000, emissiveIntensity: 0.4 })
+  );
+  shell.scale.y = 0.7; shell.castShadow = true;
+  g.add(shell);
+  // two glowing eyes
+  for (const sx of [-0.5, 0.5]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
+    eye.position.set(sx, 0.5, 1.05);
+    g.add(eye);
+  }
+  const edge = WORLD - 4;
+  const side = Math.floor(Math.random() * 4);
+  const t = (Math.random() * 2 - 1) * edge;
+  const p = [ [t, 0, -edge], [t, 0, edge], [-edge, 0, t], [edge, 0, t] ][side];
+  g.position.set(p[0], 1.1, p[2]);
+  g.userData = { wob: Math.random() * 6 };
+  scene.add(g);
+  state.beetles.push(g);
+}
+
+// ---------- Effects (tween pool) ----------
+function addFX(fn, dur) {
+  state.fx.push({ fn, t: 0, dur });
+}
+
+// Vacuum a resource node into the player, then add to stack
+function vacuumResource(mesh) {
+  const idx = state.resources.indexOf(mesh);
+  if (idx >= 0) state.resources.splice(idx, 1);
+  const type = mesh.userData.type;
+  const start = mesh.position.clone();
+  addFX((k) => {
+    // ease toward player while shrinking + spinning (the "vacuum")
+    const target = player.position.clone().add(new THREE.Vector3(0, 2.5, 0));
+    mesh.position.lerpVectors(start, target, k * k);
+    const s = 1 - k;
+    mesh.scale.setScalar(Math.max(0.001, s));
+    mesh.rotation.y += 0.5; mesh.rotation.x += 0.4;
+    if (k >= 1) { scene.remove(mesh); addToStack(type); }
+  }, 0.22);
+}
+
+// Add a clone to the player's back stack (with a little pop-in)
+function addToStack(type) {
+  const mesh = new THREE.Mesh(GEO[type], MAT[type]);
+  mesh.castShadow = true;
+  mesh.scale.setScalar(0.001);
+  mesh.userData = { type, baseScale: stackGeoScale };
+  stackGroup.add(mesh);
+  state.carry.push({ type, mesh });
+  layoutStack();
+  // pop-in tween
+  const target = stackGeoScale;
+  addFX((k) => {
+    const s = target * (1 + 0.4 * Math.sin(Math.min(1, k) * Math.PI)); // overshoot
+    mesh.scale.setScalar(k < 1 ? s : target);
+  }, 0.18);
+  refreshUI();
+}
+
+// Position every stacked item along the Y axis
+function layoutStack() {
+  for (let i = 0; i < state.carry.length; i++) {
+    const m = state.carry[i].mesh;
+    m.userData.stackY = i * ITEM_H + 0.5;
+    m.position.set(0, m.userData.stackY, 0);
+  }
+}
+
+// Pop the top item off the stack (LIFO) when depositing
+function popStack() {
+  const item = state.carry.pop();
+  if (!item) return null;
+  layoutStack();
+  // fly the popped clone into the dome beacon, then bank it
+  const mesh = item.mesh;
+  stackGroup.remove(mesh);
+  scene.add(mesh);
+  const start = mesh.getWorldPosition(new THREE.Vector3());
+  mesh.position.copy(start);
+  mesh.scale.setScalar(stackGeoScale);
+  const target = new THREE.Vector3(0, 5, 0); // up into the beacon
+  addFX((k) => {
+    mesh.position.lerpVectors(start, target, k);
+    mesh.position.y += Math.sin(k * Math.PI) * 2; // arc
+    mesh.rotation.y += 0.4;
+    mesh.scale.setScalar(stackGeoScale * (1 - k));
+    if (k >= 1) scene.remove(mesh);
+  }, 0.3);
+  state.store[item.type]++;
+  refreshUI();
+  return item.type;
+}
+
+// Kill a beetle: shrink + reward biomass
+function killBeetle(g) {
+  const idx = state.beetles.indexOf(g);
+  if (idx >= 0) state.beetles.splice(idx, 1);
+  const start = g.scale.x;
+  addFX((k) => {
+    g.scale.setScalar(start * (1 - k));
+    g.rotation.y += 0.6;
+    g.position.y = 1.1 + k * 2;
+    if (k >= 1) scene.remove(g);
+  }, 0.3);
+  state.store.biomass++;
+  state.shake = Math.min(1, state.shake + 0.6);
+  // spawn a little biomass spark burst
+  for (let i = 0; i < 6; i++) {
+    const spark = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 6, 6),
+      new THREE.MeshBasicMaterial({ color: COLORS.biomass })
+    );
+    spark.position.copy(g.position);
+    const dir = new THREE.Vector3((Math.random()*2-1), Math.random()*1.5, (Math.random()*2-1)).normalize().multiplyScalar(4 + Math.random()*3);
+    scene.add(spark);
+    addFX((k) => {
+      spark.position.addScaledVector(dir, 0.03 * (1 - k));
+      spark.position.y += 0.04 * (1 - k);
+      spark.scale.setScalar(1 - k);
+      if (k >= 1) scene.remove(spark);
+    }, 0.5);
+  }
+  refreshUI();
+  checkUpgrade();
+  toast('+1 BIOMASS', 'Sand beetle neutralized');
+}
+
+// ---------- Base upgrades ----------
+function checkUpgrade() {
+  const next = LEVELS[state.level]; // the level we're working toward (0-indexed = state.level)
+  if (!next || !next.goalType) return;
+  if (state.store[next.goalType] >= next.goalAmount) {
+    applyUpgrade(state.level + 1);
+  }
+}
+
+function applyUpgrade(newLevel) {
+  state.level = newLevel;
+  const def = LEVELS[newLevel - 1];
+
+  // animate the dome scaling up
+  const fromScale = dome.scale.x;
+  const toScale = def.domeScale;
+  addFX((k) => {
+    const s = fromScale + (toScale - fromScale) * easeOutBack(k);
+    dome.scale.setScalar(s);
+  }, 0.6);
+
+  // Level 2: metallic grid floor under the dome
+  if (newLevel === 2 && !gridFloor) {
+    gridFloor = new THREE.GridHelper(DOME_BASE_R * 3, 12, 0xbfe9ff, 0x4a7a8a);
+    gridFloor.position.y = 0.12;
+    gridFloor.material.transparent = true;
+    gridFloor.material.opacity = 0.0;
+    scene.add(gridFloor);
+    const plate = new THREE.Mesh(
+      new THREE.CircleGeometry(DOME_BASE_R * 1.5, 40),
+      new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.8, roughness: 0.3 })
+    );
+    plate.rotation.x = -Math.PI / 2; plate.position.y = 0.1; plate.receiveShadow = true;
+    scene.add(plate);
+    addFX((k) => { gridFloor.material.opacity = 0.6 * k; }, 0.8);
+    toast('DOME UPGRADED', 'Level 2 — Foundation plating installed');
+  }
+
+  // Level 3: two friendly survivor cylinders inside
+  if (newLevel === 3 && survivors.length === 0) {
+    for (const sx of [-3.5, 3.5]) {
+      const s = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 1.0, 3, 12),
+        new THREE.MeshStandardMaterial({ color: 0xffc98a, roughness: 0.6, emissive: 0x442200, emissiveIntensity: 0.3 })
+      );
+      s.position.set(sx, 1.5, -2);
+      s.castShadow = true;
+      // little visor box
+      const v = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 0.4), new THREE.MeshStandardMaterial({ color: 0x2f7adf, emissive: 0x113366, emissiveIntensity: 0.5 }));
+      v.position.set(0, 1.1, 0.7); s.add(v);
+      s.scale.setScalar(0.001);
+      dome.add(s);
+      survivors.push(s);
+      addFX((k) => { s.scale.setScalar(easeOutBack(k)); }, 0.7);
+    }
+    toast('SURVIVORS RESCUED', 'Level 3 — Two colonists join the dome');
+  }
+
+  if (newLevel >= 4) {
+    toast('COLONY TERRAFORMED', 'Max level — the dome glows brighter');
+    domeMat.emissiveIntensity = 0.5;
+  }
+
+  state.shake = 1;
+  refreshUI();
+}
+
+function easeOutBack(x) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+}
+
+// ---------- Input ----------
+const keys = {};
+addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+});
+addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+// Mobile joystick
+const stick = document.getElementById('stick');
+const knob = document.getElementById('knob');
+let touchVec = new THREE.Vector2(0, 0);
+let stickId = null;
+function stickStart(e) { stickId = e.changedTouches[0].identifier; stickMove(e); }
+function stickMove(e) {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== stickId) continue;
+    const r = stick.getBoundingClientRect();
+    let dx = t.clientX - (r.left + r.width / 2);
+    let dy = t.clientY - (r.top + r.height / 2);
+    const max = r.width / 2;
+    const len = Math.hypot(dx, dy);
+    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+    knob.style.left = (35 + dx) + 'px';
+    knob.style.top = (35 + dy) + 'px';
+    touchVec.set(dx / max, dy / max);
+  }
+}
+function stickEnd() { stickId = null; touchVec.set(0, 0); knob.style.left = '35px'; knob.style.top = '35px'; }
+stick.addEventListener('touchstart', (e) => { e.preventDefault(); stickStart(e); }, { passive: false });
+stick.addEventListener('touchmove', (e) => { e.preventDefault(); stickMove(e); }, { passive: false });
+stick.addEventListener('touchend', (e) => { e.preventDefault(); stickEnd(e); }, { passive: false });
+
+// ---------- Main update ----------
+const tmp = new THREE.Vector3();
+let velMag = 0;       // smoothed speed, drives stack wobble
+let faceAngle = 0;
+
+function update(dt, time) {
+  // --- movement input ---
+  let mx = 0, mz = 0;
+  if (keys['w'] || keys['arrowup'])    mz -= 1;
+  if (keys['s'] || keys['arrowdown'])  mz += 1;
+  if (keys['a'] || keys['arrowleft'])  mx -= 1;
+  if (keys['d'] || keys['arrowright']) mx += 1;
+  mx += touchVec.x; mz += touchVec.y;
+
+  const len = Math.hypot(mx, mz);
+  if (len > 1) { mx /= len; mz /= len; }
+
+  const moveDist = PLAYER_SPEED * dt;
+  player.position.x += mx * moveDist;
+  player.position.z += mz * moveDist;
+
+  // clamp to world
+  player.position.x = THREE.MathUtils.clamp(player.position.x, -WORLD + 3, WORLD - 3);
+  player.position.z = THREE.MathUtils.clamp(player.position.z, -WORLD + 3, WORLD - 3);
+
+  // face movement direction
+  const speed = Math.hypot(mx, mz);
+  if (speed > 0.01) faceAngle = Math.atan2(mx, mz);
+  player.rotation.y += (faceAngle - player.rotation.y) * Math.min(1, dt * 12);
+
+  // smooth velocity for wobble
+  velMag += (speed - velMag) * Math.min(1, dt * 8);
+
+  // bob the body while walking
+  body.position.y = 1.2 + Math.sin(time * 10) * 0.08 * velMag;
+
+  // --- stack wobble (sine tied to speed) ---
+  const wob = velMag * 0.12;
+  stackGroup.rotation.z = Math.sin(time * 6) * wob;
+  stackGroup.rotation.x = Math.cos(time * 5) * wob * 0.6;
+  // each cube gets a tiny rotation offset based on velocity + index
+  for (let i = 0; i < state.carry.length; i++) {
+    const m = state.carry[i].mesh;
+    m.rotation.y = Math.sin(time * 3 + i * 0.5) * velMag * 0.3 + i * 0.1;
+  }
+
+  // --- resource spin/bob + pickup ---
+  const pickR2 = 2.6 * 2.6;
+  for (let i = state.resources.length - 1; i >= 0; i--) {
+    const r = state.resources[i];
+    r.rotation.y += r.userData.spin * dt;
+    r.position.y = r.userData.baseY + Math.sin(time * 2 + r.userData.bobOff) * 0.15;
+    if (state.carry.length < CARRY_MAX) {
+      const dx = r.position.x - player.position.x;
+      const dz = r.position.z - player.position.z;
+      if (dx*dx + dz*dz < pickR2) vacuumResource(r);
+    }
+  }
+  topUpResources();
+
+  // --- depositing at the dome ---
+  const domeR = currentDomeRadius();
+  const pdx = player.position.x, pdz = player.position.z;
+  const inDome = Math.hypot(pdx, pdz) < domeR;
+  if (inDome && state.carry.length > 0) {
+    state.depositTimer -= dt;
+    while (state.depositTimer <= 0 && state.carry.length > 0) {
+      popStack();
+      state.depositTimer += DEPOSIT_RATE;
+      checkUpgrade();
+    }
+  } else {
+    state.depositTimer = 0;
+  }
+
+  // --- beetles ---
+  state.beetleTimer -= dt;
+  if (state.beetleTimer <= 0) {
+    spawnBeetle();
+    state.beetleTimer = BEETLE_INTERVAL + Math.random() * 2;
+  }
+  const beetleHitR2 = 2.4 * 2.4;
+  for (let i = state.beetles.length - 1; i >= 0; i--) {
+    const b = state.beetles[i];
+    // move toward dome center
+    tmp.set(-b.position.x, 0, -b.position.z);
+    const d = tmp.length();
+    tmp.normalize();
+    b.position.addScaledVector(tmp, BEETLE_SPEED * dt);
+    b.rotation.y = Math.atan2(tmp.x, tmp.z);
+    // waddle
+    b.userData.wob += dt * 12;
+    b.position.y = 1.1 + Math.abs(Math.sin(b.userData.wob)) * 0.3;
+    // player ram?
+    const bx = b.position.x - player.position.x, bz = b.position.z - player.position.z;
+    if (bx*bx + bz*bz < beetleHitR2) { killBeetle(b); continue; }
+    // reached the dome — it gets absorbed harmlessly (despawn), small shake
+    if (d < domeR) {
+      const idx = state.beetles.indexOf(b);
+      if (idx >= 0) state.beetles.splice(idx, 1);
+      scene.remove(b);
+      state.shake = Math.min(1, state.shake + 0.3);
+    }
+  }
+
+  // --- dome idle animation ---
+  domeRing.rotation.z += dt * 0.4;
+  beacon.rotation.y += dt * 0.8;
+  for (const s of survivors) s.rotation.y = Math.sin(time + s.position.x) * 0.3;
+
+  // --- run effects ---
+  for (let i = state.fx.length - 1; i >= 0; i--) {
+    const f = state.fx[i];
+    f.t += dt;
+    const k = Math.min(1, f.t / f.dur);
+    f.fn(k);
+    if (k >= 1) state.fx.splice(i, 1);
+  }
+
+  // --- camera chase + shake ---
+  const desired = player.position.clone().add(CAM_OFFSET);
+  camera.position.lerp(desired, Math.min(1, dt * 4));
+  if (state.shake > 0) {
+    state.shake = Math.max(0, state.shake - dt * 2.5);
+    camera.position.x += (Math.random()*2-1) * state.shake * 1.2;
+    camera.position.y += (Math.random()*2-1) * state.shake * 0.8;
+  }
+  camera.lookAt(player.position.x, 1.5, player.position.z);
+}
+
+// ---------- Loop ----------
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  const time = now / 1000;
+  if (state.running) update(dt, time);
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// ---------- Resize ----------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- Boot ----------
+topUpResources();
+refreshUI();
+
+// Debug hook (handy for automated testing; harmless in normal play)
+window.__game = { state, player, currentDomeRadius };
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  document.getElementById('start').style.display = 'none';
+  state.running = true;
+  last = performance.now();
+  toast('WELCOME, FORAGER', 'Fill your stack and feed the dome');
+});
+</script>
+</body>
+</html>
