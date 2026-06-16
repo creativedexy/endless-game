@@ -1,44 +1,44 @@
 name: Deploy to GitHub Pages
 
+# This repo's GitHub Pages is served from the `gh-pages` branch. The Mars
+# Colony game lives in the `/mars-colony/` subfolder so it is published
+# alongside the existing site without disturbing the root homepage.
 on:
   push:
     branches: [main]
+    paths:
+      - index.html
+      - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
-# Allow the workflow to publish to Pages and to request the OIDC token used by the deploy step.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Only one concurrent deployment; let an in-progress run finish.
 concurrency:
-  group: pages
+  group: pages-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
 
-      - name: Configure Pages
-        # enablement: true turns the Pages site on automatically the first time
-        # this workflow runs, so no manual repo-settings step is required.
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # The game is a single static index.html at the repo root.
-          path: .
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish index.html to gh-pages/mars-colony
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add ghp origin/gh-pages
+          mkdir -p ghp/mars-colony
+          cp index.html ghp/mars-colony/index.html
+          cd ghp
+          git add mars-colony/index.html
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Deploy Mars Colony ${GITHUB_SHA}"
+            git push origin HEAD:gh-pages
+          fi
