@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Mars Colony — Gather & Build</title>
+<title>Mars Colony — Saber Siege</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0a05; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -29,6 +29,10 @@
   .stat .label { color: #f0d9c8; font-size: 13px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   .stat .value { color: #fff; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
 
+  /* energy bar inside a stat */
+  #energyWrap { flex: 1; height: 12px; border-radius: 6px; background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.12); }
+  #energyBar { height: 100%; width: 100%; background: linear-gradient(90deg,#36e0ff,#7af0ff); transition: width .1s linear; }
+
   #carry {
     position: absolute; top: 14px; right: 14px;
     background: rgba(20, 8, 4, 0.55);
@@ -41,6 +45,17 @@
   }
   #carry .big { color: #fff; font-size: 20px; font-weight: 800; }
   #carry.full { border-color: #ffcf5e; box-shadow: 0 0 18px rgba(255,207,94,.5); }
+
+  /* combo counter */
+  #combo {
+    position: absolute; top: 84px; right: 14px;
+    color: #ffd24a; font-weight: 900; font-size: 26px; text-align: right;
+    text-shadow: 0 0 12px rgba(255,160,40,.8), 0 2px 4px #000;
+    opacity: 0; transform: scale(.7); transition: opacity .15s, transform .15s;
+    pointer-events: none; user-select: none;
+  }
+  #combo.show { opacity: 1; transform: scale(1); }
+  #combo small { font-size: 13px; font-weight: 700; color: #ffe9b0; display:block; letter-spacing:1px; }
 
   /* ---------- Base level banner ---------- */
   #baseInfo {
@@ -64,7 +79,7 @@
 
   /* ---------- Toast / events ---------- */
   #toast {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(.8);
+    position: absolute; top: 22%; left: 50%; transform: translate(-50%,-50%) scale(.8);
     background: rgba(20, 8, 4, 0.85); border: 1px solid rgba(255, 207, 94, 0.6);
     color: #ffe8b0; font-size: 22px; font-weight: 800; letter-spacing: .5px;
     padding: 16px 32px; border-radius: 14px; text-align: center;
@@ -74,6 +89,9 @@
   }
   #toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
   #toast .sub { display:block; font-size: 14px; font-weight: 600; color:#d8c4b6; margin-top: 6px; letter-spacing:0; }
+
+  /* full-screen hit flash */
+  #flash { position: absolute; inset: 0; background: #ff2a2a; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
 
   /* ---------- Controls hint ---------- */
   #hint {
@@ -87,15 +105,16 @@
   /* ---------- Start overlay ---------- */
   #start {
     position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 18px; text-align: center;
-    background: radial-gradient(circle at 50% 40%, rgba(60,20,8,.6), rgba(10,4,2,.92));
+    align-items: center; justify-content: center; gap: 16px; text-align: center;
+    background: radial-gradient(circle at 50% 40%, rgba(60,20,8,.6), rgba(10,4,2,.94));
     z-index: 10; backdrop-filter: blur(2px);
   }
   #start h1 {
-    color: #ffd9a8; font-size: clamp(34px, 7vw, 64px); font-weight: 900; letter-spacing: 1px;
+    color: #ffd9a8; font-size: clamp(30px, 6.5vw, 60px); font-weight: 900; letter-spacing: 1px;
     text-shadow: 0 0 30px rgba(255,140,60,.5), 0 4px 10px #000;
   }
-  #start p { color: #e0c4b0; font-size: 16px; max-width: 460px; line-height: 1.6; }
+  #start h1 span { color: #7af0ff; text-shadow: 0 0 24px rgba(60,224,255,.9); }
+  #start p { color: #e0c4b0; font-size: 16px; max-width: 480px; line-height: 1.6; }
   #start .keys { color: #ffcf7e; font-weight: 700; }
   #playBtn {
     margin-top: 6px; pointer-events: auto; cursor: pointer;
@@ -118,7 +137,7 @@
   #knob {
     position: absolute; left: 35px; top: 35px;
     width: 60px; height: 60px; border-radius: 50%;
-    background: rgba(255,200,150,0.5); border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(120,240,255,0.45); border: 2px solid rgba(255,255,255,0.4);
   }
   @media (pointer: coarse) { #stick { display: block; } #hint { display: none; } }
 </style>
@@ -127,37 +146,39 @@
 <div id="game"></div>
 
 <div id="hud">
-  <div class="stat"><span class="swatch" style="background:#7a4a28"></span><span class="label">Regolith</span><span class="value" id="uiRegolith">0</span></div>
-  <div class="stat"><span class="swatch" style="background:#2f7adf"></span><span class="label">Resin</span><span class="value" id="uiResin">0</span></div>
-  <div class="stat"><span class="swatch" style="background:#46e88a"></span><span class="label">Biomass</span><span class="value" id="uiBiomass">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#7af0ff"></span><span class="label">Shards</span><span class="value" id="uiShards">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#36e0ff"></span><span class="label">Energy</span><span id="energyWrap"><span id="energyBar"></span></span></div>
+  <div class="stat"><span class="swatch" style="background:#ff5a3c"></span><span class="label">Kills</span><span class="value" id="uiKills">0</span></div>
 </div>
 
 <div id="carry">
-  Carrying<br><span class="big"><span id="uiCarry">0</span>/<span id="uiCarryMax">12</span></span>
+  Carrying<br><span class="big"><span id="uiCarry">0</span>/<span id="uiCarryMax">20</span></span>
 </div>
+<div id="combo"></div>
 
 <div id="baseInfo">
-  <div id="levelTag">DOME · LEVEL 1</div>
+  <div id="levelTag">OUTPOST · LEVEL 1</div>
   <div id="progressWrap"><div id="progressBar"></div></div>
-  <div id="goalText">Deposit 20 Regolith to expand the dome</div>
+  <div id="goalText">Deposit 8 Shards to raise the walls</div>
 </div>
 
 <div id="toast"></div>
+<div id="flash"></div>
 
 <div id="hint">
   <b>WASD</b> / <b>Arrows</b> to move<br>
-  Walk over resources to vacuum them up<br>
-  Return to the <b>green dome</b> to deposit<br>
-  Ram <b>black beetles</b> for Biomass
+  Your <b>saber</b> swings automatically — wade into crystals &amp; bugs<br>
+  Shards vacuum onto your back; <b>deposit at the core</b> to build<br>
+  Don't let the swarm drain your <b>energy</b>
 </div>
 
 <div id="stick"><div id="knob"></div></div>
 
 <div id="start">
-  <h1>MARS COLONY</h1>
-  <p>You're the last forager on the red planet. Roll over scattered resources to suck them into your stack, haul them back to the <span class="keys">Oxygen Dome</span>, and grow your colony. Watch for <span class="keys">sand beetles</span> — ram them for rare Biomass.</p>
-  <p class="keys">Move with WASD or Arrow Keys</p>
-  <button id="playBtn">▶ LAND ON MARS</button>
+  <h1>MARS COLONY<br><span>SABER SIEGE</span></h1>
+  <p>Carve through dense crystal fields with a whirling energy <span class="keys">lightsaber</span>, haul the shards back to your core, and build a fortified outpost — walls, turrets, drones — before the <span class="keys">sand-beetle swarm</span> overruns you. Keep moving. It never stops.</p>
+  <p class="keys">Move with WASD or Arrow Keys — the saber does the rest</p>
+  <button id="playBtn">▶ IGNITE THE SABER</button>
 </div>
 
 <script type="importmap">
@@ -168,34 +189,55 @@
 import * as THREE from 'three';
 
 /* ============================================================
-   Mars Colony — single-file Three.js gather-and-build game
+   Mars Colony: Saber Siege
+   Single-file Three.js arena survivor / base-builder.
    ============================================================ */
 
-// ---------- Constants / tuning ----------
-const WORLD = 90;                 // half-extent of the playable ground
-const PLAYER_SPEED = 18;          // units / second
-const CARRY_MAX = 12;             // how many items the player can hold
-const ITEM_H = 0.9;               // visual height of one stacked item
-const RESOURCE_TARGET = 14;       // resources kept alive on the map
-const BEETLE_INTERVAL = 4.2;      // seconds between beetle spawns
-const BEETLE_SPEED = 3.4;
-const DEPOSIT_RATE = 0.05;        // seconds between LIFO pops while depositing
+const TAU = Math.PI * 2;
+
+// ---------- Tuning ----------
+const WORLD = 95;
+const PLAYER_SPEED = 19;
+const CARRY_MAX = 20;
+const ITEM_H = 0.55;
+
+// saber
+const SABER_REACH = 7.2;        // blade length / hit radius
+const SABER_SPIN = 9.0;         // radians/sec sweep
+const SABER_HALF_ARC = 0.6;     // angular half-width of the hit window (rad)
+const SABER_CD = 0.32;          // per-target hit cooldown (s)
+const SABER_NODE_DMG = 1;
+const SABER_ENEMY_DMG = 1;
+const KNOCK = 7.5;              // enemy knockback impulse
+
+// nodes (crystals to clear)
+const NODE_TARGET = 70;         // dense field maintained around the base
+const NODE_RING_MIN = 16, NODE_RING_MAX = 78;
+
+// enemies
+const ENEMY_SPEED = 5.2;
+const ENEMY_DPS = 38;           // energy drained per second on contact
+const ENEMY_HIT_R = 2.0;
+
+// player energy
+const MAX_ENERGY = 100;
 
 const COLORS = {
-  regolith: 0x7a4a28,
-  resin:    0x2f7adf,
-  biomass:  0x46e88a,
-  dome:     0x46e88a,
-  enemy:    0x101014,
+  crystalA: 0x46e8ff,
+  crystalB: 0xb070ff,
+  enemy:    0x141018,
   player:   0xf2f2f2,
+  saber:    0x7af0ff,
+  dome:     0x46e88a,
 };
 
-// Base expansion definitions (Level 1 is the starting state)
+// Base build ladder (shard-cost driven; low = builds fast)
 const LEVELS = [
-  { domeScale: 1.0, goalType: null,       goalAmount: 0,  tag: 'DOME · LEVEL 1' },
-  { domeScale: 1.5, goalType: 'regolith', goalAmount: 20, tag: 'DOME · LEVEL 2', text: 'Deposit 20 Regolith to expand the dome' },
-  { domeScale: 2.0, goalType: 'resin',    goalAmount: 50, tag: 'DOME · LEVEL 3', text: 'Deposit 50 Resin to grow the colony' },
-  { domeScale: 2.6, goalType: 'biomass',  goalAmount: 30, tag: 'DOME · LEVEL 4', text: 'Gather 30 Biomass to terraform' },
+  { domeScale: 1.0, cost: 0,  tag: 'OUTPOST · LEVEL 1' },
+  { domeScale: 1.4, cost: 8,  tag: 'OUTPOST · LEVEL 2', text: 'Deposit 8 Shards to raise the walls' },
+  { domeScale: 1.8, cost: 20, tag: 'OUTPOST · LEVEL 3', text: 'Deposit 20 Shards to mount turrets' },
+  { domeScale: 2.2, cost: 40, tag: 'OUTPOST · LEVEL 4', text: 'Deposit 40 Shards to deploy drones' },
+  { domeScale: 2.7, cost: 70, tag: 'FORTRESS · LEVEL 5', text: 'Deposit 70 Shards to fortify the colony' },
 ];
 
 // ---------- Renderer / scene / camera ----------
@@ -209,28 +251,26 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2a0f06);
-scene.fog = new THREE.FogExp2(0x49180a, 0.0065);
+scene.fog = new THREE.FogExp2(0x49180a, 0.006);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 600);
-const CAM_OFFSET = new THREE.Vector3(0, 46, 38);   // top-down-ish chase
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 700);
+const CAM_OFFSET = new THREE.Vector3(0, 50, 40);
 camera.position.copy(CAM_OFFSET);
 camera.lookAt(0, 0, 0);
 
 // ---------- Lights ----------
-scene.add(new THREE.HemisphereLight(0xffd9b0, 0x3a1505, 0.85));
-const sun = new THREE.DirectionalLight(0xfff0e0, 1.15);
+scene.add(new THREE.HemisphereLight(0xffd9b0, 0x3a1505, 0.9));
+const sun = new THREE.DirectionalLight(0xfff0e0, 1.1);
 sun.position.set(40, 80, 30);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 260;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 280;
 const sc = sun.shadow.camera;
 sc.left = -WORLD; sc.right = WORLD; sc.top = WORLD; sc.bottom = -WORLD;
 scene.add(sun);
 
 // ---------- Ground ----------
-const groundGeo = new THREE.PlaneGeometry(WORLD * 2, WORLD * 2, 60, 60);
-// gentle dune displacement for texture
+const groundGeo = new THREE.PlaneGeometry(WORLD * 2, WORLD * 2, 64, 64);
 const gp = groundGeo.attributes.position;
 for (let i = 0; i < gp.count; i++) {
   const x = gp.getX(i), y = gp.getY(i);
@@ -242,155 +282,170 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Boundary ring so the player can see the edge of the world
 {
-  const ringGeo = new THREE.RingGeometry(WORLD - 1.5, WORLD, 96);
-  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x6a2a12, side: THREE.DoubleSide }));
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.05;
-  scene.add(ring);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(WORLD - 1.5, WORLD, 96),
+    new THREE.MeshBasicMaterial({ color: 0x6a2a12, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; scene.add(ring);
 }
-
-// Starfield backdrop
 {
   const starGeo = new THREE.BufferGeometry();
   const N = 600, pos = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const r = 250 + Math.random() * 120;
-    const th = Math.random() * Math.PI * 2;
-    const ph = Math.random() * Math.PI * 0.5;
-    pos[i*3]   = Math.cos(th) * Math.sin(ph + 0.2) * r;
+    const r = 260 + Math.random() * 130, th = Math.random() * TAU, ph = Math.random() * Math.PI * 0.5;
+    pos[i*3] = Math.cos(th) * Math.sin(ph + 0.2) * r;
     pos[i*3+1] = Math.cos(ph) * r * 0.9 + 30;
     pos[i*3+2] = Math.sin(th) * Math.sin(ph + 0.2) * r;
   }
   starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffe8c0, size: 1.2, sizeAttenuation: true })));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffe8c0, size: 1.2 })));
 }
 
-// ---------- The Oxygen Dome (deposit zone + base) ----------
-const DOME_BASE_R = 10;
+// ---------- Base / core ----------
+const DOME_BASE_R = 11;
 const dome = new THREE.Group();
 scene.add(dome);
 
 const domeMat = new THREE.MeshStandardMaterial({
-  color: COLORS.dome, transparent: true, opacity: 0.32,
-  roughness: 0.2, metalness: 0.1, side: THREE.DoubleSide,
-  emissive: COLORS.dome, emissiveIntensity: 0.25,
+  color: COLORS.dome, transparent: true, opacity: 0.3, roughness: 0.2, metalness: 0.1,
+  side: THREE.DoubleSide, emissive: COLORS.dome, emissiveIntensity: 0.25,
 });
-const domeShell = new THREE.Mesh(new THREE.SphereGeometry(DOME_BASE_R, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+const domeShell = new THREE.Mesh(new THREE.SphereGeometry(DOME_BASE_R, 40, 24, 0, TAU, 0, Math.PI / 2), domeMat);
 dome.add(domeShell);
 
-// glowing base ring of the dome
-const domeRing = new THREE.Mesh(
-  new THREE.TorusGeometry(DOME_BASE_R, 0.35, 12, 48),
-  new THREE.MeshStandardMaterial({ color: 0x9effc4, emissive: 0x46e88a, emissiveIntensity: 0.8 })
-);
-domeRing.rotation.x = Math.PI / 2;
-domeRing.position.y = 0.4;
-dome.add(domeRing);
+const domeRing = new THREE.Mesh(new THREE.TorusGeometry(DOME_BASE_R, 0.4, 12, 48),
+  new THREE.MeshStandardMaterial({ color: 0x9effc4, emissive: 0x46e88a, emissiveIntensity: 0.8 }));
+domeRing.rotation.x = Math.PI / 2; domeRing.position.y = 0.4; dome.add(domeRing);
 
-// central beacon
-const beacon = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.5, 0.9, 5, 8),
-  new THREE.MeshStandardMaterial({ color: 0xcfd8d8, metalness: 0.7, roughness: 0.3, emissive: 0x114422, emissiveIntensity: 0.3 })
-);
-beacon.position.y = 2.5; beacon.castShadow = true;
-dome.add(beacon);
+// glowing deposit core in the center
+const core = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.8, 4, 8),
+  new THREE.MeshStandardMaterial({ color: 0xcfd8d8, metalness: 0.7, roughness: 0.3, emissive: 0x1466aa, emissiveIntensity: 0.6 }));
+core.position.y = 2; core.castShadow = true; dome.add(core);
+const coreGlow = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 0),
+  new THREE.MeshStandardMaterial({ color: 0x7af0ff, emissive: 0x36e0ff, emissiveIntensity: 1.2 }));
+coreGlow.position.y = 4.6; dome.add(coreGlow);
 
-// Containers that appear with upgrades
-let gridFloor = null;       // appears at level 2
-const survivors = [];       // appear at level 3
+// containers revealed by upgrades
+let walls = null;            // L2
+const turrets = [];          // L3
+const drones = [];           // L4
 
 // ---------- Player ----------
 const player = new THREE.Group();
-player.position.set(0, 0, 24);
+player.position.set(0, 0, 26);
 scene.add(player);
 
-const body = new THREE.Mesh(
-  new THREE.CylinderGeometry(1.1, 1.3, 2.4, 16),
-  new THREE.MeshStandardMaterial({ color: COLORS.player, roughness: 0.5, metalness: 0.2 })
-);
-body.position.y = 1.2; body.castShadow = true;
-player.add(body);
+const body = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 2.4, 16),
+  new THREE.MeshStandardMaterial({ color: COLORS.player, roughness: 0.5, metalness: 0.2 }));
+body.position.y = 1.2; body.castShadow = true; player.add(body);
 
-// helmet visor (small blue box) facing forward
-const visor = new THREE.Mesh(
-  new THREE.BoxGeometry(1.4, 0.7, 0.5),
-  new THREE.MeshStandardMaterial({ color: COLORS.resin, emissive: 0x113366, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 })
-);
-visor.position.set(0, 2.1, 0.95);
-player.add(visor);
+const visor = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.5),
+  new THREE.MeshStandardMaterial({ color: 0x2f7adf, emissive: 0x113366, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 }));
+visor.position.set(0, 2.1, 0.95); player.add(visor);
 
-// shadow-catcher disc under player (cheap soft contact shadow)
-const blob = new THREE.Mesh(
-  new THREE.CircleGeometry(1.6, 20),
-  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })
-);
-blob.rotation.x = -Math.PI / 2; blob.position.y = 0.08;
-player.add(blob);
+const blob = new THREE.Mesh(new THREE.CircleGeometry(1.6, 20),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 }));
+blob.rotation.x = -Math.PI / 2; blob.position.y = 0.08; player.add(blob);
 
-// The carry stack — a group attached to the player
 const stackGroup = new THREE.Group();
-stackGroup.position.y = 2.6;
-player.add(stackGroup);
+stackGroup.position.y = 2.6; player.add(stackGroup);
 
-// ---------- Shared geometries / materials ----------
-const GEO = {
-  regolith: new THREE.BoxGeometry(1.3, 1.3, 1.3),
-  resin:    new THREE.BoxGeometry(1.1, 1.4, 1.1),
-};
+// ---------- The Lightsaber ----------
+const saberPivot = new THREE.Group();
+saberPivot.position.y = 1.5;
+player.add(saberPivot);
+{
+  const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.2, 10),
+    new THREE.MeshStandardMaterial({ color: 0x888c90, metalness: 0.9, roughness: 0.25 }));
+  hilt.rotation.z = Math.PI / 2; hilt.position.x = 0.6; saberPivot.add(hilt);
+
+  // blade: bright additive cylinder + a solid white-hot core
+  const bladeMat = new THREE.MeshBasicMaterial({ color: COLORS.saber, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+  const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.18, SABER_REACH, 12), bladeMat);
+  blade.rotation.z = Math.PI / 2; blade.position.x = 1.2 + SABER_REACH / 2; saberPivot.add(blade);
+  const bladeCore = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.07, SABER_REACH, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  bladeCore.rotation.z = Math.PI / 2; bladeCore.position.x = 1.2 + SABER_REACH / 2; saberPivot.add(bladeCore);
+
+  const tip = new THREE.PointLight(COLORS.saber, 2.4, 26, 2);
+  tip.position.x = 1.2 + SABER_REACH; saberPivot.add(tip);
+
+  // glowing motion-trail sector (lies flat, trails behind the blade)
+  const trail = new THREE.Mesh(
+    new THREE.RingGeometry(1.3, 1.2 + SABER_REACH, 24, 1, 0, 2.4),
+    new THREE.MeshBasicMaterial({ color: COLORS.saber, transparent: true, opacity: 0.22, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  trail.rotation.x = -Math.PI / 2;   // flat
+  trail.rotation.z = -2.4;           // start of sector trails behind blade (blade sits at angle 0)
+  saberPivot.add(trail);
+}
+
+// ---------- Shared geometry / materials ----------
+const crystalGeo = new THREE.ConeGeometry(0.9, 2.4, 5);
+const shardGeo = new THREE.OctahedronGeometry(0.5, 0);
 const MAT = {
-  regolith: new THREE.MeshStandardMaterial({ color: COLORS.regolith, roughness: 0.9 }),
-  resin:    new THREE.MeshStandardMaterial({ color: COLORS.resin, roughness: 0.35, metalness: 0.3, emissive: 0x0a2244, emissiveIntensity: 0.3 }),
+  crystalA: new THREE.MeshStandardMaterial({ color: COLORS.crystalA, emissive: 0x114a66, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.3, flatShading: true }),
+  crystalB: new THREE.MeshStandardMaterial({ color: COLORS.crystalB, emissive: 0x3a1466, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.3, flatShading: true }),
+  shardA:   new THREE.MeshStandardMaterial({ color: COLORS.crystalA, emissive: 0x2aa0cc, emissiveIntensity: 0.7, flatShading: true }),
+  shardB:   new THREE.MeshStandardMaterial({ color: COLORS.crystalB, emissive: 0x7a40cc, emissiveIntensity: 0.7, flatShading: true }),
 };
-const stackGeoScale = 0.62;   // stacked clones are a bit smaller
+const STACK_SCALE = 0.6;
 
-// ---------- Game state ----------
+// ---------- State ----------
 const state = {
-  store: { regolith: 0, resin: 0, biomass: 0 },  // banked in the dome
-  carry: [],            // array of { type, mesh } currently on the player's back
-  level: 1,             // current base level (1-indexed)
-  resources: [],        // active resource nodes in the world
-  beetles: [],          // active enemies
-  fx: [],               // transient tween effects (vacuum/pop/death)
+  shards: 0,
+  carry: [],
+  kills: 0,
+  baseLevel: 1,
+  nodes: [],
+  enemies: [],
+  pickups: [],
+  fx: [],
+  energy: MAX_ENERGY,
+  energyDelay: 0,
+  saberAngle: 0,
   depositTimer: 0,
-  beetleTimer: 2,
+  enemyTimer: 1.5,
+  combo: 0,
+  comboTimer: 0,
   running: false,
   shake: 0,
 };
 
-// ---------- UI refs ----------
+// ---------- UI ----------
 const ui = {
-  regolith: document.getElementById('uiRegolith'),
-  resin: document.getElementById('uiResin'),
-  biomass: document.getElementById('uiBiomass'),
+  shards: document.getElementById('uiShards'),
+  kills: document.getElementById('uiKills'),
   carry: document.getElementById('uiCarry'),
   carryMax: document.getElementById('uiCarryMax'),
   carryBox: document.getElementById('carry'),
+  energyBar: document.getElementById('energyBar'),
   levelTag: document.getElementById('levelTag'),
   progressBar: document.getElementById('progressBar'),
   goalText: document.getElementById('goalText'),
   toast: document.getElementById('toast'),
+  combo: document.getElementById('combo'),
+  flash: document.getElementById('flash'),
 };
 ui.carryMax.textContent = CARRY_MAX;
 
 function refreshUI() {
-  ui.regolith.textContent = state.store.regolith;
-  ui.resin.textContent = state.store.resin;
-  ui.biomass.textContent = state.store.biomass;
+  ui.shards.textContent = state.shards;
+  ui.kills.textContent = state.kills;
   ui.carry.textContent = state.carry.length;
   ui.carryBox.classList.toggle('full', state.carry.length >= CARRY_MAX);
+  ui.energyBar.style.width = Math.max(0, (state.energy / MAX_ENERGY) * 100) + '%';
 
-  const lvl = LEVELS[state.level];      // the level we're working toward
-  ui.levelTag.textContent = LEVELS[state.level - 1].tag;
-  if (lvl && lvl.goalType) {
-    const have = state.store[lvl.goalType];
-    const pct = Math.min(100, (have / lvl.goalAmount) * 100);
-    ui.progressBar.style.width = pct + '%';
-    ui.goalText.textContent = `${lvl.text}  (${Math.min(have, lvl.goalAmount)}/${lvl.goalAmount})`;
+  const next = LEVELS[state.baseLevel];
+  ui.levelTag.textContent = LEVELS[state.baseLevel - 1].tag;
+  if (next) {
+    const prevCost = LEVELS[state.baseLevel - 1].cost;
+    const span = next.cost - prevCost;
+    const pct = Math.min(100, ((state.shards - prevCost) / span) * 100);
+    ui.progressBar.style.width = Math.max(0, pct) + '%';
+    ui.goalText.textContent = `${next.text}  (${Math.min(state.shards, next.cost)}/${next.cost})`;
   } else {
     ui.progressBar.style.width = '100%';
-    ui.goalText.textContent = 'Colony fully terraformed — keep foraging!';
+    ui.goalText.textContent = 'Fortress complete — hold the line!';
   }
 }
 
@@ -399,409 +454,461 @@ function toast(main, sub) {
   ui.toast.innerHTML = main + (sub ? `<span class="sub">${sub}</span>` : '');
   ui.toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1900);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
+}
+
+function bumpCombo() {
+  state.combo++;
+  state.comboTimer = 1.6;
+  if (state.combo >= 3) {
+    ui.combo.innerHTML = state.combo + '<small>COMBO</small>';
+    ui.combo.classList.add('show');
+  }
 }
 
 // ---------- Helpers ----------
-function randSpawnPos(minFromDome) {
-  // random point on the map but outside the dome radius
-  let x, z, d, tries = 0;
-  do {
-    x = (Math.random() * 2 - 1) * (WORLD - 6);
-    z = (Math.random() * 2 - 1) * (WORLD - 6);
-    d = Math.hypot(x, z);
-    tries++;
-  } while (d < minFromDome && tries < 40);
-  return new THREE.Vector3(x, 0, z);
+function easeOutBack(x) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+function angDiff(a, b) { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; }
+function currentDomeRadius() { return DOME_BASE_R * LEVELS[state.baseLevel - 1].domeScale; }
+
+function ringPos(minR, maxR) {
+  const a = Math.random() * TAU;
+  const r = minR + Math.random() * (maxR - minR);
+  return new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
 }
 
-function currentDomeRadius() {
-  return DOME_BASE_R * LEVELS[state.level - 1].domeScale;
-}
+function addFX(fn, dur) { state.fx.push({ fn, t: 0, dur }); }
 
-// ---------- Resource nodes ----------
-function spawnResource(type) {
-  const mesh = new THREE.Mesh(GEO[type], MAT[type]);
-  const p = randSpawnPos(currentDomeRadius() + 8);
-  mesh.position.set(p.x, type === 'resin' ? 0.7 : 0.65, p.z);
-  mesh.rotation.y = Math.random() * Math.PI;
-  mesh.castShadow = true;
-  mesh.userData = { type, spin: 0.3 + Math.random() * 0.6, bobOff: Math.random() * 6, baseY: mesh.position.y };
-  scene.add(mesh);
-  state.resources.push(mesh);
-}
-
-function topUpResources() {
-  while (state.resources.length < RESOURCE_TARGET) {
-    // resin is rarer than regolith
-    spawnResource(Math.random() < 0.62 ? 'regolith' : 'resin');
-  }
-}
-
-// ---------- Beetles (enemies) ----------
-function spawnBeetle() {
+// billboarded bar (bg + fill); child of a target mesh
+function makeBar(width, color) {
   const g = new THREE.Group();
-  const shell = new THREE.Mesh(
-    new THREE.SphereGeometry(1.4, 16, 12),
-    new THREE.MeshStandardMaterial({ color: COLORS.enemy, roughness: 0.6, metalness: 0.2, emissive: 0x330000, emissiveIntensity: 0.4 })
-  );
-  shell.scale.y = 0.7; shell.castShadow = true;
-  g.add(shell);
-  // two glowing eyes
-  for (const sx of [-0.5, 0.5]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
-    eye.position.set(sx, 0.5, 1.05);
-    g.add(eye);
+  const bg = new THREE.Mesh(new THREE.PlaneGeometry(width, 0.22),
+    new THREE.MeshBasicMaterial({ color: 0x120c0c, transparent: true, opacity: 0.75, depthTest: false }));
+  const fill = new THREE.Mesh(new THREE.PlaneGeometry(width, 0.16),
+    new THREE.MeshBasicMaterial({ color, depthTest: false }));
+  fill.position.z = 0.01; bg.renderOrder = 998; fill.renderOrder = 999;
+  g.add(bg); g.add(fill);
+  g.userData = { fill, width };
+  return g;
+}
+function setBar(bar, frac) {
+  const f = bar.userData.fill;
+  f.scale.x = Math.max(0.0001, frac);
+  f.position.x = -bar.userData.width * (1 - frac) / 2;
+}
+
+// ---------- Nodes (crystal clusters) ----------
+function spawnNode() {
+  const variant = Math.random() < 0.5 ? 'A' : 'B';
+  const g = new THREE.Group();
+  const mat = variant === 'A' ? MAT.crystalA : MAT.crystalB;
+  const n = 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) {
+    const c = new THREE.Mesh(crystalGeo, mat);
+    c.position.set((Math.random()-0.5)*1.4, 0, (Math.random()-0.5)*1.4);
+    c.scale.setScalar(0.7 + Math.random()*0.8);
+    c.position.y = c.scale.y * 1.1;
+    c.rotation.y = Math.random() * TAU;
+    c.castShadow = true;
+    g.add(c);
   }
-  const edge = WORLD - 4;
-  const side = Math.floor(Math.random() * 4);
-  const t = (Math.random() * 2 - 1) * edge;
-  const p = [ [t, 0, -edge], [t, 0, edge], [-edge, 0, t], [edge, 0, t] ][side];
-  g.position.set(p[0], 1.1, p[2]);
-  g.userData = { wob: Math.random() * 6 };
+  const p = ringPos(NODE_RING_MIN, NODE_RING_MAX);
+  g.position.copy(p);
+  const maxHp = 3 + Math.floor(Math.random() * 2);
+  const bar = makeBar(1.8, variant === 'A' ? COLORS.crystalA : COLORS.crystalB);
+  bar.position.y = 3.4; bar.visible = false; g.add(bar);
+  g.userData = { hp: maxHp, maxHp, bar, variant, lastHit: -99, barTimer: 0, spin: (Math.random()-0.5) };
   scene.add(g);
-  state.beetles.push(g);
+  state.nodes.push(g);
+}
+function topUpNodes() { while (state.nodes.length < NODE_TARGET) spawnNode(); }
+
+function destroyNode(g) {
+  const idx = state.nodes.indexOf(g); if (idx >= 0) state.nodes.splice(idx, 1);
+  // burst shards toward the player's stack
+  const drops = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < drops; i++) spawnPickup(g.position, g.userData.variant);
+  // shatter fx
+  for (let i = 0; i < 6; i++) {
+    const sh = new THREE.Mesh(shardGeo, g.userData.variant === 'A' ? MAT.shardA : MAT.shardB);
+    sh.position.copy(g.position); sh.position.y = 1;
+    const dir = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).normalize().multiplyScalar(5 + Math.random()*4);
+    scene.add(sh);
+    addFX((k) => { sh.position.addScaledVector(dir, 0.04*(1-k)); sh.position.y += 0.05*(1-k); sh.rotation.x += 0.3; sh.scale.setScalar(1-k); if (k>=1) scene.remove(sh); }, 0.5);
+  }
+  scene.remove(g);
+  state.shake = Math.min(1, state.shake + 0.18);
 }
 
-// ---------- Effects (tween pool) ----------
-function addFX(fn, dur) {
-  state.fx.push({ fn, t: 0, dur });
+// ---------- Pickups (vacuum to stack) ----------
+function spawnPickup(pos, variant) {
+  const mesh = new THREE.Mesh(shardGeo, variant === 'A' ? MAT.shardA : MAT.shardB);
+  mesh.position.copy(pos); mesh.position.y = 1.2;
+  mesh.userData = { variant, delay: 0.12 + Math.random() * 0.1 };
+  scene.add(mesh);
+  state.pickups.push(mesh);
 }
 
-// Vacuum a resource node into the player, then add to stack
-function vacuumResource(mesh) {
-  const idx = state.resources.indexOf(mesh);
-  if (idx >= 0) state.resources.splice(idx, 1);
-  const type = mesh.userData.type;
-  const start = mesh.position.clone();
-  addFX((k) => {
-    // ease toward player while shrinking + spinning (the "vacuum")
-    const target = player.position.clone().add(new THREE.Vector3(0, 2.5, 0));
-    mesh.position.lerpVectors(start, target, k * k);
-    const s = 1 - k;
-    mesh.scale.setScalar(Math.max(0.001, s));
-    mesh.rotation.y += 0.5; mesh.rotation.x += 0.4;
-    if (k >= 1) { scene.remove(mesh); addToStack(type); }
-  }, 0.22);
-}
-
-// Add a clone to the player's back stack (with a little pop-in)
-function addToStack(type) {
-  const mesh = new THREE.Mesh(GEO[type], MAT[type]);
-  mesh.castShadow = true;
-  mesh.scale.setScalar(0.001);
-  mesh.userData = { type, baseScale: stackGeoScale };
+function addToStack(variant) {
+  const mesh = new THREE.Mesh(shardGeo, variant === 'A' ? MAT.shardA : MAT.shardB);
+  mesh.castShadow = true; mesh.scale.setScalar(0.001);
+  mesh.userData = { variant };
   stackGroup.add(mesh);
-  state.carry.push({ type, mesh });
+  state.carry.push({ variant, mesh });
   layoutStack();
-  // pop-in tween
-  const target = stackGeoScale;
-  addFX((k) => {
-    const s = target * (1 + 0.4 * Math.sin(Math.min(1, k) * Math.PI)); // overshoot
-    mesh.scale.setScalar(k < 1 ? s : target);
-  }, 0.18);
+  addFX((k) => { mesh.scale.setScalar(k < 1 ? STACK_SCALE * (1 + 0.4 * Math.sin(k * Math.PI)) : STACK_SCALE); }, 0.18);
   refreshUI();
 }
-
-// Position every stacked item along the Y axis
 function layoutStack() {
   for (let i = 0; i < state.carry.length; i++) {
     const m = state.carry[i].mesh;
-    m.userData.stackY = i * ITEM_H + 0.5;
-    m.position.set(0, m.userData.stackY, 0);
+    m.position.set(0, i * ITEM_H + 0.4, 0);
   }
 }
-
-// Pop the top item off the stack (LIFO) when depositing
 function popStack() {
-  const item = state.carry.pop();
-  if (!item) return null;
+  const item = state.carry.pop(); if (!item) return;
   layoutStack();
-  // fly the popped clone into the dome beacon, then bank it
   const mesh = item.mesh;
-  stackGroup.remove(mesh);
-  scene.add(mesh);
+  stackGroup.remove(mesh); scene.add(mesh);
   const start = mesh.getWorldPosition(new THREE.Vector3());
-  mesh.position.copy(start);
-  mesh.scale.setScalar(stackGeoScale);
-  const target = new THREE.Vector3(0, 5, 0); // up into the beacon
+  mesh.position.copy(start); mesh.scale.setScalar(STACK_SCALE);
+  const target = new THREE.Vector3(0, 5, 0);
   addFX((k) => {
     mesh.position.lerpVectors(start, target, k);
-    mesh.position.y += Math.sin(k * Math.PI) * 2; // arc
-    mesh.rotation.y += 0.4;
-    mesh.scale.setScalar(stackGeoScale * (1 - k));
+    mesh.position.y += Math.sin(k * Math.PI) * 2.5;
+    mesh.rotation.y += 0.4; mesh.scale.setScalar(STACK_SCALE * (1 - k));
     if (k >= 1) scene.remove(mesh);
-  }, 0.3);
-  state.store[item.type]++;
+  }, 0.26);
+  state.shards++;
+  coreGlow.scale.setScalar(1.4);
   refreshUI();
-  return item.type;
 }
 
-// Kill a beetle: shrink + reward biomass
-function killBeetle(g) {
-  const idx = state.beetles.indexOf(g);
-  if (idx >= 0) state.beetles.splice(idx, 1);
-  const start = g.scale.x;
-  addFX((k) => {
-    g.scale.setScalar(start * (1 - k));
-    g.rotation.y += 0.6;
-    g.position.y = 1.1 + k * 2;
-    if (k >= 1) scene.remove(g);
-  }, 0.3);
-  state.store.biomass++;
-  state.shake = Math.min(1, state.shake + 0.6);
-  // spawn a little biomass spark burst
-  for (let i = 0; i < 6; i++) {
-    const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.25, 6, 6),
-      new THREE.MeshBasicMaterial({ color: COLORS.biomass })
-    );
-    spark.position.copy(g.position);
-    const dir = new THREE.Vector3((Math.random()*2-1), Math.random()*1.5, (Math.random()*2-1)).normalize().multiplyScalar(4 + Math.random()*3);
-    scene.add(spark);
-    addFX((k) => {
-      spark.position.addScaledVector(dir, 0.03 * (1 - k));
-      spark.position.y += 0.04 * (1 - k);
-      spark.scale.setScalar(1 - k);
-      if (k >= 1) scene.remove(spark);
-    }, 0.5);
+// ---------- Enemies ----------
+function spawnEnemy() {
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12),
+    new THREE.MeshStandardMaterial({ color: COLORS.enemy, roughness: 0.6, metalness: 0.2, emissive: 0x330008, emissiveIntensity: 0.5 }));
+  shell.scale.y = 0.7; shell.castShadow = true; g.add(shell);
+  for (const sx of [-0.5, 0.5]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
+    eye.position.set(sx, 0.5, 1.05); g.add(eye);
   }
+  const p = ringPos(WORLD - 14, WORLD - 6);
+  g.position.set(p.x, 1.1, p.z);
+  const maxHp = 3 + Math.floor(state.baseLevel * 0.8);
+  const bar = makeBar(2.0, 0x46e88a);
+  bar.position.y = 2.4; g.add(bar); setBar(bar, 1);
+  g.userData = { hp: maxHp, maxHp, bar, vel: new THREE.Vector3(), wob: Math.random()*6, lastHit: -99 };
+  scene.add(g);
+  state.enemies.push(g);
+}
+
+function killEnemy(g) {
+  const idx = state.enemies.indexOf(g); if (idx >= 0) state.enemies.splice(idx, 1);
+  state.kills++;
+  bumpCombo();
+  const start = g.scale.x;
+  addFX((k) => { g.scale.setScalar(start * (1 - k)); g.rotation.y += 0.7; g.position.y = 1.1 + k * 2.4; if (k>=1) scene.remove(g); }, 0.3);
+  for (let i = 0; i < 7; i++) {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff7a3c }));
+    sp.position.copy(g.position);
+    const dir = new THREE.Vector3((Math.random()-0.5), Math.random()*1.4, (Math.random()-0.5)).normalize().multiplyScalar(5 + Math.random()*3);
+    scene.add(sp);
+    addFX((k) => { sp.position.addScaledVector(dir, 0.035*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.45);
+  }
+  state.shake = Math.min(1, state.shake + 0.35);
   refreshUI();
-  checkUpgrade();
-  toast('+1 BIOMASS', 'Sand beetle neutralized');
+}
+
+// ---------- Saber hit sparks ----------
+function hitSpark(pos, color) {
+  for (let i = 0; i < 3; i++) {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 5, 5), new THREE.MeshBasicMaterial({ color }));
+    sp.position.copy(pos); sp.position.y += 1;
+    const dir = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).normalize().multiplyScalar(4);
+    scene.add(sp);
+    addFX((k) => { sp.position.addScaledVector(dir, 0.04*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.25);
+  }
 }
 
 // ---------- Base upgrades ----------
 function checkUpgrade() {
-  const next = LEVELS[state.level]; // the level we're working toward (0-indexed = state.level)
-  if (!next || !next.goalType) return;
-  if (state.store[next.goalType] >= next.goalAmount) {
-    applyUpgrade(state.level + 1);
-  }
+  const next = LEVELS[state.baseLevel];
+  if (next && state.shards >= next.cost) applyUpgrade(state.baseLevel + 1);
 }
 
 function applyUpgrade(newLevel) {
-  state.level = newLevel;
+  state.baseLevel = newLevel;
   const def = LEVELS[newLevel - 1];
+  const fromScale = dome.scale.x, toScale = def.domeScale;
+  addFX((k) => dome.scale.setScalar(fromScale + (toScale - fromScale) * easeOutBack(k)), 0.6);
 
-  // animate the dome scaling up
-  const fromScale = dome.scale.x;
-  const toScale = def.domeScale;
-  addFX((k) => {
-    const s = fromScale + (toScale - fromScale) * easeOutBack(k);
-    dome.scale.setScalar(s);
-  }, 0.6);
-
-  // Level 2: metallic grid floor under the dome
-  if (newLevel === 2 && !gridFloor) {
-    gridFloor = new THREE.GridHelper(DOME_BASE_R * 3, 12, 0xbfe9ff, 0x4a7a8a);
-    gridFloor.position.y = 0.12;
-    gridFloor.material.transparent = true;
-    gridFloor.material.opacity = 0.0;
-    scene.add(gridFloor);
-    const plate = new THREE.Mesh(
-      new THREE.CircleGeometry(DOME_BASE_R * 1.5, 40),
-      new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.8, roughness: 0.3 })
-    );
-    plate.rotation.x = -Math.PI / 2; plate.position.y = 0.1; plate.receiveShadow = true;
-    scene.add(plate);
-    addFX((k) => { gridFloor.material.opacity = 0.6 * k; }, 0.8);
-    toast('DOME UPGRADED', 'Level 2 — Foundation plating installed');
-  }
-
-  // Level 3: two friendly survivor cylinders inside
-  if (newLevel === 3 && survivors.length === 0) {
-    for (const sx of [-3.5, 3.5]) {
-      const s = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.8, 1.0, 3, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffc98a, roughness: 0.6, emissive: 0x442200, emissiveIntensity: 0.3 })
-      );
-      s.position.set(sx, 1.5, -2);
-      s.castShadow = true;
-      // little visor box
-      const v = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 0.4), new THREE.MeshStandardMaterial({ color: 0x2f7adf, emissive: 0x113366, emissiveIntensity: 0.5 }));
-      v.position.set(0, 1.1, 0.7); s.add(v);
-      s.scale.setScalar(0.001);
-      dome.add(s);
-      survivors.push(s);
-      addFX((k) => { s.scale.setScalar(easeOutBack(k)); }, 0.7);
+  if (newLevel === 2 && !walls) {
+    walls = new THREE.Group(); dome.add(walls);
+    const segs = 22, R = DOME_BASE_R + 1.5;
+    for (let i = 0; i < segs; i++) {
+      const a = (i / segs) * TAU;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(1.1, 3.4, 1.1),
+        new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.85 }));
+      post.position.set(Math.cos(a) * R, 1.7, Math.sin(a) * R);
+      post.castShadow = true; post.scale.y = 0.001;
+      walls.add(post);
+      addFX((k) => post.scale.y = easeOutBack(Math.min(1,k)), 0.5 + Math.random()*0.3);
     }
-    toast('SURVIVORS RESCUED', 'Level 3 — Two colonists join the dome');
+    const plate = new THREE.Mesh(new THREE.CircleGeometry(DOME_BASE_R + 1, 40),
+      new THREE.MeshStandardMaterial({ color: 0x5a4030, metalness: 0.3, roughness: 0.7 }));
+    plate.rotation.x = -Math.PI/2; plate.position.y = 0.1; plate.receiveShadow = true; dome.add(plate);
+    toast('WALLS RAISED', 'Level 2 — perimeter secured');
   }
 
-  if (newLevel >= 4) {
-    toast('COLONY TERRAFORMED', 'Max level — the dome glows brighter');
-    domeMat.emissiveIntensity = 0.5;
+  if (newLevel === 3 && turrets.length === 0) {
+    for (const a of [0, TAU/3, 2*TAU/3]) {
+      const t = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 1.4, 10),
+        new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.7, roughness: 0.3 }));
+      base.position.y = 0.7; t.add(base);
+      const barrel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x9aa6b0, metalness: 0.8, roughness: 0.25, emissive: 0x113355, emissiveIntensity: 0.4 }));
+      barrel.position.set(1, 1.5, 0); t.add(barrel);
+      const R = DOME_BASE_R + 1.5;
+      t.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
+      t.userData = { barrel, cd: 0 };
+      t.scale.setScalar(0.001); dome.add(t); turrets.push(t);
+      addFX((k) => t.scale.setScalar(easeOutBack(Math.min(1,k))), 0.5);
+    }
+    toast('TURRETS ONLINE', 'Level 3 — auto-defense engaged');
   }
 
-  state.shake = 1;
-  refreshUI();
+  if (newLevel === 4 && drones.length === 0) {
+    for (let i = 0; i < 3; i++) {
+      const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.7, 0),
+        new THREE.MeshStandardMaterial({ color: 0xffc98a, emissive: 0x442200, emissiveIntensity: 0.4, metalness: 0.5, roughness: 0.4 }));
+      d.userData = { ang: (i/3)*TAU, r: 5 + i*1.2, h: 3 + i*0.6 };
+      d.castShadow = true; dome.add(d); drones.push(d);
+    }
+    toast('DRONES DEPLOYED', 'Level 4 — workers airborne');
+  }
+
+  if (newLevel >= 5) { domeMat.emissiveIntensity = 0.5; toast('FORTRESS COMPLETE', 'Level 5 — colony fortified'); }
+
+  state.shake = 1; refreshUI();
 }
 
-function easeOutBack(x) {
-  const c1 = 1.70158, c3 = c1 + 1;
-  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+// ---------- Turret firing ----------
+function fireTurret(t) {
+  let best = null, bd = 1e9;
+  const wp = t.getWorldPosition(new THREE.Vector3());
+  for (const e of state.enemies) {
+    const d = e.position.distanceTo(wp);
+    if (d < bd) { bd = d; best = e; }
+  }
+  if (!best || bd > 60) return;
+  t.userData.barrel.parent.lookAt(best.position.x, t.position.y, best.position.z);
+  // tracer
+  const start = wp.clone(); start.y = 1.5;
+  const end = best.position.clone();
+  const tracer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), new THREE.MeshBasicMaterial({ color: 0x7af0ff }));
+  scene.add(tracer);
+  const target = best;
+  addFX((k) => {
+    tracer.position.lerpVectors(start, end, k);
+    if (k >= 1) { scene.remove(tracer); if (state.enemies.includes(target)) { target.userData.hp -= 2; setBar(target.userData.bar, Math.max(0,target.userData.hp/target.userData.maxHp)); hitSpark(target.position, 0x7af0ff); if (target.userData.hp <= 0) killEnemy(target); } }
+  }, 0.12);
 }
 
 // ---------- Input ----------
 const keys = {};
-addEventListener('keydown', (e) => {
-  keys[e.key.toLowerCase()] = true;
-  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
-});
+addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-// Mobile joystick
-const stick = document.getElementById('stick');
-const knob = document.getElementById('knob');
-let touchVec = new THREE.Vector2(0, 0);
-let stickId = null;
-function stickStart(e) { stickId = e.changedTouches[0].identifier; stickMove(e); }
+const stick = document.getElementById('stick'), knob = document.getElementById('knob');
+let touchVec = new THREE.Vector2(0, 0), stickId = null;
 function stickMove(e) {
   for (const t of e.changedTouches) {
     if (t.identifier !== stickId) continue;
     const r = stick.getBoundingClientRect();
-    let dx = t.clientX - (r.left + r.width / 2);
-    let dy = t.clientY - (r.top + r.height / 2);
-    const max = r.width / 2;
-    const len = Math.hypot(dx, dy);
-    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
-    knob.style.left = (35 + dx) + 'px';
-    knob.style.top = (35 + dy) + 'px';
-    touchVec.set(dx / max, dy / max);
+    let dx = t.clientX - (r.left + r.width/2), dy = t.clientY - (r.top + r.height/2);
+    const max = r.width/2, len = Math.hypot(dx, dy);
+    if (len > max) { dx = dx/len*max; dy = dy/len*max; }
+    knob.style.left = (35 + dx) + 'px'; knob.style.top = (35 + dy) + 'px';
+    touchVec.set(dx/max, dy/max);
   }
 }
-function stickEnd() { stickId = null; touchVec.set(0, 0); knob.style.left = '35px'; knob.style.top = '35px'; }
-stick.addEventListener('touchstart', (e) => { e.preventDefault(); stickStart(e); }, { passive: false });
+stick.addEventListener('touchstart', (e) => { e.preventDefault(); stickId = e.changedTouches[0].identifier; stickMove(e); }, { passive: false });
 stick.addEventListener('touchmove', (e) => { e.preventDefault(); stickMove(e); }, { passive: false });
-stick.addEventListener('touchend', (e) => { e.preventDefault(); stickEnd(e); }, { passive: false });
+stick.addEventListener('touchend', (e) => { e.preventDefault(); stickId = null; touchVec.set(0,0); knob.style.left='35px'; knob.style.top='35px'; }, { passive: false });
+
+// ---------- Player respawn / flash ----------
+function flash(amount) {
+  ui.flash.style.opacity = amount;
+  addFX((k) => ui.flash.style.opacity = amount * (1 - k), 0.4);
+}
+function respawn() {
+  flash(0.55);
+  toast('SHIELD DOWN', 'Recovered at the core');
+  // knock back all nearby enemies (shockwave)
+  for (const e of state.enemies) {
+    const d = e.position.distanceTo(player.position);
+    if (d < 22) { const dir = e.position.clone().sub(player.position).setY(0).normalize(); e.userData.vel.copy(dir.multiplyScalar(28)); }
+  }
+  player.position.set(0, 0, currentDomeRadius() + 3);
+  state.energy = MAX_ENERGY;
+  state.shake = 1;
+}
 
 // ---------- Main update ----------
 const tmp = new THREE.Vector3();
-let velMag = 0;       // smoothed speed, drives stack wobble
-let faceAngle = 0;
+let velMag = 0, faceAngle = 0;
 
 function update(dt, time) {
-  // --- movement input ---
+  // movement
   let mx = 0, mz = 0;
-  if (keys['w'] || keys['arrowup'])    mz -= 1;
-  if (keys['s'] || keys['arrowdown'])  mz += 1;
-  if (keys['a'] || keys['arrowleft'])  mx -= 1;
+  if (keys['w'] || keys['arrowup']) mz -= 1;
+  if (keys['s'] || keys['arrowdown']) mz += 1;
+  if (keys['a'] || keys['arrowleft']) mx -= 1;
   if (keys['d'] || keys['arrowright']) mx += 1;
   mx += touchVec.x; mz += touchVec.y;
-
   const len = Math.hypot(mx, mz);
   if (len > 1) { mx /= len; mz /= len; }
-
-  const moveDist = PLAYER_SPEED * dt;
-  player.position.x += mx * moveDist;
-  player.position.z += mz * moveDist;
-
-  // clamp to world
-  player.position.x = THREE.MathUtils.clamp(player.position.x, -WORLD + 3, WORLD - 3);
-  player.position.z = THREE.MathUtils.clamp(player.position.z, -WORLD + 3, WORLD - 3);
-
-  // face movement direction
+  player.position.x = THREE.MathUtils.clamp(player.position.x + mx * PLAYER_SPEED * dt, -WORLD+3, WORLD-3);
+  player.position.z = THREE.MathUtils.clamp(player.position.z + mz * PLAYER_SPEED * dt, -WORLD+3, WORLD-3);
   const speed = Math.hypot(mx, mz);
   if (speed > 0.01) faceAngle = Math.atan2(mx, mz);
-  player.rotation.y += (faceAngle - player.rotation.y) * Math.min(1, dt * 12);
-
-  // smooth velocity for wobble
+  player.rotation.y += angDiff(faceAngle, player.rotation.y) * Math.min(1, dt * 12);
   velMag += (speed - velMag) * Math.min(1, dt * 8);
-
-  // bob the body while walking
   body.position.y = 1.2 + Math.sin(time * 10) * 0.08 * velMag;
 
-  // --- stack wobble (sine tied to speed) ---
+  // saber sweep
+  state.saberAngle = (state.saberAngle + SABER_SPIN * dt) % TAU;
+  saberPivot.rotation.y = state.saberAngle;
+  const bladeAng = (player.rotation.y + state.saberAngle) % TAU;
+
+  // saber hits — nodes
+  for (let i = state.nodes.length - 1; i >= 0; i--) {
+    const g = state.nodes[i];
+    g.rotation.y += g.userData.spin * dt;
+    const dx = g.position.x - player.position.x, dz = g.position.z - player.position.z;
+    const d2 = dx*dx + dz*dz;
+    if (g.userData.barTimer > 0) { g.userData.barTimer -= dt; if (g.userData.barTimer <= 0) g.userData.bar.visible = false; }
+    if (d2 <= SABER_REACH*SABER_REACH) {
+      const bearing = Math.atan2(dx, dz);
+      if (Math.abs(angDiff(bearing, bladeAng)) <= SABER_HALF_ARC && time - g.userData.lastHit >= SABER_CD) {
+        g.userData.lastHit = time; g.userData.hp -= SABER_NODE_DMG;
+        g.userData.bar.visible = true; g.userData.barTimer = 1.2;
+        setBar(g.userData.bar, Math.max(0, g.userData.hp / g.userData.maxHp));
+        hitSpark(g.position, g.userData.variant === 'A' ? COLORS.crystalA : COLORS.crystalB);
+        if (g.userData.hp <= 0) destroyNode(g);
+      }
+    }
+  }
+  topUpNodes();
+
+  // pickups vacuum to stack
+  for (let i = state.pickups.length - 1; i >= 0; i--) {
+    const m = state.pickups[i];
+    m.rotation.y += dt * 4; m.rotation.x += dt * 2;
+    if (m.userData.delay > 0) { m.userData.delay -= dt; m.position.y = 1.2 + Math.sin(time*6)*0.2; continue; }
+    if (state.carry.length >= CARRY_MAX) continue;
+    const target = player.position.clone().add(new THREE.Vector3(0, 2.6, 0));
+    m.position.lerp(target, Math.min(1, dt * 9));
+    if (m.position.distanceTo(target) < 1.0) {
+      scene.remove(m); state.pickups.splice(i, 1); addToStack(m.userData.variant);
+    }
+  }
+
+  // deposit at core
+  const domeR = currentDomeRadius();
+  const inDome = Math.hypot(player.position.x, player.position.z) < domeR;
+  if (inDome && state.carry.length > 0) {
+    state.depositTimer -= dt;
+    while (state.depositTimer <= 0 && state.carry.length > 0) { popStack(); state.depositTimer += 0.045; checkUpgrade(); }
+  } else state.depositTimer = 0;
+
+  // enemy spawning — ramps with base level for rising intensity
+  state.enemyTimer -= dt;
+  const spawnEvery = Math.max(0.5, 2.4 - state.baseLevel * 0.3);
+  const cap = 14 + state.baseLevel * 6;
+  if (state.enemyTimer <= 0 && state.enemies.length < cap) {
+    const burst = 1 + Math.floor(state.baseLevel / 2);
+    for (let i = 0; i < burst; i++) spawnEnemy();
+    state.enemyTimer = spawnEvery;
+  }
+
+  // enemies
+  let contact = false;
+  for (let i = state.enemies.length - 1; i >= 0; i--) {
+    const e = state.enemies[i];
+    // knockback velocity decay
+    if (e.userData.vel.lengthSq() > 0.01) {
+      e.position.addScaledVector(e.userData.vel, dt);
+      e.userData.vel.multiplyScalar(1 - Math.min(1, dt * 6));
+    }
+    // chase player
+    tmp.set(player.position.x - e.position.x, 0, player.position.z - e.position.z);
+    const d = tmp.length(); tmp.normalize();
+    e.position.addScaledVector(tmp, ENEMY_SPEED * dt);
+    e.rotation.y = Math.atan2(tmp.x, tmp.z);
+    e.userData.wob += dt * 12;
+    e.position.y = 1.1 + Math.abs(Math.sin(e.userData.wob)) * 0.3;
+
+    // saber hit
+    const ex = e.position.x - player.position.x, ez = e.position.z - player.position.z;
+    const ed2 = ex*ex + ez*ez;
+    if (ed2 <= SABER_REACH*SABER_REACH) {
+      const bearing = Math.atan2(ex, ez);
+      if (Math.abs(angDiff(bearing, bladeAng)) <= SABER_HALF_ARC && time - e.userData.lastHit >= SABER_CD) {
+        e.userData.lastHit = time; e.userData.hp -= SABER_ENEMY_DMG;
+        e.userData.vel.set(Math.sin(bearing), 0, Math.cos(bearing)).multiplyScalar(KNOCK);
+        setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
+        hitSpark(e.position, 0x7af0ff);
+        state.shake = Math.min(1, state.shake + 0.08);
+        if (e.userData.hp <= 0) { killEnemy(e); continue; }
+      }
+    }
+    // contact damage to player
+    if (d < ENEMY_HIT_R) { contact = true; }
+    e.userData.bar.quaternion.copy(camera.quaternion);
+  }
+
+  // player energy
+  if (contact) { state.energy -= ENEMY_DPS * dt; state.energyDelay = 0.9; state.shake = Math.min(1, state.shake + dt*1.5); if (state.energy <= 0) respawn(); }
+  else { state.energyDelay -= dt; if (state.energyDelay <= 0) state.energy = Math.min(MAX_ENERGY, state.energy + 22 * dt); }
+  ui.energyBar.style.width = Math.max(0, (state.energy/MAX_ENERGY)*100) + '%';
+
+  // node bars billboard
+  for (const g of state.nodes) if (g.userData.bar.visible) g.userData.bar.quaternion.copy(camera.quaternion);
+
+  // combo timeout
+  if (state.comboTimer > 0) { state.comboTimer -= dt; if (state.comboTimer <= 0) { state.combo = 0; ui.combo.classList.remove('show'); } }
+
+  // turrets
+  for (const t of turrets) { t.userData.cd -= dt; if (t.userData.cd <= 0) { fireTurret(t); t.userData.cd = 0.7; } }
+  // drones orbit
+  for (const d of drones) { d.userData.ang += dt * 1.2; d.position.set(Math.cos(d.userData.ang)*d.userData.r, d.userData.h + Math.sin(time*2+d.userData.r)*0.3, Math.sin(d.userData.ang)*d.userData.r); d.rotation.y += dt*3; }
+
+  // core idle
+  domeRing.rotation.z += dt * 0.4;
+  coreGlow.rotation.y += dt * 1.5; coreGlow.rotation.x += dt * 0.8;
+  coreGlow.scale.lerp(new THREE.Vector3(1,1,1), Math.min(1, dt*6));
+
+  // stack wobble
   const wob = velMag * 0.12;
   stackGroup.rotation.z = Math.sin(time * 6) * wob;
   stackGroup.rotation.x = Math.cos(time * 5) * wob * 0.6;
-  // each cube gets a tiny rotation offset based on velocity + index
-  for (let i = 0; i < state.carry.length; i++) {
-    const m = state.carry[i].mesh;
-    m.rotation.y = Math.sin(time * 3 + i * 0.5) * velMag * 0.3 + i * 0.1;
-  }
 
-  // --- resource spin/bob + pickup ---
-  const pickR2 = 2.6 * 2.6;
-  for (let i = state.resources.length - 1; i >= 0; i--) {
-    const r = state.resources[i];
-    r.rotation.y += r.userData.spin * dt;
-    r.position.y = r.userData.baseY + Math.sin(time * 2 + r.userData.bobOff) * 0.15;
-    if (state.carry.length < CARRY_MAX) {
-      const dx = r.position.x - player.position.x;
-      const dz = r.position.z - player.position.z;
-      if (dx*dx + dz*dz < pickR2) vacuumResource(r);
-    }
-  }
-  topUpResources();
-
-  // --- depositing at the dome ---
-  const domeR = currentDomeRadius();
-  const pdx = player.position.x, pdz = player.position.z;
-  const inDome = Math.hypot(pdx, pdz) < domeR;
-  if (inDome && state.carry.length > 0) {
-    state.depositTimer -= dt;
-    while (state.depositTimer <= 0 && state.carry.length > 0) {
-      popStack();
-      state.depositTimer += DEPOSIT_RATE;
-      checkUpgrade();
-    }
-  } else {
-    state.depositTimer = 0;
-  }
-
-  // --- beetles ---
-  state.beetleTimer -= dt;
-  if (state.beetleTimer <= 0) {
-    spawnBeetle();
-    state.beetleTimer = BEETLE_INTERVAL + Math.random() * 2;
-  }
-  const beetleHitR2 = 2.4 * 2.4;
-  for (let i = state.beetles.length - 1; i >= 0; i--) {
-    const b = state.beetles[i];
-    // move toward dome center
-    tmp.set(-b.position.x, 0, -b.position.z);
-    const d = tmp.length();
-    tmp.normalize();
-    b.position.addScaledVector(tmp, BEETLE_SPEED * dt);
-    b.rotation.y = Math.atan2(tmp.x, tmp.z);
-    // waddle
-    b.userData.wob += dt * 12;
-    b.position.y = 1.1 + Math.abs(Math.sin(b.userData.wob)) * 0.3;
-    // player ram?
-    const bx = b.position.x - player.position.x, bz = b.position.z - player.position.z;
-    if (bx*bx + bz*bz < beetleHitR2) { killBeetle(b); continue; }
-    // reached the dome — it gets absorbed harmlessly (despawn), small shake
-    if (d < domeR) {
-      const idx = state.beetles.indexOf(b);
-      if (idx >= 0) state.beetles.splice(idx, 1);
-      scene.remove(b);
-      state.shake = Math.min(1, state.shake + 0.3);
-    }
-  }
-
-  // --- dome idle animation ---
-  domeRing.rotation.z += dt * 0.4;
-  beacon.rotation.y += dt * 0.8;
-  for (const s of survivors) s.rotation.y = Math.sin(time + s.position.x) * 0.3;
-
-  // --- run effects ---
+  // FX
   for (let i = state.fx.length - 1; i >= 0; i--) {
-    const f = state.fx[i];
-    f.t += dt;
-    const k = Math.min(1, f.t / f.dur);
-    f.fn(k);
-    if (k >= 1) state.fx.splice(i, 1);
+    const f = state.fx[i]; f.t += dt; const k = Math.min(1, f.t / f.dur); f.fn(k); if (k >= 1) state.fx.splice(i, 1);
   }
 
-  // --- camera chase + shake ---
+  // camera
   const desired = player.position.clone().add(CAM_OFFSET);
   camera.position.lerp(desired, Math.min(1, dt * 4));
   if (state.shake > 0) {
     state.shake = Math.max(0, state.shake - dt * 2.5);
-    camera.position.x += (Math.random()*2-1) * state.shake * 1.2;
-    camera.position.y += (Math.random()*2-1) * state.shake * 0.8;
+    camera.position.x += (Math.random()*2-1) * state.shake * 1.3;
+    camera.position.y += (Math.random()*2-1) * state.shake * 0.9;
   }
   camera.lookAt(player.position.x, 1.5, player.position.z);
 }
@@ -810,33 +917,24 @@ function update(dt, time) {
 let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const time = now / 1000;
   if (state.running) update(dt, time);
   renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
 
-// ---------- Resize ----------
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+addEventListener('resize', () => { camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
 // ---------- Boot ----------
-topUpResources();
+topUpNodes();
 refreshUI();
-
-// Debug hook (handy for automated testing; harmless in normal play)
-window.__game = { state, player, currentDomeRadius };
+window.__game = { state, player, saberPivot, currentDomeRadius, spawnEnemy, spawnNode, checkUpgrade };
 
 document.getElementById('playBtn').addEventListener('click', () => {
   document.getElementById('start').style.display = 'none';
-  state.running = true;
-  last = performance.now();
-  toast('WELCOME, FORAGER', 'Fill your stack and feed the dome');
+  state.running = true; last = performance.now();
+  toast('SABER IGNITED', 'Carve, gather, and build');
 });
 </script>
 </body>
