@@ -191,11 +191,8 @@ const CRYSTAL_RING_RADII = [22, 42, 68, 100];
 const CRYSTAL_HP_BY_RING = [2,  5,  12, 24];
 const NODE_TARGET = 320;
 
-// Enemies attack the base — slower early ramp so the player has time to upgrade
-const ENEMY_SPEED = 5.0;
+// Enemies attack the base; per-type stats live in ENEMY_TYPES below.
 const ENEMY_HIT_R = 2.4;
-const ENEMY_WALL_DMG = 4;
-const ENEMY_CORE_DMG = 3;
 const ENEMY_ATTACK_CD = 0.6;
 
 // Base
@@ -371,7 +368,8 @@ const state = {
   pickups: [],
   fx: [],
   saberAngle: 0,
-  saber: { reachTier: 0, dmgTier: 0, spinTier: 0, mirrored: false, crit: 0 },
+  saber: { reachTier: 0, dmgTier: 0, spinTier: 0, mirrored: false },
+  turrets: [],
   base: { hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, radius: BASE_START_RADIUS },
   carryMax: CARRY_MAX_BASE,
   enemyTimer: 8.0,        // grace before any beetles spawn
@@ -595,28 +593,69 @@ function popStackToTarget(target) {
 }
 
 // ---------- Walls ----------
+// Add one wall segment at world position (x,z) facing inward at angle `a`.
+// kind: 'outer' | 'bastion' | 'inner' — drives HP, color, and visual height.
+function addWallSegment(x, z, a, kind) {
+  const profiles = {
+    outer:   { hp: 36, color: 0x8a5a36, h: 3.6, w: 1.2 },
+    bastion: { hp: 30, color: 0xa06030, h: 3.4, w: 1.1 },
+    inner:   { hp: 24, color: 0x6a3a26, h: 2.4, w: 0.9 },
+  };
+  const prof = profiles[kind];
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  g.rotation.y = -a;
+  const post = new THREE.Mesh(new THREE.BoxGeometry(prof.w, prof.h, prof.w),
+    new THREE.MeshStandardMaterial({ color: prof.color, roughness: 0.85 }));
+  post.position.y = prof.h / 2; post.castShadow = true; g.add(post);
+  const bar = makeBar(prof.w * 1.6, 0xffaa3c); bar.position.y = prof.h + 0.4; bar.visible = false; g.add(bar);
+  g.scale.y = 0.001;
+  scene.add(g);
+  const w = { group: g, post, bar, hp: prof.hp, maxHp: prof.hp, angle: a, barTimer: 0, dead: false, kind };
+  state.walls.push(w);
+  addFX((k) => g.scale.y = easeOutBack(Math.min(1, k)), 0.4 + Math.random() * 0.25);
+  return w;
+}
+
 function rebuildWalls() {
   for (const w of state.walls) scene.remove(w.group);
   state.walls.length = 0;
+
   const R = state.base.radius;
+
+  // --- OUTER RING ---
   const segs = Math.max(20, Math.round(R * 1.6));
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.85 });
-  const postMatDmg = new THREE.MeshStandardMaterial({ color: 0xb14a2a, roughness: 0.85, emissive: 0x441100, emissiveIntensity: 0.3 });
   for (let i = 0; i < segs; i++) {
     const a = (i / segs) * TAU;
-    const g = new THREE.Group();
-    g.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
-    g.rotation.y = -a;
-    const post = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.6, 1.2), postMat.clone());
-    post.position.y = 1.8; post.castShadow = true; g.add(post);
-    const bar = makeBar(1.8, 0xffaa3c); bar.position.y = 4.0; bar.visible = false; g.add(bar);
-    g.scale.y = 0.001;
-    scene.add(g);
-    const w = { group: g, post, bar, hp: 36, maxHp: 36, angle: a, barTimer: 0, dead: false, matDmg: postMatDmg };
-    state.walls.push(w);
-    addFX((k) => g.scale.y = easeOutBack(Math.min(1, k)), 0.4 + Math.random() * 0.25);
+    addWallSegment(Math.cos(a) * R, Math.sin(a) * R, a, 'outer');
   }
-  // ground plate inside the ring
+
+  // --- BASTIONS (4 cardinal outward spurs creating alley ways) ---
+  for (let q = 0; q < 4; q++) {
+    const baseA = (q / 4) * TAU + Math.PI / 4;  // 45°, 135°, 225°, 315°
+    // straight spur of 2 posts extending outward
+    for (let i = 1; i <= 2; i++) {
+      const ra = R + i * 1.6;
+      addWallSegment(Math.cos(baseA) * ra, Math.sin(baseA) * ra, baseA, 'bastion');
+    }
+    // perpendicular caps at the tip — form the bastion's "wings", funneling enemies
+    const tipR = R + 2.6;
+    const perpA = baseA + Math.PI / 2;
+    const off = 1.7;
+    addWallSegment(Math.cos(baseA)*tipR + Math.cos(perpA)*off, Math.sin(baseA)*tipR + Math.sin(perpA)*off, baseA, 'bastion');
+    addWallSegment(Math.cos(baseA)*tipR - Math.cos(perpA)*off, Math.sin(baseA)*tipR - Math.sin(perpA)*off, baseA, 'bastion');
+  }
+
+  // --- INNER COURT WALL (last-line defense, alternating gaps for player movement) ---
+  const innerR = Math.max(5, R * 0.42);
+  const innerSegs = 10;
+  for (let i = 0; i < innerSegs; i++) {
+    if (i % 2 === 0) continue;  // gates
+    const a = (i / innerSegs) * TAU;
+    addWallSegment(Math.cos(a) * innerR, Math.sin(a) * innerR, a, 'inner');
+  }
+
+  // --- ground plate inside the outer ring ---
   if (dome.userData.plate) dome.remove(dome.userData.plate);
   const plate = new THREE.Mesh(new THREE.CircleGeometry(R - 0.6, 48),
     new THREE.MeshStandardMaterial({ color: 0x5a4030, metalness: 0.3, roughness: 0.7 }));
@@ -837,16 +876,16 @@ function hireBuilderPad(slot, n = 1) {
 
 // --- new pad types ---
 function carryCapacityPad(tier, slot) {
-  const prices = [15, 35, 75, 160];
+  const prices = [18, 40, 85, 180];
   return {
     title: 'CARRY CAPACITY',
-    sub: `+6 SLOTS  (${state.carryMax + 6})`,
+    sub: `+4 SLOTS  (${state.carryMax + 4})`,
     price: prices[tier],
     color: 0xffaf6a,
     ringSlot: slot,
     ...padSlotPos(slot),
     onComplete(pad) {
-      state.carryMax += 6;
+      state.carryMax += 4;
       refreshUI();
       toast('CAPACITY UP', `Carry ${state.carryMax}`);
       if (tier + 1 < 4) spawnReplacementPad(pad, carryCapacityPad(tier + 1, slot));
@@ -854,58 +893,57 @@ function carryCapacityPad(tier, slot) {
   };
 }
 function coreRepairPad(tier, slot) {
-  const prices = [12, 28, 60, 130];
+  const prices = [14, 32, 70, 150];
   return {
     title: 'CORE REPAIR',
-    sub: `+80 HP, +40 MAX`,
+    sub: `+60 HP, +30 MAX`,
     price: prices[tier],
     color: 0xff4060,
     ringSlot: slot,
     ...padSlotPos(slot),
     onComplete(pad) {
-      state.base.maxHp += 40;
-      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 80);
+      state.base.maxHp += 30;
+      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 60);
       refreshUI();
       toast('CORE REPAIRED', `${state.base.hp} / ${state.base.maxHp}`);
       if (tier + 1 < 4) spawnReplacementPad(pad, coreRepairPad(tier + 1, slot));
     },
   };
 }
-function critStrikePad(tier, slot) {
-  const prices = [22, 55, 120];
+function turretPad(tier, slot) {
+  const prices = [25, 55, 110, 220];
   return {
-    title: 'CRIT STRIKE',
-    sub: `+25% (${Math.round((state.saber.crit + 0.25) * 100)}%)`,
+    title: 'BUILD TURRET',
+    sub: `Turret #${tier + 1}`,
     price: prices[tier],
-    color: 0xb070ff,
+    color: 0x9aa6b0,
     ringSlot: slot,
     ...padSlotPos(slot),
     onComplete(pad) {
-      state.saber.crit = Math.min(1, state.saber.crit + 0.25);
-      toast('CRIT UNLOCKED', `${Math.round(state.saber.crit * 100)}% crit chance`);
-      if (tier + 1 < 3) spawnReplacementPad(pad, critStrikePad(tier + 1, slot));
+      spawnTurret();
+      toast('TURRET ONLINE', 'Auto-defense engaged');
+      if (tier + 1 < 4) spawnReplacementPad(pad, turretPad(tier + 1, slot));
     },
   };
 }
 
 function expandBasePad(n = 1) {
   // EXPAND BASE always lives at (0, -5) behind the core, with a smaller footprint.
-  const price = 30 + n * 25;
+  // Rolled back: +4 radius / +50 HP per buy (was +7 / +80). Pricier to stretch out the curve.
+  const price = 45 + n * 30;
   return {
     title: 'EXPAND BASE',
-    sub: `Push walls outward`,
+    sub: `+4 RADIUS  +50 HP`,
     price,
     color: 0xb070ff,
     ringSlot: -1,
     x: 0, z: -5, w: 3.6, d: 3.6,
     onComplete(pad) {
-      state.base.radius = Math.min(70, state.base.radius + 7);
-      state.base.maxHp += 80;
-      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 80);
+      state.base.radius = Math.min(36, state.base.radius + 4);
+      state.base.maxHp += 50;
+      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 50);
       rebuildWalls();
-      // pads STAY where they are — only walls/floor expand outward.
-      toast('BASE EXPANDED', 'Walls pushed outward');
-      // Spawn the replacement EXPAND pad directly at the fixed back-of-core slot.
+      toast('BASE EXPANDED', `Radius ${state.base.radius}`);
       makePad(expandBasePad(n + 1));
     },
   };
@@ -921,7 +959,7 @@ function seedInitialPads() {
   makePad(hireBuilderPad(5));
   makePad(carryCapacityPad(0, 6));
   makePad(coreRepairPad(0, 7));
-  makePad(critStrikePad(0, 8));
+  makePad(turretPad(0, 8));
   // EXPAND BASE — fixed slot behind the core (handled inside its factory)
   makePad(expandBasePad(1));
 }
@@ -1117,23 +1155,55 @@ function updateWorker(w, dt, time) {
 }
 
 // ---------- Enemies ----------
-function spawnEnemy() {
+const ENEMY_TYPES = {
+  beetle:   { color: 0x141018, eye: 0xff3b30, baseHp: 4,  hpPerWave: 1.0, speed: 5.0, wallDmg: 4, coreDmg: 3, scale: 1.0, minWave: 1, weight: 1.0 },
+  sprinter: { color: 0x6a2010, eye: 0xffaa00, baseHp: 2,  hpPerWave: 0.6, speed: 8.6, wallDmg: 2, coreDmg: 2, scale: 0.72, minWave: 2, weight: 0.8 },
+  brute:    { color: 0x14202a, eye: 0x00ff8a, baseHp: 14, hpPerWave: 2.2, speed: 3.1, wallDmg: 9, coreDmg: 6, scale: 1.6, minWave: 4, weight: 0.35 },
+};
+
+function chooseEnemyType() {
+  const pool = [];
+  for (const [name, def] of Object.entries(ENEMY_TYPES)) {
+    if (state.wave >= def.minWave) pool.push([name, def.weight]);
+  }
+  const total = pool.reduce((s, [, w]) => s + w, 0);
+  let r = Math.random() * total;
+  for (const [name, w] of pool) { r -= w; if (r <= 0) return name; }
+  return 'beetle';
+}
+
+function spawnEnemy(typeOverride) {
+  const type = typeOverride || chooseEnemyType();
+  const def = ENEMY_TYPES[type];
   const g = new THREE.Group();
   const shell = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12),
-    new THREE.MeshStandardMaterial({ color: COLORS.enemy, roughness: 0.6, metalness: 0.2, emissive: 0x330008, emissiveIntensity: 0.55 }));
+    new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.6, metalness: 0.2, emissive: def.color, emissiveIntensity: 0.55 }));
   shell.scale.y = 0.7; shell.castShadow = true; g.add(shell);
   for (const sx of [-0.5, 0.5]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: def.eye }));
     eye.position.set(sx, 0.5, 1.05); g.add(eye);
   }
-  // spawn at the world edge
+  // Brutes get a spikier silhouette
+  if (type === 'brute') {
+    for (let s = 0; s < 4; s++) {
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.7, 5),
+        new THREE.MeshStandardMaterial({ color: 0x405560, roughness: 0.6 }));
+      sp.position.set(Math.cos(s/4*TAU)*0.9, 0.8, Math.sin(s/4*TAU)*0.9);
+      sp.rotation.x = Math.PI; g.add(sp);
+    }
+  }
+  g.scale.setScalar(def.scale);
   const a = Math.random() * TAU;
   const r = WORLD * 0.8 + Math.random() * 8;
-  g.position.set(Math.cos(a) * r, 1.1, Math.sin(a) * r);
-  const hp = 3 + state.wave;
-  const bar = makeBar(2.0, 0x46e88a);
-  bar.position.y = 2.4; g.add(bar); setBar(bar, 1);
-  g.userData = { hp, maxHp: hp, bar, wob: Math.random()*6, lastHit: -99, target: null, targetCd: 0, attackCd: 0 };
+  g.position.set(Math.cos(a) * r, 1.1 * def.scale, Math.sin(a) * r);
+  const hp = Math.round(def.baseHp + state.wave * def.hpPerWave);
+  const bar = makeBar(2.0 * def.scale, 0x46e88a);
+  bar.position.y = 2.4 * def.scale; g.add(bar); setBar(bar, 1);
+  g.userData = {
+    type, hp, maxHp: hp, bar, wob: Math.random()*6,
+    lastHit: -99, target: null, targetCd: 0, attackCd: 0,
+    speed: def.speed, wallDmg: def.wallDmg, coreDmg: def.coreDmg, scale: def.scale,
+  };
   scene.add(g);
   state.enemies.push(g);
 }
@@ -1162,6 +1232,67 @@ function hitSpark(pos, color) {
     scene.add(sp);
     addFX((k) => { sp.position.addScaledVector(dir, 0.04*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.25);
   }
+}
+
+// ---------- Turrets (auto-firing defense) ----------
+const TURRET_SLOTS = 8;
+function spawnTurret() {
+  const used = new Set(state.turrets.map(t => t.slot));
+  let slot = 0;
+  for (let i = 0; i < TURRET_SLOTS; i++) if (!used.has(i)) { slot = i; break; }
+  const ang = (slot / TURRET_SLOTS) * TAU + Math.PI / TURRET_SLOTS;
+  const R = state.base.radius + 1.2;
+  const g = new THREE.Group();
+  g.position.set(Math.cos(ang) * R, 0, Math.sin(ang) * R);
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.05, 1.8, 12),
+    new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.7, roughness: 0.3 }));
+  stand.position.y = 0.9; stand.castShadow = true; g.add(stand);
+  const top = new THREE.Group(); top.position.y = 1.8;
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.75, 14, 8, 0, TAU, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x6a7480, metalness: 0.8, roughness: 0.3 }));
+  top.add(dome);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.45, 0.45),
+    new THREE.MeshStandardMaterial({ color: 0x7a8a96, metalness: 0.85, roughness: 0.3, emissive: 0x113355, emissiveIntensity: 0.5 }));
+  barrel.position.set(1.2, 0.2, 0); top.add(barrel);
+  g.add(top);
+  g.scale.setScalar(0.001);
+  scene.add(g);
+  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
+  state.turrets.push({ group: g, top, barrel, slot, ang, cd: 0.6, range: 32, dmg: 3, fireRate: 0.7 });
+}
+
+function updateTurret(t, dt, time) {
+  t.cd -= dt;
+  let best = null, bd = t.range * t.range;
+  for (const e of state.enemies) {
+    const dx = e.position.x - t.group.position.x, dz = e.position.z - t.group.position.z;
+    const d2 = dx*dx + dz*dz;
+    if (d2 < bd) { bd = d2; best = e; }
+  }
+  if (!best) return;
+  const dx = best.position.x - t.group.position.x, dz = best.position.z - t.group.position.z;
+  t.top.rotation.y = Math.atan2(dx, dz);
+  if (t.cd > 0) return;
+  // fire tracer
+  const startPos = t.group.position.clone(); startPos.y = 2.4;
+  const endPos = best.position.clone();
+  const tracer = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0x7af0ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+  scene.add(tracer);
+  const target = best;
+  addFX((k) => {
+    tracer.position.lerpVectors(startPos, endPos, k);
+    if (k >= 1) {
+      scene.remove(tracer);
+      if (state.enemies.includes(target)) {
+        target.userData.hp -= t.dmg;
+        setBar(target.userData.bar, Math.max(0, target.userData.hp / target.userData.maxHp));
+        hitSpark(target.position, 0x7af0ff);
+        if (target.userData.hp <= 0) killEnemy(target);
+      }
+    }
+  }, 0.1);
+  t.cd = t.fireRate;
 }
 
 function pickEnemyTarget(e) {
@@ -1278,9 +1409,7 @@ function update(dt, time) {
     // Tier 0 (dmg 2) breaks band-0 (hp 2); tier 1 (dmg 3) breaks band-1 (hp 5);
     // tier 2 (dmg 5) breaks band-2 (hp 12); tier 3+ breaks band-3 (hp 24).
     if (g.userData.maxHp > dmg * 5) continue;
-    const isCrit = state.saber.crit > 0 && Math.random() < state.saber.crit;
-    const dealt = isCrit ? dmg * 2 : dmg;
-    g.userData.hp -= dealt;
+    g.userData.hp -= dmg;
     setBar(g.userData.bar, Math.max(0, g.userData.hp / g.userData.maxHp));
     if (g.userData.hp <= 0) destroyNode(g);
   }
@@ -1295,12 +1424,10 @@ function update(dt, time) {
     if (!inSaberHit(dx, dz, d2)) continue;
     if (time - e.userData.lastHit < SABER_CD) continue;
     e.userData.lastHit = time;
-    const isCrit = state.saber.crit > 0 && Math.random() < state.saber.crit;
-    const dealt = isCrit ? dmg * 2 : dmg;
-    e.userData.hp -= dealt;
+    e.userData.hp -= dmg;
     setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
-    hitSpark(e.position, isCrit ? 0xffd24a : 0x7af0ff);
-    state.shake = Math.min(1, state.shake + (isCrit ? 0.12 : 0.06));
+    hitSpark(e.position, 0x7af0ff);
+    state.shake = Math.min(1, state.shake + 0.06);
     if (e.userData.hp <= 0) killEnemy(e);
   }
 
@@ -1337,6 +1464,7 @@ function update(dt, time) {
 
   // ---- workers
   for (const w of state.workers) updateWorker(w, dt, time);
+  for (const t of state.turrets) updateTurret(t, dt, time);
 
   // ---- enemy spawning by waves
   state.enemyTimer -= dt;
@@ -1365,13 +1493,13 @@ function update(dt, time) {
     const dx = t.x - e.position.x, dz = t.z - e.position.z;
     const d = Math.hypot(dx, dz);
     if (d > 0.01) {
-      const step = ENEMY_SPEED * dt;
+      const step = e.userData.speed * dt;
       e.position.x += (dx / d) * step;
       e.position.z += (dz / d) * step;
       e.rotation.y = Math.atan2(dx, dz);
     }
     e.userData.wob += dt * 12;
-    e.position.y = 1.1 + Math.abs(Math.sin(e.userData.wob)) * 0.3;
+    e.position.y = 1.1 * (e.userData.scale || 1) + Math.abs(Math.sin(e.userData.wob)) * 0.3;
     e.userData.bar.quaternion.copy(camera.quaternion);
 
     // attack
@@ -1379,17 +1507,16 @@ function update(dt, time) {
       e.userData.attackCd -= dt;
       if (e.userData.attackCd <= 0) {
         if (t.type === 'wall' && t.ref && !t.ref.dead) {
-          t.ref.hp -= ENEMY_WALL_DMG;
+          t.ref.hp -= e.userData.wallDmg;
           t.ref.bar.visible = true; t.ref.barTimer = 1.5;
           setBar(t.ref.bar, Math.max(0, t.ref.hp / t.ref.maxHp));
-          // tint post when damaged
           if (t.ref.hp / t.ref.maxHp < 0.4) t.ref.post.material.color.setHex(0xb14a2a);
           if (t.ref.hp <= 0) {
             t.ref.dead = true;
-            addFX((k) => { t.ref.post.position.y = 1.8 - k * 3; t.ref.bar.visible = false; }, 0.5);
+            addFX((k) => { t.ref.post.position.y -= 0.06; t.ref.bar.visible = false; }, 0.5);
           }
         } else {
-          state.base.hp -= ENEMY_CORE_DMG;
+          state.base.hp -= e.userData.coreDmg;
           state.shake = Math.min(1, state.shake + 0.2);
           refreshUI();
           if (state.base.hp <= 0) { triggerGameOver(); return; }
