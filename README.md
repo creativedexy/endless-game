@@ -2,43 +2,44 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
-## Mars Colony
+## Mars Colony: Saber Siege
 
-A single-file, hyper-casual 3D **gather-and-build** game built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — just open `index.html` in a modern browser.
+A single-file, hyper-casual 3D **arena-survivor / base-builder** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — just open `index.html` in a modern browser.
+
+**Play it live:** https://creativedexy.github.io/endless-game/mars-colony/
 
 ### How to play
 
-- **Move** with `WASD` or the arrow keys (touch joystick on mobile).
-- **Forage** by simply rolling over resource cubes — they get vacuumed onto a stack on your back.
-- **Deposit** by returning to the green Oxygen Dome in the center; your stack drains into the colony bank.
-- **Fight** the black sand beetles crawling in from the edges — ram them to pop them and earn rare **Biomass**.
+- **Move** with `WASD` or the arrow keys (touch joystick on mobile). Movement is the only input.
+- Your **lightsaber swings automatically** — a whirling energy blade that sweeps around you, shredding anything it touches.
+- **Carve** through the dense crystal field; each cleared cluster drops shards that vacuum onto a stack on your back.
+- **Deposit** by standing on the glowing core; your stack drains in and builds the outpost.
+- **Survive** the sand-beetle swarm — the saber kills them, but contact drains your **energy**. Hit zero and you respawn at the core with a shockwave.
 
-### Resources
+### The loop
 
-| Resource | Color | Source |
-|----------|-------|--------|
-| Regolith | brown | foraging |
-| Resin    | blue  | foraging |
-| Biomass  | green | ramming beetles |
+Carve crystals → haul shards → deposit at the core → the outpost builds itself → the swarm intensifies → repeat. It never stops.
 
-### Base expansion
+### Base building (fast)
 
-The Oxygen Dome evolves as you bank resources:
+The outpost evolves quickly as you bank shards:
 
-| Level | Goal | Visual change |
-|-------|------|---------------|
-| 1 | — | Small green hemisphere |
-| 2 | 20 Regolith | Dome scales 1.5×, metallic grid floor appears |
-| 3 | 50 Resin | Dome scales 2×, two survivor colonists spawn inside |
-| 4 | 30 Biomass | Dome scales 2.6×, fully terraformed glow |
+| Level | Cost | What appears |
+|-------|------|--------------|
+| 1 | — | Bare core |
+| 2 | 8 shards | Perimeter **walls** rise, floor plating |
+| 3 | 20 shards | Auto-firing **turrets** mount the walls |
+| 4 | 40 shards | Worker **drones** deploy and orbit |
+| 5 | 70 shards | **Fortress** — dome fully scaled, glowing |
 
 ### Features
 
-- Auto-foraging with a "vacuum" tween (scale + spin into the player).
-- A dynamic Y-axis carry stack that wobbles with movement velocity.
-- LIFO deposit animation arcing each cube up into the dome beacon.
-- Proximity-defense beetles that spawn at the map edge and march inward.
-- Camera chase with screen shake on impacts, dune-displaced terrain, and a starfield backdrop.
+- **Swinging lightsaber** — a rotating additive-glow blade with a motion-trail arc, tip light, per-target hit cooldown, and knockback. Cheap angle+distance sweep hit-detection.
+- **Dense destructible resources** — ~70 crystal clusters with HP and damage bars, kept topped up around the base.
+- **Swarming enemies** — sand beetles with billboarded green health bars that chase you; spawn rate and HP ramp with your base level for rising intensity.
+- **Auto-turret defense** and orbiting worker drones once the base is built up.
+- **Energy/shield** with regen and an endless respawn shockwave (no hard game-over).
+- Combo counter, hit sparks, death bursts, camera shake, dune terrain, and a starfield backdrop.
 
 ### Run it
 
