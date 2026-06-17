@@ -23,28 +23,31 @@ Carve crystals → haul shards → step on a pad → upgrade saber / hire worker
 
 ### Walk-on buy pads
 
-Seven pads ring the inside of your base:
+Ten pads ring the inside of your base:
 
 | Pad | Effect |
 |-----|--------|
-| **Saber Reach** | Blade physically grows longer (tier I–III) |
-| **Saber Power** | Per-hit damage I–III — needed to break outer crystal rings |
-| **Saber Spin** | Sweep speed I–III — more hits per second |
+| **Saber Reach** | Blade physically grows longer (tier I–V) |
+| **Saber Power** | Per-hit damage I–V — needed to break outer crystal rings |
+| **Saber Spin** | Sweep speed I–V — more hits per second |
+| **Saber Crit** | +25% chance per tier to deal double damage (gold sparks) |
+| **Carry Capacity** | +6 stack slots per tier — haul more before depositing |
+| **Core Repair** | +80 core HP and +40 max HP per tier — buy when under siege |
 | **Hire Gatherer** | Worker NPCs that auto-chop band-0 crystals and dump shards into the cheapest active pad (idle income) |
 | **Hire Guard** | Patrols the perimeter, sabers nearby beetles |
 | **Hire Builder** | Repairs damaged wall segments |
-| **Expand Base** | Pushes the walls outward, more base HP |
+| **Expand Base** | Pushes the walls outward, +80 base HP (pads stay in place) |
 
-Reach all three saber stats to **Tier III** and a **second mirrored blade** ignites for full 360° coverage.
+Reach all three core saber stats to **Tier V** and a **second mirrored blade** ignites for full 360° coverage.
 
 ### Crystals & ring gating
 
 | Ring | Color | HP | Saber tier needed |
 |------|-------|----|--|
-| 0 | cyan | 3 | I (start) |
-| 1 | purple | 6 | II |
-| 2 | pink | 14 | III |
-| 3 | orange | 28 | IV (mirrored) |
+| 0 | cyan | 2 | I (start) |
+| 1 | purple | 5 | II |
+| 2 | pink | 12 | III |
+| 3 | orange | 24 | IV+ |
 
 Tier 0 saber visually flashes outer crystals but bounces off — clearing more of the map is gated by **saber power upgrades**.
 
