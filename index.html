@@ -67,6 +67,29 @@
   #toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
   #toast .sub { display:block; font-size: 14px; font-weight: 600; color:#d8c4b6; margin-top: 6px; letter-spacing:0; }
 
+  /* Floating world-space damage / pickup numbers */
+  .float-text {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 18px; font-weight: 900; letter-spacing: .5px;
+    color: #7af0ff; text-shadow: 0 2px 6px #000, 0 0 12px currentColor;
+    pointer-events: none; user-select: none; z-index: 9;
+    will-change: transform, opacity;
+  }
+
+  /* Context-action prompt above the action area */
+  #actionPrompt {
+    position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
+    background: rgba(20, 8, 4, 0.78); border: 1px solid rgba(122, 240, 255, 0.55);
+    color: #d6f6ff; font-size: 15px; font-weight: 700; letter-spacing: .4px;
+    padding: 9px 18px; border-radius: 20px;
+    pointer-events: none; user-select: none;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    opacity: 0; transition: opacity .18s ease, border-color .15s ease, color .15s ease;
+    white-space: nowrap;
+  }
+  #actionPrompt.show { opacity: 1; }
+  #actionPrompt.broke { border-color: rgba(255, 90, 60, 0.7); color: #ffb8a8; }
+
   #hint {
     position: absolute; bottom: 14px; right: 14px;
     color: #c9a892; font-size: 12px; text-align: right; line-height: 1.6;
@@ -126,13 +149,14 @@
 </div>
 
 <div id="carry">Carrying<br><span class="big"><span id="uiCarry">0</span>/<span id="uiCarryMax">24</span></span></div>
-<div id="wave">Wave<br><span class="big" id="uiWave">1</span></div>
+<div id="wave">Threat<br><span class="big" id="uiWave">1</span></div>
 
 <div id="baseInfo" style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);pointer-events:none;user-select:none;text-align:center;">
   <div style="background:rgba(20,8,4,0.6);border:1px solid rgba(120,255,170,0.4);color:#9effc4;font-size:13px;font-weight:700;letter-spacing:.5px;padding:6px 16px;border-radius:20px;" id="hintLine">Carve crystals → haul shards → step on a pad to buy upgrades</div>
 </div>
 
 <div id="toast"></div>
+<div id="actionPrompt"></div>
 
 <div id="hint">
   <b>WASD</b> / <b>Arrows</b> to move<br>
@@ -372,8 +396,14 @@ const state = {
   turrets: [],
   base: { hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, radius: BASE_START_RADIUS },
   carryMax: CARRY_MAX_BASE,
-  enemyTimer: 8.0,        // grace before any beetles spawn
-  waveTimer: 32,
+  // Threat-scaled spawner (replaces wave/enemyTimer/waveTimer)
+  elapsed: 0,
+  spawnTimer: 6.0,           // grace before first beetles spawn
+  threatLevel: 1,
+  threatPeak: 1,
+  // Game over stats
+  startedAt: 0,
+  survived: 0,
   shake: 0,
   running: false,
   gameOver: false,
@@ -392,6 +422,7 @@ const ui = {
   goStats: document.getElementById('goStats'),
   gameOver: document.getElementById('gameOver'),
   hintLine: document.getElementById('hintLine'),
+  actionPrompt: document.getElementById('actionPrompt'),
 };
 ui.carryMax.textContent = state.carryMax;
 
@@ -402,7 +433,7 @@ function refreshUI() {
   ui.carryBox.classList.toggle('full', state.carry.length >= state.carryMax);
   ui.carryMax.textContent = state.carryMax;
   ui.baseHpBar.style.width = Math.max(0, (state.base.hp / state.base.maxHp) * 100) + '%';
-  ui.wave.textContent = state.wave;
+  ui.wave.textContent = state.threatLevel;
 }
 
 let toastTimer = null;
@@ -411,6 +442,30 @@ function toast(main, sub) {
   ui.toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
+}
+
+// Context-action prompt: tells the player what the nearest pad would buy,
+// or hides while they're free-roaming. Color flips red if they don't have
+// enough carry to start filling it. Ported pattern from Outpost Zero.
+const PROMPT_RADIUS = 6.5;
+function updateContextPrompt() {
+  let nearest = null, nd = PROMPT_RADIUS * PROMPT_RADIUS;
+  for (const pad of state.pads) {
+    const dx = pad.x - player.position.x, dz = pad.z - player.position.z;
+    const d2 = dx*dx + dz*dz;
+    if (d2 < nd) { nd = d2; nearest = pad; }
+  }
+  if (!nearest) {
+    ui.actionPrompt.classList.remove('show');
+    return;
+  }
+  const remain = nearest.price - nearest.paid;
+  const onPad = Math.abs(player.position.x - nearest.x) < nearest.w/2
+             && Math.abs(player.position.z - nearest.z) < nearest.d/2;
+  const broke = onPad && state.carry.length === 0 && remain > 0;
+  ui.actionPrompt.textContent = `${nearest.title} · ${nearest.sub} · ${remain} ◆`;
+  ui.actionPrompt.classList.add('show');
+  ui.actionPrompt.classList.toggle('broke', broke);
 }
 
 // ---------- Helpers ----------
@@ -497,6 +552,148 @@ function redrawPadLabel(pad) {
   tex.needsUpdate = true;
 }
 
+// ---------- Procedural sound (ported from Outpost Zero) ----------
+const sound = (() => {
+  let ctx = null, master = null;
+  function unlock() {
+    if (ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ctx = new Ctx();
+    master = ctx.createGain();
+    master.gain.value = 0.32;
+    master.connect(ctx.destination);
+  }
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
+  window.addEventListener('touchstart', unlock, { passive: true });
+
+  function tone(freq, dur, type = 'square', volume = 1, slideTo) {
+    if (!ctx || !master) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if (slideTo !== undefined) osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(master);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+  function noise(dur, volume = 0.2, lowpass = 800) {
+    if (!ctx || !master) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const t = ctx.currentTime;
+    const bufLen = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = lowpass;
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(volume, t); gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(filter).connect(gain).connect(master);
+    src.start(t);
+  }
+
+  // Hit/swing/etc. throttling so dense hit-streams don't blow eardrums.
+  const cd = {};
+  function throttle(key, ms) {
+    const now = performance.now();
+    if (cd[key] && now - cd[key] < ms) return false;
+    cd[key] = now; return true;
+  }
+
+  return {
+    saberHit()   { if (throttle('saberHit', 70))   tone(740, 0.06, 'square',   0.18, 380); },
+    crystalHit() { if (throttle('crystHit', 90))   tone(520, 0.07, 'triangle', 0.22, 240); },
+    crystalBreak(){ if (throttle('crBrk', 60))    { tone(880, 0.1, 'sawtooth', 0.28, 200); noise(0.18, 0.18, 1400); } },
+    collect()    { tone(660, 0.06, 'sine', 0.32, 990); tone(990, 0.09, 'sine', 0.18, 1320); },
+    deposit()    { if (throttle('dep', 50))        tone(540, 0.05, 'square', 0.18, 720); },
+    padReady()   { tone(330, 0.09, 'square', 0.32, 440); tone(550, 0.12, 'square', 0.28, 770); tone(880, 0.18, 'square', 0.22, 1100); },
+    denied()     { if (throttle('deny', 350))      tone(180, 0.16, 'sawtooth', 0.28, 90); },
+    enemyHit()   { if (throttle('eHit', 70))       tone(420, 0.07, 'square', 0.24, 220); },
+    enemyDie()   { tone(220, 0.18, 'sawtooth', 0.32, 60); noise(0.18, 0.15, 600); },
+    turretFire() { if (throttle('turret', 80))     tone(900, 0.07, 'square', 0.22, 1300); },
+    coreHit()    { tone(120, 0.22, 'sawtooth', 0.42, 50); noise(0.16, 0.2, 280); },
+    wallHit()    { if (throttle('wall', 90))       tone(180, 0.1, 'sawtooth', 0.22, 90); },
+    build()      { tone(330, 0.1, 'square', 0.32, 440); tone(440, 0.16, 'square', 0.3, 660); },
+    upgrade()    { tone(440, 0.08, 'square', 0.3, 550); tone(660, 0.1, 'square', 0.3, 770); tone(880, 0.14, 'square', 0.3, 1100); },
+    hire()       { tone(380, 0.08, 'triangle', 0.28, 500); tone(620, 0.12, 'triangle', 0.28, 800); },
+    gameOver()   { tone(330, 0.4, 'sawtooth', 0.4, 110); tone(220, 0.5, 'sawtooth', 0.35, 80); tone(110, 0.7, 'sawtooth', 0.3, 55); },
+  };
+})();
+
+// ---------- Effects: pooled particles + floating DOM text (from Outpost Zero) ----------
+const effects = (() => {
+  const POOL = 200;
+  const partGeo = new THREE.TetrahedronGeometry(0.22);
+  const parts = [];
+  for (let i = 0; i < POOL; i++) {
+    const m = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    m.visible = false; scene.add(m);
+    parts.push({ mesh: m, vel: new THREE.Vector3(), life: 0, maxLife: 0, active: false });
+  }
+  const floats = [];
+  const projected = new THREE.Vector3();
+
+  function burst(pos, color, count = 10, speed = 6) {
+    let spawned = 0;
+    for (const p of parts) {
+      if (p.active) continue;
+      p.active = true; p.mesh.visible = true;
+      p.mesh.position.copy(pos);
+      p.mesh.scale.setScalar(0.8 + Math.random() * 0.9);
+      p.mesh.material.color.setHex(color);
+      const a = Math.random() * TAU;
+      const up = 3 + Math.random() * 5;
+      p.vel.set(Math.cos(a) * speed * (0.4 + Math.random()*0.7), up, Math.sin(a) * speed * (0.4 + Math.random()*0.7));
+      p.maxLife = p.life = 0.45 + Math.random() * 0.35;
+      if (++spawned >= count) break;
+    }
+  }
+
+  function floatText(worldPos, text, color = '#7af0ff') {
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;
+    el.style.color = color;
+    document.body.appendChild(el);
+    floats.push({ el, pos: worldPos.clone(), life: 1.0 });
+  }
+
+  function update(dt) {
+    for (const p of parts) {
+      if (!p.active) continue;
+      p.life -= dt;
+      if (p.life <= 0) { p.active = false; p.mesh.visible = false; continue; }
+      p.vel.y -= 18 * dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      if (p.mesh.position.y < 0.08) { p.mesh.position.y = 0.08; p.vel.y *= -0.4; p.vel.x *= 0.6; p.vel.z *= 0.6; }
+      p.mesh.rotation.x += dt * 8;
+      p.mesh.rotation.y += dt * 6;
+      const s = (p.life / p.maxLife) * 1.0;
+      p.mesh.scale.setScalar(Math.max(0.05, s));
+    }
+    for (let i = floats.length - 1; i >= 0; i--) {
+      const f = floats[i];
+      f.life -= dt;
+      if (f.life <= 0) { f.el.remove(); floats.splice(i, 1); continue; }
+      f.pos.y += dt * 1.8;
+      projected.copy(f.pos).project(camera);
+      const x = (projected.x * 0.5 + 0.5) * innerWidth;
+      const y = (-projected.y * 0.5 + 0.5) * innerHeight;
+      f.el.style.left = x + 'px';
+      f.el.style.top = y + 'px';
+      f.el.style.opacity = String(Math.min(1, f.life * 1.8));
+    }
+  }
+
+  return { burst, floatText, update };
+})();
+
 // ---------- Crystals (dense rings) ----------
 function ringSpawnPos() {
   const r1 = Math.random();
@@ -536,15 +733,14 @@ function topUpNodes() {
 
 function destroyNode(g) {
   const i = state.nodes.indexOf(g); if (i >= 0) state.nodes.splice(i, 1);
-  const drops = 1 + Math.floor(Math.random() * 2) + g.userData.band;
-  for (let k = 0; k < drops; k++) spawnPickup(g.position, g.userData.band);
-  for (let i = 0; i < 6; i++) {
-    const sh = new THREE.Mesh(carryBoxGeo, ringPickupMats[g.userData.band]);
-    sh.position.copy(g.position); sh.position.y = 1; sh.scale.setScalar(0.35);
-    const dir = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).normalize().multiplyScalar(5 + Math.random()*4);
-    scene.add(sh);
-    addFX((k) => { sh.position.addScaledVector(dir, 0.04*(1-k)); sh.position.y += 0.05*(1-k); sh.rotation.x += 0.3; sh.scale.setScalar(0.35*(1-k)); if (k>=1) scene.remove(sh); }, 0.5);
-  }
+  const band = g.userData.band;
+  const drops = 1 + Math.floor(Math.random() * 2) + band;
+  for (let k = 0; k < drops; k++) spawnPickup(g.position, band);
+  // pooled particle burst replaces the ad-hoc cube shower
+  const burstPos = g.position.clone(); burstPos.y = 1.2;
+  effects.burst(burstPos, RING_COLORS[band], 8 + band * 2, 5 + band);
+  effects.floatText(burstPos.clone().setY(2.2), '+' + drops, '#' + RING_COLORS[band].toString(16).padStart(6, '0'));
+  sound.crystalBreak();
   scene.remove(g);
   state.shake = Math.min(1, state.shake + 0.14);
 }
@@ -566,6 +762,7 @@ function addToStack(band) {
   state.carry.push({ band, mesh });
   layoutStack();
   addFX((k) => { mesh.scale.setScalar(k < 1 ? STACK_SCALE * (1 + 0.4 * Math.sin(k * Math.PI)) : STACK_SCALE); }, 0.18);
+  sound.collect();
   refreshUI();
 }
 function layoutStack() {
@@ -710,10 +907,15 @@ function payIntoPad(pad, sourcePopFn) {
   pad.paid++;
   setPadProgress(pad);
   redrawPadLabel(pad);
+  sound.deposit();
   if (pad.paid >= pad.price) {
     pad.complete = true;
     redrawPadLabel(pad);
     state.shake = Math.min(1, state.shake + 0.4);
+    sound.padReady();
+    const padPos = new THREE.Vector3(pad.x, 1.8, pad.z);
+    effects.burst(padPos, pad.color, 22, 7);
+    effects.floatText(padPos.clone().setY(3.0), 'READY', '#9effc4');
     addFX((k) => {
       pad.group.position.y = -k * 1.6;
       pad.labelSprite.material.opacity = 1 - k;
@@ -811,6 +1013,7 @@ function saberReachPad(tier, slot) {
       state.saber.reachTier = tier + 1;
       rebuildSaber();
       toast('REACH UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      sound.upgrade();
       if (tier + 1 < 4) spawnReplacementPad(pad, saberReachPad(tier + 1, slot));
     },
   };
@@ -828,6 +1031,7 @@ function saberDmgPad(tier, slot) {
       state.saber.dmgTier = tier + 1;
       rebuildSaber();
       toast('POWER UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      sound.upgrade();
       if (tier + 1 < 4) spawnReplacementPad(pad, saberDmgPad(tier + 1, slot));
     },
   };
@@ -845,6 +1049,7 @@ function saberSpinPad(tier, slot) {
       state.saber.spinTier = tier + 1;
       rebuildSaber();
       toast('SPIN UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      sound.upgrade();
       if (tier + 1 < 4) spawnReplacementPad(pad, saberSpinPad(tier + 1, slot));
     },
   };
@@ -854,7 +1059,7 @@ function hireGathererPad(slot, n = 1) {
     title: 'HIRE GATHERER', sub: `Worker #${n}`,
     price: 12 + n * 5, color: 0xffd24a, ringSlot: slot,
     ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('gatherer'); toast('GATHERER HIRED', 'Auto-chops crystals'); spawnReplacementPad(pad, hireGathererPad(slot, n + 1)); },
+    onComplete(pad) { spawnWorker('gatherer'); sound.hire(); toast('GATHERER HIRED', 'Auto-chops crystals'); spawnReplacementPad(pad, hireGathererPad(slot, n + 1)); },
   };
 }
 function hireGuardPad(slot, n = 1) {
@@ -862,7 +1067,7 @@ function hireGuardPad(slot, n = 1) {
     title: 'HIRE GUARD', sub: `Guard #${n}`,
     price: 16 + n * 7, color: 0xff5a3c, ringSlot: slot,
     ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('guard'); toast('GUARD HIRED', 'Patrols the perimeter'); spawnReplacementPad(pad, hireGuardPad(slot, n + 1)); },
+    onComplete(pad) { spawnWorker('guard'); sound.hire(); toast('GUARD HIRED', 'Patrols the perimeter'); spawnReplacementPad(pad, hireGuardPad(slot, n + 1)); },
   };
 }
 function hireBuilderPad(slot, n = 1) {
@@ -870,7 +1075,7 @@ function hireBuilderPad(slot, n = 1) {
     title: 'HIRE BUILDER', sub: `Builder #${n}`,
     price: 10 + n * 4, color: 0x9effc4, ringSlot: slot,
     ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('builder'); toast('BUILDER HIRED', 'Repairs damaged walls'); spawnReplacementPad(pad, hireBuilderPad(slot, n + 1)); },
+    onComplete(pad) { spawnWorker('builder'); sound.hire(); toast('BUILDER HIRED', 'Repairs damaged walls'); spawnReplacementPad(pad, hireBuilderPad(slot, n + 1)); },
   };
 }
 
@@ -888,6 +1093,7 @@ function carryCapacityPad(tier, slot) {
       state.carryMax += 4;
       refreshUI();
       toast('CAPACITY UP', `Carry ${state.carryMax}`);
+      sound.upgrade();
       if (tier + 1 < 4) spawnReplacementPad(pad, carryCapacityPad(tier + 1, slot));
     },
   };
@@ -906,6 +1112,7 @@ function coreRepairPad(tier, slot) {
       state.base.hp = Math.min(state.base.maxHp, state.base.hp + 60);
       refreshUI();
       toast('CORE REPAIRED', `${state.base.hp} / ${state.base.maxHp}`);
+      sound.build();
       if (tier + 1 < 4) spawnReplacementPad(pad, coreRepairPad(tier + 1, slot));
     },
   };
@@ -922,6 +1129,7 @@ function turretPad(tier, slot) {
     onComplete(pad) {
       spawnTurret();
       toast('TURRET ONLINE', 'Auto-defense engaged');
+      sound.build();
       if (tier + 1 < 4) spawnReplacementPad(pad, turretPad(tier + 1, slot));
     },
   };
@@ -944,6 +1152,7 @@ function expandBasePad(n = 1) {
       state.base.hp = Math.min(state.base.maxHp, state.base.hp + 50);
       rebuildWalls();
       toast('BASE EXPANDED', `Radius ${state.base.radius}`);
+      sound.build();
       makePad(expandBasePad(n + 1));
     },
   };
@@ -1172,18 +1381,17 @@ function chooseEnemyType() {
   return 'beetle';
 }
 
-function spawnEnemy(typeOverride) {
+function spawnEnemy(typeOverride, bearingOverride) {
   const type = typeOverride || chooseEnemyType();
   const def = ENEMY_TYPES[type];
   const g = new THREE.Group();
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12),
-    new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.6, metalness: 0.2, emissive: def.color, emissiveIntensity: 0.55 }));
+  const shellMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.6, metalness: 0.2, emissive: def.color, emissiveIntensity: 0.55 });
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12), shellMat);
   shell.scale.y = 0.7; shell.castShadow = true; g.add(shell);
   for (const sx of [-0.5, 0.5]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: def.eye }));
     eye.position.set(sx, 0.5, 1.05); g.add(eye);
   }
-  // Brutes get a spikier silhouette
   if (type === 'brute') {
     for (let s = 0; s < 4; s++) {
       const sp = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.7, 5),
@@ -1193,16 +1401,17 @@ function spawnEnemy(typeOverride) {
     }
   }
   g.scale.setScalar(def.scale);
-  const a = Math.random() * TAU;
+  const a = bearingOverride !== undefined ? bearingOverride : Math.random() * TAU;
   const r = WORLD * 0.8 + Math.random() * 8;
   g.position.set(Math.cos(a) * r, 1.1 * def.scale, Math.sin(a) * r);
-  const hp = Math.round(def.baseHp + state.wave * def.hpPerWave);
+  const hp = Math.round(def.baseHp + state.threatLevel * def.hpPerWave);
   const bar = makeBar(2.0 * def.scale, 0x46e88a);
   bar.position.y = 2.4 * def.scale; g.add(bar); setBar(bar, 1);
   g.userData = {
     type, hp, maxHp: hp, bar, wob: Math.random()*6,
     lastHit: -99, target: null, targetCd: 0, attackCd: 0,
     speed: def.speed, wallDmg: def.wallDmg, coreDmg: def.coreDmg, scale: def.scale,
+    shellMat, flashTimer: 0,
   };
   scene.add(g);
   state.enemies.push(g);
@@ -1212,14 +1421,12 @@ function killEnemy(g) {
   const idx = state.enemies.indexOf(g); if (idx >= 0) state.enemies.splice(idx, 1);
   state.kills++;
   const start = g.scale.x;
+  const burstPos = g.position.clone(); burstPos.y = 1.2 * g.userData.scale;
+  // pooled particle death burst (replaces ad-hoc spark spheres) + float text + sound
+  effects.burst(burstPos, 0xff7a3c, 12, 7);
+  effects.floatText(burstPos.clone().setY(2.4), '+1', '#9effc4');
+  sound.enemyDie();
   addFX((k) => { g.scale.setScalar(start * (1 - k)); g.rotation.y += 0.7; g.position.y = 1.1 + k * 2.4; if (k>=1) scene.remove(g); }, 0.3);
-  for (let i = 0; i < 7; i++) {
-    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff7a3c }));
-    sp.position.copy(g.position);
-    const dir = new THREE.Vector3((Math.random()-0.5), Math.random()*1.4, (Math.random()-0.5)).normalize().multiplyScalar(5 + Math.random()*3);
-    scene.add(sp);
-    addFX((k) => { sp.position.addScaledVector(dir, 0.035*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.4);
-  }
   state.shake = Math.min(1, state.shake + 0.3);
   refreshUI();
 }
@@ -1279,6 +1486,7 @@ function updateTurret(t, dt, time) {
   const tracer = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 6),
     new THREE.MeshBasicMaterial({ color: 0x7af0ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
   scene.add(tracer);
+  sound.turretFire();
   const target = best;
   addFX((k) => {
     tracer.position.lerpVectors(startPos, endPos, k);
@@ -1286,8 +1494,10 @@ function updateTurret(t, dt, time) {
       scene.remove(tracer);
       if (state.enemies.includes(target)) {
         target.userData.hp -= t.dmg;
+        target.userData.flashTimer = 0.12;
         setBar(target.userData.bar, Math.max(0, target.userData.hp / target.userData.maxHp));
         hitSpark(target.position, 0x7af0ff);
+        sound.enemyHit();
         if (target.userData.hp <= 0) killEnemy(target);
       }
     }
@@ -1318,8 +1528,12 @@ function pickEnemyTarget(e) {
 function triggerGameOver() {
   if (state.gameOver) return;
   state.gameOver = true;
-  ui.goStats.textContent = `Wave ${state.wave}  ·  Kills ${state.kills}  ·  Shards ${state.shards}`;
+  state.survived = state.elapsed;
+  const mins = Math.floor(state.survived / 60);
+  const secs = Math.floor(state.survived % 60).toString().padStart(2, '0');
+  ui.goStats.innerHTML = `Survived <b>${mins}:${secs}</b><br>Kills <b>${state.kills}</b>  ·  Peak threat <b>${state.threatPeak}</b>  ·  Shards banked <b>${state.shards}</b>`;
   ui.gameOver.style.display = 'flex';
+  sound.gameOver();
 }
 
 // ---------- Input ----------
@@ -1406,11 +1620,10 @@ function update(dt, time) {
     g.userData.bar.visible = true; g.userData.barTimer = 1.2;
     hitSpark(g.position, RING_COLORS[g.userData.band]);
     // gating: outer crystals beyond your damage tier just flash.
-    // Tier 0 (dmg 2) breaks band-0 (hp 2); tier 1 (dmg 3) breaks band-1 (hp 5);
-    // tier 2 (dmg 5) breaks band-2 (hp 12); tier 3+ breaks band-3 (hp 24).
-    if (g.userData.maxHp > dmg * 5) continue;
+    if (g.userData.maxHp > dmg * 5) { sound.denied(); continue; }
     g.userData.hp -= dmg;
     setBar(g.userData.bar, Math.max(0, g.userData.hp / g.userData.maxHp));
+    sound.crystalHit();
     if (g.userData.hp <= 0) destroyNode(g);
   }
   topUpNodes();
@@ -1425,8 +1638,10 @@ function update(dt, time) {
     if (time - e.userData.lastHit < SABER_CD) continue;
     e.userData.lastHit = time;
     e.userData.hp -= dmg;
+    e.userData.flashTimer = 0.12;  // hit-flash tint
     setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
     hitSpark(e.position, 0x7af0ff);
+    sound.enemyHit();
     state.shake = Math.min(1, state.shake + 0.06);
     if (e.userData.hp <= 0) killEnemy(e);
   }
@@ -1466,19 +1681,33 @@ function update(dt, time) {
   for (const w of state.workers) updateWorker(w, dt, time);
   for (const t of state.turrets) updateTurret(t, dt, time);
 
-  // ---- enemy spawning by waves
-  state.enemyTimer -= dt;
-  state.waveTimer -= dt;
-  if (state.waveTimer <= 0) {
-    state.wave++; state.waveTimer = 30 + state.wave * 2; refreshUI();
-    toast(`WAVE ${state.wave}`, 'Beetles intensify');
+  // ---- threat-scaled enemy spawning (ported from EnemySpawner.ts)
+  // threat level ticks up every 28s. Spawn cadence shrinks ~7%/level (floor 0.85s).
+  state.elapsed += dt;
+  const THREAT_INTERVAL = 28;
+  const prevThreat = state.threatLevel;
+  state.threatLevel = 1 + Math.floor(state.elapsed / THREAT_INTERVAL);
+  if (state.threatLevel > prevThreat) {
+    state.threatPeak = Math.max(state.threatPeak, state.threatLevel);
+    refreshUI();
+    toast(`THREAT ${state.threatLevel}`, 'The swarm escalates');
+    // Keep state.wave in sync for code paths that still read it (chooseEnemyType, spawnEnemy hp formula).
+    state.wave = state.threatLevel;
   }
-  const cap = 8 + state.wave * 3;
-  const spawnEvery = Math.max(1.0, 3.6 - state.wave * 0.18);
-  if (state.enemyTimer <= 0 && state.enemies.length < cap) {
-    const burst = 1 + Math.floor(state.wave / 4);
-    for (let i = 0; i < burst; i++) spawnEnemy();
-    state.enemyTimer = spawnEvery;
+  state.spawnTimer -= dt;
+  const spawnEvery = Math.max(0.85, 3.2 * Math.pow(0.93, state.threatLevel - 1));
+  const enemyCap = 10 + state.threatLevel * 4;
+  if (state.spawnTimer <= 0 && state.enemies.length < enemyCap) {
+    // Pack spawning: higher threats occasionally drop multiple from one bearing.
+    let pack = 1;
+    if (state.threatLevel >= 3 && Math.random() < Math.min(0.55, state.threatLevel * 0.05)) pack++;
+    if (state.threatLevel >= 6 && Math.random() < 0.35) pack++;
+    const baseAngle = Math.random() * TAU;
+    for (let i = 0; i < pack; i++) {
+      // pack members spawn in a tight bearing cluster for the "focused assault" feel
+      spawnEnemy(undefined, baseAngle + (Math.random() - 0.5) * 0.4);
+    }
+    state.spawnTimer = spawnEvery;
   }
 
   // ---- enemies: retarget, move, attack
@@ -1502,6 +1731,16 @@ function update(dt, time) {
     e.position.y = 1.1 * (e.userData.scale || 1) + Math.abs(Math.sin(e.userData.wob)) * 0.3;
     e.userData.bar.quaternion.copy(camera.quaternion);
 
+    // hit-flash tint (porting Outpost Zero's enemy material flash pattern)
+    if (e.userData.flashTimer > 0) {
+      e.userData.flashTimer -= dt;
+      e.userData.shellMat.emissiveIntensity = 1.3;
+      e.userData.shellMat.emissive.setHex(0xffffff);
+    } else {
+      e.userData.shellMat.emissiveIntensity = 0.55;
+      e.userData.shellMat.emissive.setHex(ENEMY_TYPES[e.userData.type].color);
+    }
+
     // attack
     if (d < ENEMY_HIT_R) {
       e.userData.attackCd -= dt;
@@ -1510,14 +1749,17 @@ function update(dt, time) {
           t.ref.hp -= e.userData.wallDmg;
           t.ref.bar.visible = true; t.ref.barTimer = 1.5;
           setBar(t.ref.bar, Math.max(0, t.ref.hp / t.ref.maxHp));
+          sound.wallHit();
           if (t.ref.hp / t.ref.maxHp < 0.4) t.ref.post.material.color.setHex(0xb14a2a);
           if (t.ref.hp <= 0) {
             t.ref.dead = true;
+            effects.burst(t.ref.group.position.clone().setY(1.8), 0xa05030, 8, 4);
             addFX((k) => { t.ref.post.position.y -= 0.06; t.ref.bar.visible = false; }, 0.5);
           }
         } else {
           state.base.hp -= e.userData.coreDmg;
-          state.shake = Math.min(1, state.shake + 0.2);
+          state.shake = Math.min(1, state.shake + 0.25);
+          sound.coreHit();
           refreshUI();
           if (state.base.hp <= 0) { triggerGameOver(); return; }
         }
@@ -1548,10 +1790,12 @@ function update(dt, time) {
   stackGroup.rotation.z = Math.sin(time * 6) * wob;
   stackGroup.rotation.x = Math.cos(time * 5) * wob * 0.6;
 
-  // FX
+  // FX (tween pool + pooled particles + floating text)
   for (let i = state.fx.length - 1; i >= 0; i--) {
     const f = state.fx[i]; f.t += dt; const k = Math.min(1, f.t / f.dur); f.fn(k); if (k >= 1) state.fx.splice(i, 1);
   }
+  effects.update(dt);
+  updateContextPrompt();
 
   // camera chase + shake
   const desired = player.position.clone().add(CAM_OFFSET);
@@ -1590,8 +1834,13 @@ window.__game = { state, player, saberPivot, spawnEnemy, spawnNode, rebuildSaber
 document.getElementById('playBtn').addEventListener('click', () => {
   document.getElementById('start').style.display = 'none';
   state.running = true;
+  state.startedAt = performance.now();
+  state.elapsed = 0;
+  state.threatLevel = 1;
+  state.threatPeak = 1;
   last = performance.now();
   toast('SABER IGNITED', 'Carve your way out — then build');
+  sound.upgrade();
 });
 </script>
 </body>
