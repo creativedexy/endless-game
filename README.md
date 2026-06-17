@@ -30,13 +30,13 @@ Ten pads ring the inside of your base:
 | **Saber Reach** | Blade physically grows longer (tier I–V) |
 | **Saber Power** | Per-hit damage I–V — needed to break outer crystal rings |
 | **Saber Spin** | Sweep speed I–V — more hits per second |
-| **Saber Crit** | +25% chance per tier to deal double damage (gold sparks) |
-| **Carry Capacity** | +6 stack slots per tier — haul more before depositing |
-| **Core Repair** | +80 core HP and +40 max HP per tier — buy when under siege |
+| **Build Turret** | Spawns an auto-firing turret on the wall ring (4 tiers, 8 slots) |
+| **Carry Capacity** | +4 stack slots per tier — haul more before depositing |
+| **Core Repair** | +60 core HP and +30 max HP per tier — buy when under siege |
 | **Hire Gatherer** | Worker NPCs that auto-chop band-0 crystals and dump shards into the cheapest active pad (idle income) |
 | **Hire Guard** | Patrols the perimeter, sabers nearby beetles |
 | **Hire Builder** | Repairs damaged wall segments |
-| **Expand Base** | Pushes the walls outward, +80 base HP (pads stay in place) |
+| **Expand Base** | Pushes the walls outward +4 radius, +50 base HP (pads stay in place) |
 
 Reach all three core saber stats to **Tier V** and a **second mirrored blade** ignites for full 360° coverage.
 
@@ -54,11 +54,14 @@ Tier 0 saber visually flashes outer crystals but bounces off — clearing more o
 ### Features
 
 - **Swinging lightsaber** that grows visibly with upgrades (reach scales the cylinder mesh, spin/arc rebuilds the trail sector; mirrored second pivot at max tier).
-- **Chunky vertical carry stack** with velocity wobble (back by popular demand).
+- **Chunky vertical carry stack** with velocity wobble.
 - **Walk-on priced pads** with floating canvas-texture price labels and progress rings.
 - **Workers with FSM**: gatherers carry their own mini-stacks, guards swing small sabers, builders repair walls.
-- **Damageable walls + core HP**; beetles target nearest live segment, route through breaches, attack the core if a gap opens.
-- **Wave system** that ramps spawn rate and enemy HP over time.
+- **Auto-firing turrets** mounted on the outer wall — scan for the nearest enemy in range, rotate to aim, fire glowing cyan tracers.
+- **Three enemy types** with distinct stats and silhouettes — beetles (default), faster fragile sprinters (wave 2+), and slow heavy brutes with spiked shells (wave 4+).
+- **Layered base defense** — outer wall ring + four cardinal **bastions** (jutting wall spurs that funnel enemies into alleys) + an inner court wall around the core.
+- **Damageable walls** with HP bars; enemies target nearest live segment, route through breaches.
+- **Wave system** that ramps spawn rate, enemy HP, and enemy variety over time.
 - **Real game over** with restart, plus dune terrain, fog, starfield, and chase camera.
 
 ### Run it
