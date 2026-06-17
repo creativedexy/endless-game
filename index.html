@@ -174,33 +174,33 @@ const TAU = Math.PI * 2;
 // ---------- Tuning ----------
 const WORLD = 150;
 const PLAYER_SPEED = 21;
-const CARRY_MAX = 24;
+const CARRY_MAX_BASE = 24;
 const ITEM_H = 1.1;            // tall stack restored
 const STACK_SCALE = 1.0;
 const BOX_W = 0.95, BOX_H = 1.0, BOX_D = 0.95;
 
-// Saber upgrade tiers (index 0..3)
-const SABER_REACH_TIERS = [5.0, 7.5, 10.5, 14.0];
-const SABER_SPIN_TIERS  = [4.8, 8.5, 13.0, 18.0];
-const SABER_DMG_TIERS   = [1,   2,   4,    7  ];
-const SABER_ARC_TIERS   = [0.5, 0.65, 0.85, 1.1];
-const SABER_CD = 0.32;
+// Saber upgrade tiers (5 levels — buffed early, deeper progression)
+const SABER_REACH_TIERS = [7.0, 9.5, 12.5, 16.0, 20.5];
+const SABER_SPIN_TIERS  = [7.5, 10.5, 14.0, 18.5, 24.0];
+const SABER_DMG_TIERS   = [2,   3,    5,    8,    13  ];
+const SABER_ARC_TIERS   = [0.7, 0.85, 1.05, 1.3,  1.6 ];
+const SABER_CD = 0.25;
 
 // Crystal rings (concentric bands of escalating HP)
 const CRYSTAL_RING_RADII = [22, 42, 68, 100];
-const CRYSTAL_HP_BY_RING = [3,  6,  14, 28];
+const CRYSTAL_HP_BY_RING = [2,  5,  12, 24];
 const NODE_TARGET = 320;
 
-// Enemies attack the base
+// Enemies attack the base — slower early ramp so the player has time to upgrade
 const ENEMY_SPEED = 5.0;
 const ENEMY_HIT_R = 2.4;
-const ENEMY_WALL_DMG = 5;
-const ENEMY_CORE_DMG = 4;
-const ENEMY_ATTACK_CD = 0.55;
+const ENEMY_WALL_DMG = 4;
+const ENEMY_CORE_DMG = 3;
+const ENEMY_ATTACK_CD = 0.6;
 
 // Base
-const BASE_START_RADIUS = 14;
-const BASE_MAX_HP = 240;
+const BASE_START_RADIUS = 16;
+const BASE_MAX_HP = 280;
 
 const COLORS = {
   crystalA: 0x46e8ff, crystalB: 0xb070ff, crystalC: 0xff6a8f, crystalD: 0xffb14a,
@@ -371,10 +371,11 @@ const state = {
   pickups: [],
   fx: [],
   saberAngle: 0,
-  saber: { reachTier: 0, dmgTier: 0, spinTier: 0, mirrored: false },
+  saber: { reachTier: 0, dmgTier: 0, spinTier: 0, mirrored: false, crit: 0 },
   base: { hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, radius: BASE_START_RADIUS },
-  enemyTimer: 3.0,
-  waveTimer: 22,
+  carryMax: CARRY_MAX_BASE,
+  enemyTimer: 8.0,        // grace before any beetles spawn
+  waveTimer: 32,
   shake: 0,
   running: false,
   gameOver: false,
@@ -394,13 +395,14 @@ const ui = {
   gameOver: document.getElementById('gameOver'),
   hintLine: document.getElementById('hintLine'),
 };
-ui.carryMax.textContent = CARRY_MAX;
+ui.carryMax.textContent = state.carryMax;
 
 function refreshUI() {
   ui.shards.textContent = state.shards;
   ui.kills.textContent = state.kills;
   ui.carry.textContent = state.carry.length;
-  ui.carryBox.classList.toggle('full', state.carry.length >= CARRY_MAX);
+  ui.carryBox.classList.toggle('full', state.carry.length >= state.carryMax);
+  ui.carryMax.textContent = state.carryMax;
   ui.baseHpBar.style.width = Math.max(0, (state.base.hp / state.base.maxHp) * 100) + '%';
   ui.wave.textContent = state.wave;
 }
@@ -501,7 +503,7 @@ function redrawPadLabel(pad) {
 function ringSpawnPos() {
   const r1 = Math.random();
   const band = r1 < 0.45 ? 0 : r1 < 0.75 ? 1 : r1 < 0.92 ? 2 : 3;
-  const inner = band === 0 ? state.base.radius + 2 : CRYSTAL_RING_RADII[band - 1];
+  const inner = band === 0 ? state.base.radius + 1 : CRYSTAL_RING_RADII[band - 1];
   const outer = CRYSTAL_RING_RADII[band];
   const a = Math.random() * TAU;
   const r = inner + Math.random() * (outer - inner);
@@ -721,7 +723,7 @@ function rebuildSaber() {
   saberRefs.trail.geometry = new THREE.RingGeometry(1.3, 1.2 + reach, 28, 1, 0, halfArc * 4);
   saberRefs.trail.rotation.z = -halfArc * 4;
 
-  const maxed = state.saber.reachTier >= 3 && state.saber.dmgTier >= 3 && state.saber.spinTier >= 3;
+  const maxed = state.saber.reachTier >= 4 && state.saber.dmgTier >= 4 && state.saber.spinTier >= 4;
   if (maxed && !state.saber.mirrored) {
     state.saber.mirrored = true;
     saberPivotMirror = new THREE.Group();
@@ -747,18 +749,21 @@ function spawnReplacementPad(pad, def) {
 
 // Compute pad slot positions in a hex around the core
 function padSlotPos(slot) {
-  // 6 slots evenly spaced inside the wall ring
-  const R = Math.max(8, state.base.radius - 5);
-  const a = (slot / 6) * TAU + Math.PI / 6;
+  // 9 slots evenly spaced inside the wall ring
+  const SLOTS = 9;
+  const R = Math.max(10, state.base.radius - 4);
+  const a = (slot / SLOTS) * TAU + Math.PI / SLOTS;
   return { x: Math.cos(a) * R, z: Math.sin(a) * R };
 }
 
-// Pad definitions (reuse on tier-up)
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+
+// Pad definitions (reuse on tier-up). Saber stats: 5 tiers each.
 function saberReachPad(tier, slot) {
-  const prices = [8, 22, 50];
+  const prices = [8, 22, 50, 110, 240];
   return {
     title: 'SABER REACH',
-    sub: `TIER ${tier + 1}`,
+    sub: `TIER ${ROMAN[tier + 1]}`,
     price: prices[tier],
     color: 0x36e0ff,
     ringSlot: slot,
@@ -766,16 +771,16 @@ function saberReachPad(tier, slot) {
     onComplete(pad) {
       state.saber.reachTier = tier + 1;
       rebuildSaber();
-      toast('REACH UPGRADED', `Blade tier ${tier + 2}`);
-      if (tier + 1 < 3) spawnReplacementPad(pad, saberReachPad(tier + 1, slot));
+      toast('REACH UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      if (tier + 1 < 4) spawnReplacementPad(pad, saberReachPad(tier + 1, slot));
     },
   };
 }
 function saberDmgPad(tier, slot) {
-  const prices = [10, 26, 60];
+  const prices = [10, 26, 60, 130, 280];
   return {
     title: 'SABER POWER',
-    sub: `TIER ${tier + 1}`,
+    sub: `TIER ${ROMAN[tier + 1]}`,
     price: prices[tier],
     color: 0xff7a3c,
     ringSlot: slot,
@@ -783,16 +788,16 @@ function saberDmgPad(tier, slot) {
     onComplete(pad) {
       state.saber.dmgTier = tier + 1;
       rebuildSaber();
-      toast('POWER UPGRADED', `Damage tier ${tier + 2}`);
-      if (tier + 1 < 3) spawnReplacementPad(pad, saberDmgPad(tier + 1, slot));
+      toast('POWER UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      if (tier + 1 < 4) spawnReplacementPad(pad, saberDmgPad(tier + 1, slot));
     },
   };
 }
 function saberSpinPad(tier, slot) {
-  const prices = [10, 26, 60];
+  const prices = [10, 26, 60, 130, 280];
   return {
     title: 'SABER SPIN',
-    sub: `TIER ${tier + 1}`,
+    sub: `TIER ${ROMAN[tier + 1]}`,
     price: prices[tier],
     color: 0x7af0ff,
     ringSlot: slot,
@@ -800,102 +805,125 @@ function saberSpinPad(tier, slot) {
     onComplete(pad) {
       state.saber.spinTier = tier + 1;
       rebuildSaber();
-      toast('SPIN UPGRADED', `Sweep tier ${tier + 2}`);
-      if (tier + 1 < 3) spawnReplacementPad(pad, saberSpinPad(tier + 1, slot));
+      toast('SPIN UPGRADED', `Tier ${ROMAN[tier + 1]}`);
+      if (tier + 1 < 4) spawnReplacementPad(pad, saberSpinPad(tier + 1, slot));
     },
   };
 }
 function hireGathererPad(slot, n = 1) {
-  const price = 14 + n * 6;
   return {
-    title: 'HIRE GATHERER',
-    sub: `Worker #${n}`,
-    price,
-    color: 0xffd24a,
-    ringSlot: slot,
+    title: 'HIRE GATHERER', sub: `Worker #${n}`,
+    price: 12 + n * 5, color: 0xffd24a, ringSlot: slot,
     ...padSlotPos(slot),
-    onComplete(pad) {
-      spawnWorker('gatherer');
-      toast('GATHERER HIRED', 'Auto-chops crystals');
-      spawnReplacementPad(pad, hireGathererPad(slot, n + 1));
-    },
+    onComplete(pad) { spawnWorker('gatherer'); toast('GATHERER HIRED', 'Auto-chops crystals'); spawnReplacementPad(pad, hireGathererPad(slot, n + 1)); },
   };
 }
 function hireGuardPad(slot, n = 1) {
-  const price = 18 + n * 8;
   return {
-    title: 'HIRE GUARD',
-    sub: `Guard #${n}`,
-    price,
-    color: 0xff5a3c,
-    ringSlot: slot,
+    title: 'HIRE GUARD', sub: `Guard #${n}`,
+    price: 16 + n * 7, color: 0xff5a3c, ringSlot: slot,
     ...padSlotPos(slot),
-    onComplete(pad) {
-      spawnWorker('guard');
-      toast('GUARD HIRED', 'Patrols the perimeter');
-      spawnReplacementPad(pad, hireGuardPad(slot, n + 1));
-    },
+    onComplete(pad) { spawnWorker('guard'); toast('GUARD HIRED', 'Patrols the perimeter'); spawnReplacementPad(pad, hireGuardPad(slot, n + 1)); },
   };
 }
 function hireBuilderPad(slot, n = 1) {
-  const price = 12 + n * 5;
   return {
-    title: 'HIRE BUILDER',
-    sub: `Builder #${n}`,
-    price,
-    color: 0x9effc4,
+    title: 'HIRE BUILDER', sub: `Builder #${n}`,
+    price: 10 + n * 4, color: 0x9effc4, ringSlot: slot,
+    ...padSlotPos(slot),
+    onComplete(pad) { spawnWorker('builder'); toast('BUILDER HIRED', 'Repairs damaged walls'); spawnReplacementPad(pad, hireBuilderPad(slot, n + 1)); },
+  };
+}
+
+// --- new pad types ---
+function carryCapacityPad(tier, slot) {
+  const prices = [15, 35, 75, 160];
+  return {
+    title: 'CARRY CAPACITY',
+    sub: `+6 SLOTS  (${state.carryMax + 6})`,
+    price: prices[tier],
+    color: 0xffaf6a,
     ringSlot: slot,
     ...padSlotPos(slot),
     onComplete(pad) {
-      spawnWorker('builder');
-      toast('BUILDER HIRED', 'Repairs damaged walls');
-      spawnReplacementPad(pad, hireBuilderPad(slot, n + 1));
+      state.carryMax += 6;
+      refreshUI();
+      toast('CAPACITY UP', `Carry ${state.carryMax}`);
+      if (tier + 1 < 4) spawnReplacementPad(pad, carryCapacityPad(tier + 1, slot));
     },
   };
 }
-function expandBasePad(slot, n = 1) {
+function coreRepairPad(tier, slot) {
+  const prices = [12, 28, 60, 130];
+  return {
+    title: 'CORE REPAIR',
+    sub: `+80 HP, +40 MAX`,
+    price: prices[tier],
+    color: 0xff4060,
+    ringSlot: slot,
+    ...padSlotPos(slot),
+    onComplete(pad) {
+      state.base.maxHp += 40;
+      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 80);
+      refreshUI();
+      toast('CORE REPAIRED', `${state.base.hp} / ${state.base.maxHp}`);
+      if (tier + 1 < 4) spawnReplacementPad(pad, coreRepairPad(tier + 1, slot));
+    },
+  };
+}
+function critStrikePad(tier, slot) {
+  const prices = [22, 55, 120];
+  return {
+    title: 'CRIT STRIKE',
+    sub: `+25% (${Math.round((state.saber.crit + 0.25) * 100)}%)`,
+    price: prices[tier],
+    color: 0xb070ff,
+    ringSlot: slot,
+    ...padSlotPos(slot),
+    onComplete(pad) {
+      state.saber.crit = Math.min(1, state.saber.crit + 0.25);
+      toast('CRIT UNLOCKED', `${Math.round(state.saber.crit * 100)}% crit chance`);
+      if (tier + 1 < 3) spawnReplacementPad(pad, critStrikePad(tier + 1, slot));
+    },
+  };
+}
+
+function expandBasePad(n = 1) {
+  // EXPAND BASE always lives at (0, -5) behind the core, with a smaller footprint.
   const price = 30 + n * 25;
   return {
     title: 'EXPAND BASE',
     sub: `Push walls outward`,
     price,
     color: 0xb070ff,
-    ringSlot: slot,
-    ...padSlotPos(slot),
+    ringSlot: -1,
+    x: 0, z: -5, w: 3.6, d: 3.6,
     onComplete(pad) {
       state.base.radius = Math.min(70, state.base.radius + 7);
-      state.base.maxHp += 60;
-      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 60);
+      state.base.maxHp += 80;
+      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 80);
       rebuildWalls();
-      // also nudge existing pads outward proportionally
-      for (const p of state.pads) {
-        const slotPos = padSlotPos(p.ringSlot);
-        p.x = slotPos.x; p.z = slotPos.z;
-        p.group.position.set(p.x, p.group.position.y, p.z);
-      }
-      toast('BASE EXPANDED', 'New walls, more HP');
-      spawnReplacementPad(pad, expandBasePad(slot, n + 1));
+      // pads STAY where they are — only walls/floor expand outward.
+      toast('BASE EXPANDED', 'Walls pushed outward');
+      // Spawn the replacement EXPAND pad directly at the fixed back-of-core slot.
+      makePad(expandBasePad(n + 1));
     },
   };
 }
 
 function seedInitialPads() {
-  // 6 slots around the base hex
+  // 9 slots around the perimeter inside the wall ring
   makePad(saberReachPad(0, 0));
   makePad(saberDmgPad(0, 1));
   makePad(saberSpinPad(0, 2));
   makePad(hireGathererPad(3));
   makePad(hireGuardPad(4));
   makePad(hireBuilderPad(5));
-  // expand pad placed at the back, slot 6 → reuse slot 0's ring position; bump count: use slot 6.5 fallback near core
-  // Easier: place a 7th pad behind core on the z axis
-  const ep = expandBasePad(99); // marker slot — we'll override position
-  // hack the position: drop just behind the core
-  Object.assign(ep, { x: 0, z: -3 });
-  // make it smaller
-  ep.w = 3.6; ep.d = 3.6;
-  const pad = makePad(ep);
-  pad.group.position.set(0, pad.group.position.y, -3);
+  makePad(carryCapacityPad(0, 6));
+  makePad(coreRepairPad(0, 7));
+  makePad(critStrikePad(0, 8));
+  // EXPAND BASE — fixed slot behind the core (handled inside its factory)
+  makePad(expandBasePad(1));
 }
 
 // ---------- Workers ----------
@@ -1246,11 +1274,13 @@ function update(dt, time) {
     g.userData.lastHit = time;
     g.userData.bar.visible = true; g.userData.barTimer = 1.2;
     hitSpark(g.position, RING_COLORS[g.userData.band]);
-    // gating: outer crystal HP higher than dmg*4 → saber bounces (flash only).
-    // Tier 0 (dmg 1) breaks band-0 (hp 3); tier 1 (dmg 2) breaks band-1 (hp 6),
-    // tier 2 (dmg 4) breaks band-2 (hp 14), tier 3 (dmg 7) breaks band-3 (hp 28).
-    if (g.userData.maxHp > dmg * 4) continue;
-    g.userData.hp -= dmg;
+    // gating: outer crystals beyond your damage tier just flash.
+    // Tier 0 (dmg 2) breaks band-0 (hp 2); tier 1 (dmg 3) breaks band-1 (hp 5);
+    // tier 2 (dmg 5) breaks band-2 (hp 12); tier 3+ breaks band-3 (hp 24).
+    if (g.userData.maxHp > dmg * 5) continue;
+    const isCrit = state.saber.crit > 0 && Math.random() < state.saber.crit;
+    const dealt = isCrit ? dmg * 2 : dmg;
+    g.userData.hp -= dealt;
     setBar(g.userData.bar, Math.max(0, g.userData.hp / g.userData.maxHp));
     if (g.userData.hp <= 0) destroyNode(g);
   }
@@ -1265,10 +1295,12 @@ function update(dt, time) {
     if (!inSaberHit(dx, dz, d2)) continue;
     if (time - e.userData.lastHit < SABER_CD) continue;
     e.userData.lastHit = time;
-    e.userData.hp -= dmg;
+    const isCrit = state.saber.crit > 0 && Math.random() < state.saber.crit;
+    const dealt = isCrit ? dmg * 2 : dmg;
+    e.userData.hp -= dealt;
     setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
-    hitSpark(e.position, 0x7af0ff);
-    state.shake = Math.min(1, state.shake + 0.06);
+    hitSpark(e.position, isCrit ? 0xffd24a : 0x7af0ff);
+    state.shake = Math.min(1, state.shake + (isCrit ? 0.12 : 0.06));
     if (e.userData.hp <= 0) killEnemy(e);
   }
 
@@ -1277,7 +1309,7 @@ function update(dt, time) {
     const m = state.pickups[i];
     m.rotation.y += dt * 4;
     if (m.userData.delay > 0) { m.userData.delay -= dt; m.position.y = 1.2 + Math.sin(time*6)*0.2; continue; }
-    if (state.carry.length >= CARRY_MAX) continue;
+    if (state.carry.length >= state.carryMax) continue;
     const target = player.position.clone().add(new THREE.Vector3(0, 2.6, 0));
     m.position.lerp(target, Math.min(1, dt * 9));
     if (m.position.distanceTo(target) < 1.0) {
@@ -1310,13 +1342,13 @@ function update(dt, time) {
   state.enemyTimer -= dt;
   state.waveTimer -= dt;
   if (state.waveTimer <= 0) {
-    state.wave++; state.waveTimer = 22 + state.wave * 2; refreshUI();
+    state.wave++; state.waveTimer = 30 + state.wave * 2; refreshUI();
     toast(`WAVE ${state.wave}`, 'Beetles intensify');
   }
-  const cap = 12 + state.wave * 4;
-  const spawnEvery = Math.max(0.7, 2.6 - state.wave * 0.18);
+  const cap = 8 + state.wave * 3;
+  const spawnEvery = Math.max(1.0, 3.6 - state.wave * 0.18);
   if (state.enemyTimer <= 0 && state.enemies.length < cap) {
-    const burst = 1 + Math.floor(state.wave / 3);
+    const burst = 1 + Math.floor(state.wave / 4);
     for (let i = 0; i < burst; i++) spawnEnemy();
     state.enemyTimer = spawnEvery;
   }
