@@ -41,7 +41,7 @@ Eight build plots ring the south lot beside your HQ. Each rebuilds at the next t
 
 - **Soldiers** spawn from barracks (capped), march to the nearest enemy, and fire from range. With no enemies near, they form up along the hold line.
 - The **front line** is one readable wall of posts spanning the north edge of your base — no rings, no bastions, no inner court. Damage a post and it tints red; destroy it and enemies stream through the gap.
-- **Enemies** advance from the north: **grunts** (default), faster fragile **runners** (wave 2+), and slow heavy **tanks** with spiked shells (wave 4+). They fight soldiers in the way, batter the wall, then make for the core.
+- **Enemies** advance from the north and **shoot back**: **grunts** (default riflemen), faster **runners** that rush into short range (wave 2+), and heavy **tanks** that outrange your soldiers and shrug off fire (wave 4+). They trade fire with soldiers in the way, batter the wall up close, then make for the core. A lone soldier line beats basic grunts but bleeds against tanks — back it with turrets, med tents, and armory upgrades.
 
 ### Waves
 
@@ -53,8 +53,9 @@ A countdown HUD shows the next wave's ETA (it flashes red in the final seconds).
 - **Friendly army** — barracks deploy soldiers that march, hold, fire, take casualties, and heal at med tents.
 - **Single front line** — one damageable wall of posts; breaches open real holes enemies exploit.
 - **Auto-firing turrets** on the line, scanning for the nearest enemy and tracing it down.
-- **Directional waves** — three enemy types advancing from the north with an INCOMING countdown.
+- **Directional waves** — three enemy types advancing from the north with an INCOMING countdown; they return fire with visible tracers.
 - **Emergency-hero saber** — fixed-size auto-swinging blade for plugging breaches and clearing resource crystals.
+- **Dressed battlefield** — horizon mesas, scattered rocks, a scorched no-man's-land with craters, and front-line sandbag berms & tank traps.
 - **Real game over** with restart, plus dune terrain, fog, starfield, procedural audio, pooled particles, and a chase camera.
 
 ### Run it
