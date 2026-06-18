@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Mars Colony — Base Defense</title>
+<title>Mars Colony — War Front</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #1a0a05; font-family: 'Segoe UI', system-ui, sans-serif; }
@@ -21,39 +21,30 @@
     border: 1px solid rgba(255, 180, 120, 0.25);
     backdrop-filter: blur(6px);
     border-radius: 10px; padding: 8px 14px;
-    min-width: 170px;
+    min-width: 190px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
   .swatch { width: 16px; height: 16px; border-radius: 4px; flex: 0 0 auto; box-shadow: inset 0 0 4px rgba(0,0,0,0.5); }
   .stat .label { color: #f0d9c8; font-size: 13px; font-weight: 600; letter-spacing: .3px; flex: 1; }
   .stat .value { color: #fff; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 28px; text-align: right; }
+  .stat .sub { color: #c9a892; font-size: 11px; font-weight: 600; }
 
   #baseHpWrap { flex: 1; height: 12px; border-radius: 6px; background: rgba(0,0,0,0.5); overflow: hidden; border: 1px solid rgba(255,255,255,0.12); }
   #baseHpBar { height: 100%; width: 100%; background: linear-gradient(90deg,#ff4040,#ff8a4a); transition: width .15s linear; }
 
-  #carry {
+  #incoming {
     position: absolute; top: 14px; right: 14px;
-    background: rgba(20, 8, 4, 0.55);
-    border: 1px solid rgba(255, 180, 120, 0.25);
-    backdrop-filter: blur(6px);
-    border-radius: 10px; padding: 8px 14px; text-align: right;
-    color: #f0d9c8; font-size: 13px; font-weight: 600;
-    pointer-events: none; user-select: none;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  }
-  #carry .big { color: #fff; font-size: 20px; font-weight: 800; }
-  #carry.full { border-color: #ffcf5e; box-shadow: 0 0 18px rgba(255,207,94,.5); }
-
-  #wave {
-    position: absolute; top: 84px; right: 14px;
     background: rgba(20, 8, 4, 0.55);
     border: 1px solid rgba(255, 130, 60, 0.4);
     backdrop-filter: blur(6px);
-    border-radius: 10px; padding: 6px 14px;
-    color: #ffb38a; font-size: 13px; font-weight: 700;
+    border-radius: 10px; padding: 8px 16px; text-align: right;
+    color: #ffb38a; font-size: 12px; font-weight: 700; letter-spacing: .5px;
     pointer-events: none; user-select: none;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
-  #wave .big { color: #ffd9a8; font-size: 18px; font-weight: 900; }
+  #incoming .big { color: #ffd9a8; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  #incoming.warn { border-color: #ff5a3c; color: #ff9a7a; animation: pulse 0.6s ease-in-out infinite alternate; }
+  @keyframes pulse { from { box-shadow: 0 0 0 rgba(255,90,60,0); } to { box-shadow: 0 0 20px rgba(255,90,60,.6); } }
 
   #toast {
     position: absolute; top: 22%; left: 50%; transform: translate(-50%,-50%) scale(.8);
@@ -67,7 +58,6 @@
   #toast.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
   #toast .sub { display:block; font-size: 14px; font-weight: 600; color:#d8c4b6; margin-top: 6px; letter-spacing:0; }
 
-  /* Floating world-space damage / pickup numbers */
   .float-text {
     position: absolute; transform: translate(-50%, -50%);
     font-size: 18px; font-weight: 900; letter-spacing: .5px;
@@ -76,7 +66,6 @@
     will-change: transform, opacity;
   }
 
-  /* Context-action prompt above the action area */
   #actionPrompt {
     position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
     background: rgba(20, 8, 4, 0.78); border: 1px solid rgba(122, 240, 255, 0.55);
@@ -98,31 +87,31 @@
   }
   #hint b { color: #ffd9b0; }
 
-  /* Start / Game Over overlays */
   .overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 16px; text-align: center;
     background: radial-gradient(circle at 50% 40%, rgba(60,20,8,.6), rgba(10,4,2,.94));
-    z-index: 10; backdrop-filter: blur(2px);
+    z-index: 10; backdrop-filter: blur(2px); padding: 20px;
   }
   .overlay h1 {
     color: #ffd9a8; font-size: clamp(30px, 6.5vw, 60px); font-weight: 900; letter-spacing: 1px;
     text-shadow: 0 0 30px rgba(255,140,60,.5), 0 4px 10px #000;
   }
-  .overlay h1 span { color: #7af0ff; text-shadow: 0 0 24px rgba(60,224,255,.9); }
+  .overlay h1 span { color: #9effc4; text-shadow: 0 0 24px rgba(120,255,170,.9); }
   .overlay h1 .red { color: #ff5a3c; text-shadow: 0 0 24px rgba(255,90,60,.9); }
-  .overlay p { color: #e0c4b0; font-size: 16px; max-width: 480px; line-height: 1.6; }
+  .overlay p { color: #e0c4b0; font-size: 16px; max-width: 520px; line-height: 1.6; }
   .overlay .keys { color: #ffcf7e; font-weight: 700; }
   .overlay button {
     margin-top: 6px; pointer-events: auto; cursor: pointer;
-    background: linear-gradient(180deg,#ff7a3c,#e0531e); color: #fff;
+    background: linear-gradient(180deg,#46c878,#2e9e54); color: #fff;
     border: none; border-radius: 12px; padding: 16px 44px;
     font-size: 20px; font-weight: 800; letter-spacing: .5px;
-    box-shadow: 0 8px 24px rgba(224,83,30,.5);
+    box-shadow: 0 8px 24px rgba(46,158,84,.5);
     transition: transform .12s ease, box-shadow .12s ease;
   }
-  .overlay button:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(224,83,30,.7); }
+  .overlay button:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(46,158,84,.7); }
   #gameOver { display: none; }
+  #gameOver button { background: linear-gradient(180deg,#ff7a3c,#e0531e); box-shadow: 0 8px 24px rgba(224,83,30,.5); }
   #gameOver .stats { color: #ffe8b0; font-size: 18px; font-weight: 800; letter-spacing: .5px; }
 
   #stick {
@@ -143,42 +132,38 @@
 <div id="game"></div>
 
 <div id="hud">
-  <div class="stat"><span class="swatch" style="background:#7af0ff"></span><span class="label">Shards</span><span class="value" id="uiShards">0</span></div>
-  <div class="stat"><span class="swatch" style="background:#ff5a3c"></span><span class="label">Base</span><span id="baseHpWrap"><span id="baseHpBar"></span></span></div>
-  <div class="stat"><span class="swatch" style="background:#46e88a"></span><span class="label">Kills</span><span class="value" id="uiKills">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#7af0ff"></span><span class="label">Supply</span><span class="value" id="uiShards">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#46e88a"></span><span class="label">Income</span><span class="value" id="uiIncome">0</span><span class="sub">/s</span></div>
+  <div class="stat"><span class="swatch" style="background:#bfe89a"></span><span class="label">Troops</span><span class="value" id="uiTroops">0</span></div>
+  <div class="stat"><span class="swatch" style="background:#ff5a3c"></span><span class="label">HQ</span><span id="baseHpWrap"><span id="baseHpBar"></span></span></div>
 </div>
 
-<div id="carry">Carrying<br><span class="big"><span id="uiCarry">0</span>/<span id="uiCarryMax">24</span></span></div>
-<div id="wave">Threat<br><span class="big" id="uiWave">1</span></div>
-
-<div id="baseInfo" style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);pointer-events:none;user-select:none;text-align:center;">
-  <div style="background:rgba(20,8,4,0.6);border:1px solid rgba(120,255,170,0.4);color:#9effc4;font-size:13px;font-weight:700;letter-spacing:.5px;padding:6px 16px;border-radius:20px;" id="hintLine">Carve crystals → haul shards → step on a pad to buy upgrades</div>
-</div>
+<div id="incoming">WAVE <span id="uiWave">1</span> · NEXT IN<br><span class="big" id="uiTimer">0:10</span></div>
 
 <div id="toast"></div>
 <div id="actionPrompt"></div>
 
 <div id="hint">
-  <b>WASD</b> / <b>Arrows</b> to move<br>
-  The <b>saber</b> swings automatically — clear crystals to expand<br>
-  Stack shards on your back, then <b>stand on a buy pad</b><br>
-  Defend the <b>core</b> — if its HP hits zero, it's over
+  <b>WASD</b> / <b>Arrows</b> — move your commander<br>
+  Stand on a <b>build pad</b> to fund it from supply<br>
+  <b>Barracks</b> pump out soldiers — they hold the front line<br>
+  Your <b>saber</b> swings automatically — plug breaches in a pinch
 </div>
 
 <div id="stick"><div id="knob"></div></div>
 
 <div id="start" class="overlay">
-  <h1>MARS COLONY<br><span>BASE DEFENSE</span></h1>
-  <p>You're hemmed in by dense crystal forests on a Martian frontier. Carve your way out with a whirling <span class="keys">lightsaber</span>, haul shards back to your base, and <span class="keys">step on buy pads</span> to upgrade your saber, hire workers, and expand. Sand-beetles swarm from beyond — they attack your <span class="keys">walls and core</span>. Hold the line.</p>
-  <p class="keys">Move with WASD / Arrows — the saber does the rest</p>
-  <button id="playBtn">▶ IGNITE THE SABER</button>
+  <h1>MARS COLONY<br><span>WAR FRONT</span></h1>
+  <p>You command a frontier outpost. Build <span class="keys">barracks</span> to raise an army, <span class="keys">supply depots</span> to fund it, and <span class="keys">turrets &amp; med tents</span> to hold the line. Your soldiers march north and fight the incoming assault at a single <span class="keys">front line</span>. You're the commander — build, reinforce, and plug breaches with your saber when the wall buckles. If the HQ core falls, it's over.</p>
+  <p class="keys">Move with WASD / Arrows — your army does the fighting</p>
+  <button id="playBtn">▶ HOLD THE LINE</button>
 </div>
 
 <div id="gameOver" class="overlay">
-  <h1><span class="red">BASE LOST</span></h1>
+  <h1><span class="red">HQ OVERRUN</span></h1>
   <div class="stats" id="goStats"></div>
-  <p>The sand-beetles overran the core. Try a different upgrade path — hire guards earlier, expand the wall ring, or focus saber damage to cut through outer crystals faster.</p>
-  <button onclick="location.reload()">↻ RUN IT AGAIN</button>
+  <p>The assault broke through. Next run: build barracks earlier, stack supply depots for faster income, and fortify the line before the heavy waves hit.</p>
+  <button onclick="location.reload()">↻ NEW CAMPAIGN</button>
 </div>
 
 <script type="importmap">
@@ -189,46 +174,48 @@
 import * as THREE from 'three';
 
 /* ===============================================================
-   Mars Colony: Base Defense
-   Single-file Three.js base-defense hauler / saber survivor.
+   Mars Colony: War Front
+   Single-file Three.js base-builder war game.
+   You build production (barracks/depots) and defense (turrets/
+   med tents/wall) on the south "build lot"; your soldiers march
+   north to hold a single front line against directional waves.
+   The player is an emergency hero with a fixed, non-scaling saber.
    =============================================================== */
 
 const TAU = Math.PI * 2;
 
-// ---------- Tuning ----------
+// ---------- World / layout ----------
 const WORLD = 150;
-const PLAYER_SPEED = 21;
-const CARRY_MAX_BASE = 24;
-const ITEM_H = 1.1;            // tall stack restored
-const STACK_SCALE = 1.0;
-const BOX_W = 0.95, BOX_H = 1.0, BOX_D = 0.95;
+const PLAYER_SPEED = 22;
 
-// Saber upgrade tiers (5 levels — buffed early, deeper progression)
-const SABER_REACH_TIERS = [7.0, 9.5, 12.5, 16.0, 20.5];
-const SABER_SPIN_TIERS  = [7.5, 10.5, 14.0, 18.5, 24.0];
-const SABER_DMG_TIERS   = [2,   3,    5,    8,    13  ];
-const SABER_ARC_TIERS   = [0.7, 0.85, 1.05, 1.3,  1.6 ];
-const SABER_CD = 0.25;
+// Front line runs east-west at z = -FRONT_Z. Enemies advance from the
+// north (-Z, far up the screen) toward the HQ core at the origin.
+const FRONT_Z = 26;            // line sits 26u north of core
+const LINE_HALF = 30;          // posts span x in [-30, 30]
+const WALL_POSTS = 16;
+const HOLD_Z = -FRONT_Z + 5;   // idle soldiers form up just south of the line
+const ENEMY_SPAWN_Z = -90;
+const ENEMY_SPAWN_HALF = 28;
 
-// Crystal rings (concentric bands of escalating HP)
-const CRYSTAL_RING_RADII = [22, 42, 68, 100];
-const CRYSTAL_HP_BY_RING = [2,  5,  12, 24];
-const NODE_TARGET = 320;
+// ---------- Player saber (fixed — emergency hero, no upgrade tiers) ----------
+const SABER_REACH = 6.5;
+const SABER_SPIN  = 9.0;
+const SABER_DMG   = 4;
+const SABER_ARC   = 0.9;
+const SABER_CD    = 0.22;
 
-// Enemies attack the base; per-type stats live in ENEMY_TYPES below.
-const ENEMY_HIT_R = 2.4;
-const ENEMY_ATTACK_CD = 0.6;
+// ---------- HQ core ----------
+const CORE_MAX_HP = 320;
+const CORE_HIT_R = 3.0;
 
-// Base
-const BASE_START_RADIUS = 16;
-const BASE_MAX_HP = 280;
+// ---------- Soldiers ----------
+const SOLDIER_CAP = 44;
 
 const COLORS = {
-  crystalA: 0x46e8ff, crystalB: 0xb070ff, crystalC: 0xff6a8f, crystalD: 0xffb14a,
-  enemy: 0x141018,
   player: 0xf2f2f2,
   saber: 0x7af0ff,
   dome: 0x46e88a,
+  soldier: 0x8fd66a,
 };
 
 // ---------- Renderer / scene / camera ----------
@@ -242,19 +229,19 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x2a0f06);
-scene.fog = new THREE.FogExp2(0x49180a, 0.0045);
+scene.fog = new THREE.FogExp2(0x49180a, 0.0042);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 800);
-const CAM_OFFSET = new THREE.Vector3(0, 54, 44);
+const CAM_OFFSET = new THREE.Vector3(0, 60, 50);
 camera.position.copy(CAM_OFFSET);
 camera.lookAt(0, 0, 0);
 
-scene.add(new THREE.HemisphereLight(0xffd9b0, 0x3a1505, 0.9));
+scene.add(new THREE.HemisphereLight(0xffd9b0, 0x3a1505, 0.95));
 const sun = new THREE.DirectionalLight(0xfff0e0, 1.1);
 sun.position.set(60, 100, 40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.near = 1; sun.shadow.camera.far = 360;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 400;
 const sc = sun.shadow.camera;
 sc.left = -WORLD; sc.right = WORLD; sc.top = WORLD; sc.bottom = -WORLD;
 scene.add(sun);
@@ -292,21 +279,25 @@ scene.add(ground);
   scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffe8c0, size: 1.3 })));
 }
 
-// ---------- Base / core ----------
+// Build-lot plate (south half, where the player builds) + a faint "no-mans-land" marker.
+{
+  const lot = new THREE.Mesh(new THREE.CircleGeometry(34, 48),
+    new THREE.MeshStandardMaterial({ color: 0x5a4030, metalness: 0.25, roughness: 0.75 }));
+  lot.rotation.x = -Math.PI / 2; lot.position.set(0, 0.1, 6); lot.receiveShadow = true; scene.add(lot);
+}
+
+// ---------- HQ core ----------
 const dome = new THREE.Group();
 scene.add(dome);
-
 const domeMat = new THREE.MeshStandardMaterial({
   color: COLORS.dome, transparent: true, opacity: 0.22, roughness: 0.25, metalness: 0.1,
   side: THREE.DoubleSide, emissive: COLORS.dome, emissiveIntensity: 0.25,
 });
 const domeShell = new THREE.Mesh(new THREE.SphereGeometry(7, 32, 20, 0, TAU, 0, Math.PI / 2), domeMat);
 dome.add(domeShell);
-
 const domeRing = new THREE.Mesh(new THREE.TorusGeometry(7, 0.32, 12, 40),
   new THREE.MeshStandardMaterial({ color: 0x9effc4, emissive: 0x46e88a, emissiveIntensity: 0.8 }));
 domeRing.rotation.x = Math.PI / 2; domeRing.position.y = 0.3; dome.add(domeRing);
-
 const core = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2.0, 4.4, 8),
   new THREE.MeshStandardMaterial({ color: 0xcfd8d8, metalness: 0.7, roughness: 0.3, emissive: 0x1466aa, emissiveIntensity: 0.6 }));
 core.position.y = 2.2; core.castShadow = true; dome.add(core);
@@ -314,94 +305,72 @@ const coreGlow = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4, 0),
   new THREE.MeshStandardMaterial({ color: 0x7af0ff, emissive: 0x36e0ff, emissiveIntensity: 1.4 }));
 coreGlow.position.y = 5.2; dome.add(coreGlow);
 
-// ---------- Player ----------
+// ---------- Player (commander) ----------
 const player = new THREE.Group();
-player.position.set(0, 0, 8);
+player.position.set(0, 0, 10);
 scene.add(player);
-
 const body = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 2.4, 16),
   new THREE.MeshStandardMaterial({ color: COLORS.player, roughness: 0.5, metalness: 0.2 }));
 body.position.y = 1.2; body.castShadow = true; player.add(body);
-
 const visor = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.5),
   new THREE.MeshStandardMaterial({ color: 0x2f7adf, emissive: 0x113366, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 }));
 visor.position.set(0, 2.1, 0.95); player.add(visor);
-
 const blob = new THREE.Mesh(new THREE.CircleGeometry(1.6, 20),
   new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 }));
 blob.rotation.x = -Math.PI / 2; blob.position.y = 0.08; player.add(blob);
 
-const stackGroup = new THREE.Group();
-stackGroup.position.y = 2.6; player.add(stackGroup);
-
-// ---------- Saber (refs for upgrade resizing) ----------
+// ---------- Saber (fixed size) ----------
 const saberPivot = new THREE.Group();
 saberPivot.position.y = 1.5; player.add(saberPivot);
-
-const saberRefs = (() => {
+{
   const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.2, 10),
     new THREE.MeshStandardMaterial({ color: 0x888c90, metalness: 0.9, roughness: 0.25 }));
   hilt.rotation.z = Math.PI / 2; hilt.position.x = 0.6; saberPivot.add(hilt);
-
-  const reach = SABER_REACH_TIERS[0];
   const bladeMat = new THREE.MeshBasicMaterial({ color: COLORS.saber, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false });
-  const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.18, reach, 12), bladeMat);
-  blade.rotation.z = Math.PI / 2; blade.position.x = 1.2 + reach / 2; saberPivot.add(blade);
-  const bladeCore = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.07, reach, 8),
+  const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.16, SABER_REACH, 12), bladeMat);
+  blade.rotation.z = Math.PI / 2; blade.position.x = 1.2 + SABER_REACH / 2; saberPivot.add(blade);
+  const bladeCore = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.06, SABER_REACH, 8),
     new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  bladeCore.rotation.z = Math.PI / 2; bladeCore.position.x = 1.2 + reach / 2; saberPivot.add(bladeCore);
-
-  const tip = new THREE.PointLight(COLORS.saber, 2.6, 30, 2);
-  tip.position.x = 1.2 + reach; saberPivot.add(tip);
-
+  bladeCore.rotation.z = Math.PI / 2; bladeCore.position.x = 1.2 + SABER_REACH / 2; saberPivot.add(bladeCore);
+  const tip = new THREE.PointLight(COLORS.saber, 2.2, 26, 2); tip.position.x = 1.2 + SABER_REACH; saberPivot.add(tip);
   const trail = new THREE.Mesh(
-    new THREE.RingGeometry(1.3, 1.2 + reach, 24, 1, 0, SABER_ARC_TIERS[0] * 4),
-    new THREE.MeshBasicMaterial({ color: COLORS.saber, transparent: true, opacity: 0.24, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+    new THREE.RingGeometry(1.3, 1.2 + SABER_REACH, 24, 1, 0, SABER_ARC * 4),
+    new THREE.MeshBasicMaterial({ color: COLORS.saber, transparent: true, opacity: 0.22, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
   );
-  trail.rotation.x = -Math.PI / 2;
-  trail.rotation.z = -SABER_ARC_TIERS[0] * 4;
-  saberPivot.add(trail);
-
-  return { hilt, blade, bladeCore, tip, trail, baseReach: reach };
-})();
-
-// Mirrored second blade (unlocked at max tier)
-let saberPivotMirror = null;
+  trail.rotation.x = -Math.PI / 2; trail.rotation.z = -SABER_ARC * 4; saberPivot.add(trail);
+}
 
 // ---------- Shared geometry / materials ----------
 const crystalGeo = new THREE.ConeGeometry(0.95, 2.6, 5);
-const carryBoxGeo = new THREE.BoxGeometry(BOX_W, BOX_H, BOX_D);
-
-const RING_COLORS = [COLORS.crystalA, COLORS.crystalB, COLORS.crystalC, COLORS.crystalD];
-const ringMats = RING_COLORS.map(c =>
-  new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.4, roughness: 0.3, metalness: 0.3, flatShading: true }));
-const ringPickupMats = RING_COLORS.map(c =>
-  new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.7, flatShading: true, roughness: 0.4 }));
+const RESOURCE_COLOR = 0x46e8ff;
+const resourceMat = new THREE.MeshStandardMaterial({ color: RESOURCE_COLOR, emissive: RESOURCE_COLOR, emissiveIntensity: 0.45, roughness: 0.3, metalness: 0.3, flatShading: true });
 
 // ---------- State ----------
 const state = {
-  shards: 0,
-  carry: [],
+  shards: 25,            // supply bank (passive income + node bursts)
+  incomeAcc: 0,
+  incomePerSec: 2.0,     // base trickle; depots add to this
   kills: 0,
-  wave: 1,
   pads: [],
   walls: [],
-  workers: [],
+  soldiers: [],
+  barracks: [],
+  medTents: [],
+  turrets: [],
+  mechanics: [],
   nodes: [],
   enemies: [],
-  pickups: [],
   fx: [],
   saberAngle: 0,
-  saber: { reachTier: 0, dmgTier: 0, spinTier: 0, mirrored: false },
-  turrets: [],
-  base: { hp: BASE_MAX_HP, maxHp: BASE_MAX_HP, radius: BASE_START_RADIUS },
-  carryMax: CARRY_MAX_BASE,
-  // Threat-scaled spawner (replaces wave/enemyTimer/waveTimer)
+  soldierDmgMul: 1,
+  soldierHpMul: 1,
+  armoryTier: 0,
+  core: { hp: CORE_MAX_HP, maxHp: CORE_MAX_HP },
+  // directional threat spawner
   elapsed: 0,
-  spawnTimer: 6.0,           // grace before first beetles spawn
+  spawnTimer: 5.0,
   threatLevel: 1,
   threatPeak: 1,
-  // Game over stats
   startedAt: 0,
   survived: 0,
   shake: 0,
@@ -412,27 +381,23 @@ const state = {
 // ---------- UI refs ----------
 const ui = {
   shards: document.getElementById('uiShards'),
-  kills: document.getElementById('uiKills'),
-  carry: document.getElementById('uiCarry'),
-  carryMax: document.getElementById('uiCarryMax'),
-  carryBox: document.getElementById('carry'),
+  income: document.getElementById('uiIncome'),
+  troops: document.getElementById('uiTroops'),
   baseHpBar: document.getElementById('baseHpBar'),
   wave: document.getElementById('uiWave'),
+  timer: document.getElementById('uiTimer'),
+  incoming: document.getElementById('incoming'),
   toast: document.getElementById('toast'),
   goStats: document.getElementById('goStats'),
   gameOver: document.getElementById('gameOver'),
-  hintLine: document.getElementById('hintLine'),
   actionPrompt: document.getElementById('actionPrompt'),
 };
-ui.carryMax.textContent = state.carryMax;
 
 function refreshUI() {
-  ui.shards.textContent = state.shards;
-  ui.kills.textContent = state.kills;
-  ui.carry.textContent = state.carry.length;
-  ui.carryBox.classList.toggle('full', state.carry.length >= state.carryMax);
-  ui.carryMax.textContent = state.carryMax;
-  ui.baseHpBar.style.width = Math.max(0, (state.base.hp / state.base.maxHp) * 100) + '%';
+  ui.shards.textContent = Math.floor(state.shards);
+  ui.income.textContent = state.incomePerSec.toFixed(1);
+  ui.troops.textContent = state.soldiers.length;
+  ui.baseHpBar.style.width = Math.max(0, (state.core.hp / state.core.maxHp) * 100) + '%';
   ui.wave.textContent = state.threatLevel;
 }
 
@@ -444,9 +409,6 @@ function toast(main, sub) {
   toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
 }
 
-// Context-action prompt: tells the player what the nearest pad would buy,
-// or hides while they're free-roaming. Color flips red if they don't have
-// enough carry to start filling it. Ported pattern from Outpost Zero.
 const PROMPT_RADIUS = 6.5;
 function updateContextPrompt() {
   let nearest = null, nd = PROMPT_RADIUS * PROMPT_RADIUS;
@@ -455,14 +417,11 @@ function updateContextPrompt() {
     const d2 = dx*dx + dz*dz;
     if (d2 < nd) { nd = d2; nearest = pad; }
   }
-  if (!nearest) {
-    ui.actionPrompt.classList.remove('show');
-    return;
-  }
+  if (!nearest) { ui.actionPrompt.classList.remove('show'); return; }
   const remain = nearest.price - nearest.paid;
   const onPad = Math.abs(player.position.x - nearest.x) < nearest.w/2
              && Math.abs(player.position.z - nearest.z) < nearest.d/2;
-  const broke = onPad && state.carry.length === 0 && remain > 0;
+  const broke = onPad && Math.floor(state.shards) === 0 && remain > 0;
   ui.actionPrompt.textContent = `${nearest.title} · ${nearest.sub} · ${remain} ◆`;
   ui.actionPrompt.classList.add('show');
   ui.actionPrompt.classList.toggle('broke', broke);
@@ -491,28 +450,12 @@ function setBar(bar, frac) {
   f.position.x = -bar.userData.width * (1 - frac) / 2;
 }
 
-// 2D canvas → texture sprite for pad labels (no FontLoader)
+// 2D canvas → texture sprite for pad labels
 function makeLabelSprite(title, sub, priceLeft) {
   const W = 512, H = 256;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  // panel
-  ctx.fillStyle = 'rgba(20, 8, 4, 0.85)';
-  roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 207, 94, 0.7)'; ctx.lineWidth = 3;
-  roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.stroke();
-  // title
-  ctx.fillStyle = '#ffd9a8'; ctx.font = '700 44px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(title, W / 2, 78);
-  // sub
-  ctx.fillStyle = '#e0c4b0'; ctx.font = '600 26px "Segoe UI", system-ui, sans-serif';
-  ctx.fillText(sub, W / 2, 130);
-  // price
-  ctx.fillStyle = '#7af0ff'; ctx.font = '900 56px "Segoe UI", system-ui, sans-serif';
-  ctx.fillText(priceLeft + ' SHARDS', W / 2, 196);
-
+  drawLabel(ctx, W, H, title, sub, priceLeft, false);
   const tex = new THREE.CanvasTexture(cv);
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
@@ -521,6 +464,21 @@ function makeLabelSprite(title, sub, priceLeft) {
   sp.userData = { canvas: cv, ctx, tex, title, sub };
   sp.renderOrder = 500;
   return sp;
+}
+function drawLabel(ctx, W, H, title, sub, remain, complete) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(20, 8, 4, 0.85)';
+  roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.fill();
+  ctx.strokeStyle = complete ? 'rgba(120,255,170,0.9)' : 'rgba(255, 207, 94, 0.7)';
+  ctx.lineWidth = 3; roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.stroke();
+  ctx.fillStyle = '#ffd9a8'; ctx.font = '700 44px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(title, W / 2, 78);
+  ctx.fillStyle = '#e0c4b0'; ctx.font = '600 26px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(sub, W / 2, 130);
+  ctx.fillStyle = remain <= 0 ? '#9effc4' : '#7af0ff';
+  ctx.font = '900 52px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(remain <= 0 ? 'READY' : (remain + ' ◆'), W / 2, 196);
 }
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -534,25 +492,11 @@ function redrawPadLabel(pad) {
   const sp = pad.labelSprite;
   const { ctx, tex, title, sub } = sp.userData;
   const W = sp.userData.canvas.width, H = sp.userData.canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(20, 8, 4, 0.85)';
-  roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.fill();
-  const borderColor = pad.complete ? 'rgba(120,255,170,0.9)' : 'rgba(255, 207, 94, 0.7)';
-  ctx.strokeStyle = borderColor; ctx.lineWidth = 3;
-  roundRect(ctx, 16, 16, W - 32, H - 32, 24); ctx.stroke();
-  ctx.fillStyle = '#ffd9a8'; ctx.font = '700 44px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(title, W / 2, 78);
-  ctx.fillStyle = '#e0c4b0'; ctx.font = '600 26px "Segoe UI", system-ui, sans-serif';
-  ctx.fillText(sub, W / 2, 130);
-  const remain = pad.price - pad.paid;
-  ctx.fillStyle = remain <= 0 ? '#9effc4' : '#7af0ff';
-  ctx.font = '900 56px "Segoe UI", system-ui, sans-serif';
-  ctx.fillText(remain <= 0 ? 'READY' : (remain + ' SHARDS'), W / 2, 196);
+  drawLabel(ctx, W, H, title, sub, pad.price - pad.paid, pad.complete);
   tex.needsUpdate = true;
 }
 
-// ---------- Procedural sound (ported from Outpost Zero) ----------
+// ---------- Procedural sound ----------
 const sound = (() => {
   let ctx = null, master = null;
   function unlock() {
@@ -597,36 +541,32 @@ const sound = (() => {
     src.connect(filter).connect(gain).connect(master);
     src.start(t);
   }
-
-  // Hit/swing/etc. throttling so dense hit-streams don't blow eardrums.
   const cd = {};
   function throttle(key, ms) {
     const now = performance.now();
     if (cd[key] && now - cd[key] < ms) return false;
     cd[key] = now; return true;
   }
-
   return {
     saberHit()   { if (throttle('saberHit', 70))   tone(740, 0.06, 'square',   0.18, 380); },
-    crystalHit() { if (throttle('crystHit', 90))   tone(520, 0.07, 'triangle', 0.22, 240); },
     crystalBreak(){ if (throttle('crBrk', 60))    { tone(880, 0.1, 'sawtooth', 0.28, 200); noise(0.18, 0.18, 1400); } },
-    collect()    { tone(660, 0.06, 'sine', 0.32, 990); tone(990, 0.09, 'sine', 0.18, 1320); },
-    deposit()    { if (throttle('dep', 50))        tone(540, 0.05, 'square', 0.18, 720); },
+    deposit()    { if (throttle('dep', 40))        tone(540, 0.05, 'square', 0.16, 720); },
     padReady()   { tone(330, 0.09, 'square', 0.32, 440); tone(550, 0.12, 'square', 0.28, 770); tone(880, 0.18, 'square', 0.22, 1100); },
-    denied()     { if (throttle('deny', 350))      tone(180, 0.16, 'sawtooth', 0.28, 90); },
-    enemyHit()   { if (throttle('eHit', 70))       tone(420, 0.07, 'square', 0.24, 220); },
-    enemyDie()   { tone(220, 0.18, 'sawtooth', 0.32, 60); noise(0.18, 0.15, 600); },
-    turretFire() { if (throttle('turret', 80))     tone(900, 0.07, 'square', 0.22, 1300); },
+    shoot()      { if (throttle('shoot', 55))      tone(620, 0.05, 'square', 0.12, 360); },
+    enemyHit()   { if (throttle('eHit', 70))       tone(420, 0.07, 'square', 0.20, 220); },
+    enemyDie()   { if (throttle('eDie', 50))     { tone(220, 0.16, 'sawtooth', 0.30, 60); noise(0.16, 0.13, 600); } },
+    soldierDie() { if (throttle('sDie', 60))       tone(260, 0.16, 'sawtooth', 0.22, 90); },
+    turretFire() { if (throttle('turret', 80))     tone(900, 0.07, 'square', 0.20, 1300); },
+    wallHit()    { if (throttle('wall', 90))       tone(180, 0.1, 'sawtooth', 0.20, 90); },
     coreHit()    { tone(120, 0.22, 'sawtooth', 0.42, 50); noise(0.16, 0.2, 280); },
-    wallHit()    { if (throttle('wall', 90))       tone(180, 0.1, 'sawtooth', 0.22, 90); },
     build()      { tone(330, 0.1, 'square', 0.32, 440); tone(440, 0.16, 'square', 0.3, 660); },
     upgrade()    { tone(440, 0.08, 'square', 0.3, 550); tone(660, 0.1, 'square', 0.3, 770); tone(880, 0.14, 'square', 0.3, 1100); },
-    hire()       { tone(380, 0.08, 'triangle', 0.28, 500); tone(620, 0.12, 'triangle', 0.28, 800); },
+    waveIncoming(){ tone(300, 0.18, 'sawtooth', 0.3, 200); tone(200, 0.22, 'sawtooth', 0.26, 140); },
     gameOver()   { tone(330, 0.4, 'sawtooth', 0.4, 110); tone(220, 0.5, 'sawtooth', 0.35, 80); tone(110, 0.7, 'sawtooth', 0.3, 55); },
   };
 })();
 
-// ---------- Effects: pooled particles + floating DOM text (from Outpost Zero) ----------
+// ---------- Effects: pooled particles + floating DOM text ----------
 const effects = (() => {
   const POOL = 200;
   const partGeo = new THREE.TetrahedronGeometry(0.22);
@@ -654,16 +594,13 @@ const effects = (() => {
       if (++spawned >= count) break;
     }
   }
-
   function floatText(worldPos, text, color = '#7af0ff') {
     const el = document.createElement('div');
     el.className = 'float-text';
-    el.textContent = text;
-    el.style.color = color;
+    el.textContent = text; el.style.color = color;
     document.body.appendChild(el);
     floats.push({ el, pos: worldPos.clone(), life: 1.0 });
   }
-
   function update(dt) {
     for (const p of parts) {
       if (!p.active) continue;
@@ -672,10 +609,8 @@ const effects = (() => {
       p.vel.y -= 18 * dt;
       p.mesh.position.addScaledVector(p.vel, dt);
       if (p.mesh.position.y < 0.08) { p.mesh.position.y = 0.08; p.vel.y *= -0.4; p.vel.x *= 0.6; p.vel.z *= 0.6; }
-      p.mesh.rotation.x += dt * 8;
-      p.mesh.rotation.y += dt * 6;
-      const s = (p.life / p.maxLife) * 1.0;
-      p.mesh.scale.setScalar(Math.max(0.05, s));
+      p.mesh.rotation.x += dt * 8; p.mesh.rotation.y += dt * 6;
+      p.mesh.scale.setScalar(Math.max(0.05, (p.life / p.maxLife)));
     }
     for (let i = floats.length - 1; i >= 0; i--) {
       const f = floats[i];
@@ -683,589 +618,457 @@ const effects = (() => {
       if (f.life <= 0) { f.el.remove(); floats.splice(i, 1); continue; }
       f.pos.y += dt * 1.8;
       projected.copy(f.pos).project(camera);
-      const x = (projected.x * 0.5 + 0.5) * innerWidth;
-      const y = (-projected.y * 0.5 + 0.5) * innerHeight;
-      f.el.style.left = x + 'px';
-      f.el.style.top = y + 'px';
+      f.el.style.left = (projected.x * 0.5 + 0.5) * innerWidth + 'px';
+      f.el.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + 'px';
       f.el.style.opacity = String(Math.min(1, f.life * 1.8));
     }
   }
-
   return { burst, floatText, update };
 })();
 
-// ---------- Crystals (dense rings) ----------
-function ringSpawnPos() {
-  const r1 = Math.random();
-  const band = r1 < 0.45 ? 0 : r1 < 0.75 ? 1 : r1 < 0.92 ? 2 : 3;
-  const inner = band === 0 ? state.base.radius + 1 : CRYSTAL_RING_RADII[band - 1];
-  const outer = CRYSTAL_RING_RADII[band];
-  const a = Math.random() * TAU;
-  const r = inner + Math.random() * (outer - inner);
-  return { x: Math.cos(a) * r, z: Math.sin(a) * r, band };
+function hitSpark(pos, color) {
+  for (let i = 0; i < 3; i++) {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 5, 5), new THREE.MeshBasicMaterial({ color }));
+    sp.position.copy(pos); sp.position.y += 1.0;
+    const dir = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).normalize().multiplyScalar(4);
+    scene.add(sp);
+    addFX((k) => { sp.position.addScaledVector(dir, 0.04*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.25);
+  }
 }
 
+// ---------- Resource nodes (optional burst income) ----------
+const NODE_TARGET = 30;
 function spawnNode() {
-  const { x, z, band } = ringSpawnPos();
+  // scatter around the build lot, biased to the south/flanks (away from the front path)
+  let x, z;
+  for (let tries = 0; tries < 6; tries++) {
+    const a = Math.random() * TAU, r = 16 + Math.random() * 44;
+    x = Math.cos(a) * r; z = Math.sin(a) * r;
+    if (z > -FRONT_Z - 4) break; // keep most nodes south of / around the line, not deep in no-mans-land
+  }
   const g = new THREE.Group();
-  const mat = ringMats[band];
   const n = 2 + Math.floor(Math.random() * 3);
   for (let i = 0; i < n; i++) {
-    const c = new THREE.Mesh(crystalGeo, mat);
+    const c = new THREE.Mesh(crystalGeo, resourceMat);
     c.position.set((Math.random() - 0.5) * 1.4, 0, (Math.random() - 0.5) * 1.4);
-    c.scale.setScalar(0.7 + Math.random() * 0.8);
-    c.position.y = c.scale.y * 1.2;
-    c.rotation.y = Math.random() * TAU;
-    c.castShadow = true;
+    c.scale.setScalar(0.6 + Math.random() * 0.7);
+    c.position.y = c.scale.y * 1.2; c.rotation.y = Math.random() * TAU; c.castShadow = true;
     g.add(c);
   }
   g.position.set(x, 0, z);
-  const maxHp = CRYSTAL_HP_BY_RING[band];
-  const bar = makeBar(2.0, RING_COLORS[band]);
-  bar.position.y = 3.6; bar.visible = false; g.add(bar);
-  g.userData = { hp: maxHp, maxHp, bar, band, lastHit: -99, barTimer: 0, spin: (Math.random() - 0.5) };
+  const bar = makeBar(2.0, RESOURCE_COLOR); bar.position.y = 3.4; bar.visible = false; g.add(bar);
+  g.userData = { hp: 3, maxHp: 3, bar, barTimer: 0, spin: (Math.random() - 0.5), lastHit: -99 };
   scene.add(g);
   state.nodes.push(g);
 }
-function topUpNodes() {
-  while (state.nodes.length < NODE_TARGET) spawnNode();
-}
-
+function topUpNodes() { while (state.nodes.length < NODE_TARGET) spawnNode(); }
 function destroyNode(g) {
   const i = state.nodes.indexOf(g); if (i >= 0) state.nodes.splice(i, 1);
-  const band = g.userData.band;
-  const drops = 1 + Math.floor(Math.random() * 2) + band;
-  for (let k = 0; k < drops; k++) spawnPickup(g.position, band);
-  // pooled particle burst replaces the ad-hoc cube shower
+  const reward = 8 + Math.floor(Math.random() * 7);
+  state.shards += reward;
   const burstPos = g.position.clone(); burstPos.y = 1.2;
-  effects.burst(burstPos, RING_COLORS[band], 8 + band * 2, 5 + band);
-  effects.floatText(burstPos.clone().setY(2.2), '+' + drops, '#' + RING_COLORS[band].toString(16).padStart(6, '0'));
+  effects.burst(burstPos, RESOURCE_COLOR, 12, 6);
+  effects.floatText(burstPos.clone().setY(2.4), '+' + reward, '#7af0ff');
   sound.crystalBreak();
   scene.remove(g);
-  state.shake = Math.min(1, state.shake + 0.14);
-}
-
-// ---------- Pickups → stack ----------
-function spawnPickup(pos, band) {
-  const mesh = new THREE.Mesh(carryBoxGeo, ringPickupMats[band]);
-  mesh.position.copy(pos); mesh.position.y = 1.1; mesh.scale.setScalar(0.7);
-  mesh.userData = { band, delay: 0.1 + Math.random() * 0.1 };
-  scene.add(mesh);
-  state.pickups.push(mesh);
-}
-
-function addToStack(band) {
-  const mesh = new THREE.Mesh(carryBoxGeo, ringPickupMats[band]);
-  mesh.castShadow = true; mesh.scale.setScalar(0.001);
-  mesh.userData = { band };
-  stackGroup.add(mesh);
-  state.carry.push({ band, mesh });
-  layoutStack();
-  addFX((k) => { mesh.scale.setScalar(k < 1 ? STACK_SCALE * (1 + 0.4 * Math.sin(k * Math.PI)) : STACK_SCALE); }, 0.18);
-  sound.collect();
+  state.shake = Math.min(1, state.shake + 0.12);
   refreshUI();
 }
-function layoutStack() {
-  for (let i = 0; i < state.carry.length; i++) {
-    const m = state.carry[i].mesh;
-    m.position.set(0, i * ITEM_H + 0.55, 0);
-  }
-}
 
-// Pop top of player's stack → fly to a target world position
-function popStackToTarget(target) {
-  const item = state.carry.pop(); if (!item) return null;
-  layoutStack();
-  const mesh = item.mesh;
-  stackGroup.remove(mesh); scene.add(mesh);
-  const start = mesh.getWorldPosition(new THREE.Vector3());
-  mesh.position.copy(start); mesh.scale.setScalar(STACK_SCALE);
-  addFX((k) => {
-    mesh.position.lerpVectors(start, target, k);
-    mesh.position.y += Math.sin(k * Math.PI) * 2.5;
-    mesh.rotation.y += 0.4; mesh.scale.setScalar(STACK_SCALE * (1 - k * 0.6));
-    if (k >= 1) scene.remove(mesh);
-  }, 0.28);
-  return item.band;
-}
-
-// ---------- Walls ----------
-// Add one wall segment at world position (x,z) facing inward at angle `a`.
-// kind: 'outer' | 'bastion' | 'inner' — drives HP, color, and visual height.
-function addWallSegment(x, z, a, kind) {
-  const profiles = {
-    outer:   { hp: 36, color: 0x8a5a36, h: 3.6, w: 1.2 },
-    bastion: { hp: 30, color: 0xa06030, h: 3.4, w: 1.1 },
-    inner:   { hp: 24, color: 0x6a3a26, h: 2.4, w: 0.9 },
-  };
-  const prof = profiles[kind];
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = -a;
-  const post = new THREE.Mesh(new THREE.BoxGeometry(prof.w, prof.h, prof.w),
-    new THREE.MeshStandardMaterial({ color: prof.color, roughness: 0.85 }));
-  post.position.y = prof.h / 2; post.castShadow = true; g.add(post);
-  const bar = makeBar(prof.w * 1.6, 0xffaa3c); bar.position.y = prof.h + 0.4; bar.visible = false; g.add(bar);
-  g.scale.y = 0.001;
-  scene.add(g);
-  const w = { group: g, post, bar, hp: prof.hp, maxHp: prof.hp, angle: a, barTimer: 0, dead: false, kind };
-  state.walls.push(w);
-  addFX((k) => g.scale.y = easeOutBack(Math.min(1, k)), 0.4 + Math.random() * 0.25);
-  return w;
-}
-
-function rebuildWalls() {
+// ---------- Front line (single wall of posts) ----------
+function buildFrontLine() {
   for (const w of state.walls) scene.remove(w.group);
   state.walls.length = 0;
-
-  const R = state.base.radius;
-
-  // --- OUTER RING ---
-  const segs = Math.max(20, Math.round(R * 1.6));
-  for (let i = 0; i < segs; i++) {
-    const a = (i / segs) * TAU;
-    addWallSegment(Math.cos(a) * R, Math.sin(a) * R, a, 'outer');
+  const maxHp = state.wallMaxHp || 44;
+  for (let i = 0; i < WALL_POSTS; i++) {
+    const x = -LINE_HALF + (i + 0.5) * (LINE_HALF * 2 / WALL_POSTS);
+    const g = new THREE.Group(); g.position.set(x, 0, -FRONT_Z);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.4, 1.2),
+      new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.85 }));
+    post.position.y = 1.7; post.castShadow = true; g.add(post);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.4, 1.5),
+      new THREE.MeshStandardMaterial({ color: 0x6a4026, roughness: 0.8 }));
+    cap.position.y = 3.5; g.add(cap);
+    const bar = makeBar(2.6, 0xffaa3c); bar.position.y = 4.2; bar.visible = false; g.add(bar);
+    g.scale.y = 0.001; scene.add(g);
+    const w = { group: g, post, bar, hp: maxHp, maxHp, x, barTimer: 0, dead: false };
+    state.walls.push(w);
+    addFX((k) => g.scale.y = easeOutBack(Math.min(1, k)), 0.4 + i * 0.02);
   }
-
-  // --- BASTIONS (4 cardinal outward spurs creating alley ways) ---
-  for (let q = 0; q < 4; q++) {
-    const baseA = (q / 4) * TAU + Math.PI / 4;  // 45°, 135°, 225°, 315°
-    // straight spur of 2 posts extending outward
-    for (let i = 1; i <= 2; i++) {
-      const ra = R + i * 1.6;
-      addWallSegment(Math.cos(baseA) * ra, Math.sin(baseA) * ra, baseA, 'bastion');
-    }
-    // perpendicular caps at the tip — form the bastion's "wings", funneling enemies
-    const tipR = R + 2.6;
-    const perpA = baseA + Math.PI / 2;
-    const off = 1.7;
-    addWallSegment(Math.cos(baseA)*tipR + Math.cos(perpA)*off, Math.sin(baseA)*tipR + Math.sin(perpA)*off, baseA, 'bastion');
-    addWallSegment(Math.cos(baseA)*tipR - Math.cos(perpA)*off, Math.sin(baseA)*tipR - Math.sin(perpA)*off, baseA, 'bastion');
-  }
-
-  // --- INNER COURT WALL (last-line defense, alternating gaps for player movement) ---
-  const innerR = Math.max(5, R * 0.42);
-  const innerSegs = 10;
-  for (let i = 0; i < innerSegs; i++) {
-    if (i % 2 === 0) continue;  // gates
-    const a = (i / innerSegs) * TAU;
-    addWallSegment(Math.cos(a) * innerR, Math.sin(a) * innerR, a, 'inner');
-  }
-
-  // --- ground plate inside the outer ring ---
-  if (dome.userData.plate) dome.remove(dome.userData.plate);
-  const plate = new THREE.Mesh(new THREE.CircleGeometry(R - 0.6, 48),
-    new THREE.MeshStandardMaterial({ color: 0x5a4030, metalness: 0.3, roughness: 0.7 }));
-  plate.rotation.x = -Math.PI / 2; plate.position.y = 0.12; plate.receiveShadow = true;
-  dome.add(plate); dome.userData.plate = plate;
+}
+function nearestPostByX(x) {
+  let best = null, bd = Infinity;
+  for (const w of state.walls) { const d = Math.abs(w.x - x); if (d < bd) { bd = d; best = w; } }
+  return best;
 }
 
-// ---------- Pads (walk-on buy) ----------
-function makePad({ x, z, w = 4.2, d = 4.2, title, sub, price, color, onComplete, ringSlot }) {
+// ---------- Pads (walk-on build, funded from supply bank) ----------
+const LOT_SLOTS = [
+  // two rows of build plots on the south lot, flanking the core
+  { x: -21, z: 2 }, { x: -10.5, z: 2 }, { x: 10.5, z: 2 }, { x: 21, z: 2 },
+  { x: -21, z: 13 }, { x: -10.5, z: 13 }, { x: 10.5, z: 13 }, { x: 21, z: 13 },
+];
+
+function makePad({ x, z, w = 7.4, d = 7.4, title, sub, price, color, onComplete, slot }) {
   const g = new THREE.Group(); g.position.set(x, 0, z);
-
-  const plate = new THREE.Mesh(
-    new THREE.BoxGeometry(w, 0.18, d),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, roughness: 0.5 })
-  );
-  plate.position.y = 0.09; plate.receiveShadow = true; g.add(plate);
-
-  // glow base ring (visual emphasis)
-  const ring = new THREE.Mesh(new THREE.RingGeometry(Math.max(w, d) * 0.55, Math.max(w, d) * 0.62, 32),
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.18, d),
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.5 }));
+  plate.position.y = 0.12; plate.receiveShadow = true; g.add(plate);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(Math.max(w, d) * 0.5, Math.max(w, d) * 0.56, 32),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.2; g.add(ring);
-
-  // progress ring (yellow, fills as paid)
-  const progRing = new THREE.Mesh(new THREE.RingGeometry(Math.max(w, d) * 0.46, Math.max(w, d) * 0.54, 48, 1, 0, 0.0001),
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.22; g.add(ring);
+  const progRing = new THREE.Mesh(new THREE.RingGeometry(Math.max(w, d) * 0.42, Math.max(w, d) * 0.49, 48, 1, 0, 0.0001),
     new THREE.MeshBasicMaterial({ color: 0xffd24a, side: THREE.DoubleSide, depthWrite: false, transparent: true }));
-  progRing.rotation.x = -Math.PI / 2; progRing.position.y = 0.21; g.add(progRing);
-
+  progRing.rotation.x = -Math.PI / 2; progRing.position.y = 0.23; g.add(progRing);
   const labelSprite = makeLabelSprite(title, sub, price);
-  labelSprite.position.y = 4.0; g.add(labelSprite);
-
+  labelSprite.position.y = 4.2; g.add(labelSprite);
   scene.add(g);
-
-  const pad = {
-    group: g, plate, progRing, labelSprite,
-    x, z, w, d, title, sub, price, color, onComplete, ringSlot,
-    paid: 0, complete: false, depositCd: 0,
-  };
+  const pad = { group: g, plate, progRing, labelSprite, x, z, w, d, title, sub, price, color, onComplete, slot, paid: 0, complete: false, depositCd: 0 };
   state.pads.push(pad);
   return pad;
 }
-
 function setPadProgress(pad) {
   pad.progRing.geometry.dispose();
   const frac = Math.min(1, pad.paid / pad.price);
-  pad.progRing.geometry = new THREE.RingGeometry(Math.max(pad.w, pad.d) * 0.46, Math.max(pad.w, pad.d) * 0.54, 48, 1, 0, Math.max(0.0001, frac * TAU));
+  pad.progRing.geometry = new THREE.RingGeometry(Math.max(pad.w, pad.d) * 0.42, Math.max(pad.w, pad.d) * 0.49, 48, 1, 0, Math.max(0.0001, frac * TAU));
 }
-
-function payIntoPad(pad, sourcePopFn) {
-  // sourcePopFn returns the band of the popped item (or null if no stack)
-  const band = sourcePopFn();
-  if (band === null) return false;
+function fundPad(pad) {
+  // transfer one supply unit from the bank into the pad
+  if (Math.floor(state.shards) <= 0) return false;
+  state.shards -= 1;
   pad.paid++;
   setPadProgress(pad);
   redrawPadLabel(pad);
   sound.deposit();
+  refreshUI();
   if (pad.paid >= pad.price) {
     pad.complete = true;
     redrawPadLabel(pad);
-    state.shake = Math.min(1, state.shake + 0.4);
+    state.shake = Math.min(1, state.shake + 0.35);
     sound.padReady();
     const padPos = new THREE.Vector3(pad.x, 1.8, pad.z);
-    effects.burst(padPos, pad.color, 22, 7);
-    effects.floatText(padPos.clone().setY(3.0), 'READY', '#9effc4');
-    addFX((k) => {
-      pad.group.position.y = -k * 1.6;
-      pad.labelSprite.material.opacity = 1 - k;
-    }, 0.6);
+    effects.burst(padPos, pad.color, 20, 7);
+    effects.floatText(padPos.clone().setY(3.0), 'BUILT', '#9effc4');
+    addFX((k) => { pad.group.position.y = -k * 1.6; pad.labelSprite.material.opacity = 1 - k; }, 0.55);
     setTimeout(() => {
       const i = state.pads.indexOf(pad); if (i >= 0) state.pads.splice(i, 1);
       scene.remove(pad.group);
       pad.onComplete && pad.onComplete(pad);
-    }, 650);
+    }, 600);
   }
   return true;
 }
+function spawnReplacementPad(slot, def) { makePad({ ...def, slot, ...LOT_SLOTS[slot] }); }
 
-// Generic "pop from a stack" wrapper for the player
-function popPlayerStackToward(target) { return popStackToTarget(target); }
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
-// Pop from worker stack
-function popWorkerStackToTarget(w, target) {
-  const item = w.carry.pop(); if (!item) return null;
-  layoutWorkerStack(w);
-  const mesh = item.mesh;
-  w.stackGroup.remove(mesh); scene.add(mesh);
-  const start = mesh.getWorldPosition(new THREE.Vector3());
-  mesh.position.copy(start); mesh.scale.setScalar(STACK_SCALE * 0.55);
-  addFX((k) => {
-    mesh.position.lerpVectors(start, target, k);
-    mesh.position.y += Math.sin(k * Math.PI) * 2;
-    mesh.rotation.y += 0.4;
-    mesh.scale.setScalar(STACK_SCALE * 0.55 * (1 - k * 0.6));
-    if (k >= 1) scene.remove(mesh);
-  }, 0.25);
-  return item.band;
-}
-
-// ---------- Saber upgrade application ----------
-function rebuildSaber() {
-  const reach = SABER_REACH_TIERS[state.saber.reachTier];
-  const baseLen = saberRefs.baseReach;
-  saberRefs.blade.scale.y = reach / baseLen;
-  saberRefs.blade.position.x = 1.2 + reach / 2;
-  saberRefs.bladeCore.scale.y = reach / baseLen;
-  saberRefs.bladeCore.position.x = 1.2 + reach / 2;
-  saberRefs.tip.position.x = 1.2 + reach;
-  saberRefs.trail.geometry.dispose();
-  const halfArc = SABER_ARC_TIERS[state.saber.spinTier];
-  saberRefs.trail.geometry = new THREE.RingGeometry(1.3, 1.2 + reach, 28, 1, 0, halfArc * 4);
-  saberRefs.trail.rotation.z = -halfArc * 4;
-
-  const maxed = state.saber.reachTier >= 4 && state.saber.dmgTier >= 4 && state.saber.spinTier >= 4;
-  if (maxed && !state.saber.mirrored) {
-    state.saber.mirrored = true;
-    saberPivotMirror = new THREE.Group();
-    saberPivotMirror.position.y = 1.5;
-    player.add(saberPivotMirror);
-    // clone visible parts (cheap: rebuild small set)
-    const hilt2 = saberRefs.hilt.clone(); saberPivotMirror.add(hilt2);
-    const blade2 = saberRefs.blade.clone(); saberPivotMirror.add(blade2);
-    const core2 = saberRefs.bladeCore.clone(); saberPivotMirror.add(core2);
-    const tip2 = new THREE.PointLight(COLORS.saber, 2.4, 30, 2); tip2.position.copy(saberRefs.tip.position); saberPivotMirror.add(tip2);
-    const trail2 = new THREE.Mesh(saberRefs.trail.geometry.clone(), saberRefs.trail.material.clone());
-    trail2.rotation.copy(saberRefs.trail.rotation); saberPivotMirror.add(trail2);
-    saberPivotMirror.userData = { tip2, trail2, blade2, core2, hilt2 };
-    toast('DUAL SABER', 'A second blade ignites');
-  }
-}
-
-// ---------- Pad onComplete handlers ----------
-function spawnReplacementPad(pad, def) {
-  // place the replacement at the same ring slot
-  makePad({ ...def, ringSlot: pad.ringSlot, ...padSlotPos(pad.ringSlot) });
-}
-
-// Compute pad slot positions in a hex around the core
-function padSlotPos(slot) {
-  // 9 slots evenly spaced inside the wall ring
-  const SLOTS = 9;
-  const R = Math.max(10, state.base.radius - 4);
-  const a = (slot / SLOTS) * TAU + Math.PI / SLOTS;
-  return { x: Math.cos(a) * R, z: Math.sin(a) * R };
-}
-
-const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-
-// Pad definitions (reuse on tier-up). Saber stats: 5 tiers each.
-function saberReachPad(tier, slot) {
-  const prices = [8, 22, 50, 110, 240];
+// ---------- Building definitions ----------
+function barracksPad(slot, n = 1) {
+  const price = Math.round(28 * Math.pow(1.55, n - 1));
   return {
-    title: 'SABER REACH',
-    sub: `TIER ${ROMAN[tier + 1]}`,
-    price: prices[tier],
-    color: 0x36e0ff,
-    ringSlot: slot,
-    ...padSlotPos(slot),
+    title: 'BARRACKS', sub: `Garrison ${n}`, price, color: 0x6fae46, slot, ...LOT_SLOTS[slot],
     onComplete(pad) {
-      state.saber.reachTier = tier + 1;
-      rebuildSaber();
-      toast('REACH UPGRADED', `Tier ${ROMAN[tier + 1]}`);
-      sound.upgrade();
-      if (tier + 1 < 4) spawnReplacementPad(pad, saberReachPad(tier + 1, slot));
-    },
-  };
-}
-function saberDmgPad(tier, slot) {
-  const prices = [10, 26, 60, 130, 280];
-  return {
-    title: 'SABER POWER',
-    sub: `TIER ${ROMAN[tier + 1]}`,
-    price: prices[tier],
-    color: 0xff7a3c,
-    ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) {
-      state.saber.dmgTier = tier + 1;
-      rebuildSaber();
-      toast('POWER UPGRADED', `Tier ${ROMAN[tier + 1]}`);
-      sound.upgrade();
-      if (tier + 1 < 4) spawnReplacementPad(pad, saberDmgPad(tier + 1, slot));
-    },
-  };
-}
-function saberSpinPad(tier, slot) {
-  const prices = [10, 26, 60, 130, 280];
-  return {
-    title: 'SABER SPIN',
-    sub: `TIER ${ROMAN[tier + 1]}`,
-    price: prices[tier],
-    color: 0x7af0ff,
-    ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) {
-      state.saber.spinTier = tier + 1;
-      rebuildSaber();
-      toast('SPIN UPGRADED', `Tier ${ROMAN[tier + 1]}`);
-      sound.upgrade();
-      if (tier + 1 < 4) spawnReplacementPad(pad, saberSpinPad(tier + 1, slot));
-    },
-  };
-}
-function hireGathererPad(slot, n = 1) {
-  return {
-    title: 'HIRE GATHERER', sub: `Worker #${n}`,
-    price: 12 + n * 5, color: 0xffd24a, ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('gatherer'); sound.hire(); toast('GATHERER HIRED', 'Auto-chops crystals'); spawnReplacementPad(pad, hireGathererPad(slot, n + 1)); },
-  };
-}
-function hireGuardPad(slot, n = 1) {
-  return {
-    title: 'HIRE GUARD', sub: `Guard #${n}`,
-    price: 16 + n * 7, color: 0xff5a3c, ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('guard'); sound.hire(); toast('GUARD HIRED', 'Patrols the perimeter'); spawnReplacementPad(pad, hireGuardPad(slot, n + 1)); },
-  };
-}
-function hireBuilderPad(slot, n = 1) {
-  return {
-    title: 'HIRE BUILDER', sub: `Builder #${n}`,
-    price: 10 + n * 4, color: 0x9effc4, ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) { spawnWorker('builder'); sound.hire(); toast('BUILDER HIRED', 'Repairs damaged walls'); spawnReplacementPad(pad, hireBuilderPad(slot, n + 1)); },
-  };
-}
-
-// --- new pad types ---
-function carryCapacityPad(tier, slot) {
-  const prices = [18, 40, 85, 180];
-  return {
-    title: 'CARRY CAPACITY',
-    sub: `+4 SLOTS  (${state.carryMax + 4})`,
-    price: prices[tier],
-    color: 0xffaf6a,
-    ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) {
-      state.carryMax += 4;
-      refreshUI();
-      toast('CAPACITY UP', `Carry ${state.carryMax}`);
-      sound.upgrade();
-      if (tier + 1 < 4) spawnReplacementPad(pad, carryCapacityPad(tier + 1, slot));
-    },
-  };
-}
-function coreRepairPad(tier, slot) {
-  const prices = [14, 32, 70, 150];
-  return {
-    title: 'CORE REPAIR',
-    sub: `+60 HP, +30 MAX`,
-    price: prices[tier],
-    color: 0xff4060,
-    ringSlot: slot,
-    ...padSlotPos(slot),
-    onComplete(pad) {
-      state.base.maxHp += 30;
-      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 60);
-      refreshUI();
-      toast('CORE REPAIRED', `${state.base.hp} / ${state.base.maxHp}`);
+      spawnBarracks(pad.x, pad.z);
+      toast('BARRACKS BUILT', 'Soldiers now deploying');
       sound.build();
-      if (tier + 1 < 4) spawnReplacementPad(pad, coreRepairPad(tier + 1, slot));
+      spawnReplacementPad(slot, barracksPad(slot, n + 1));
     },
   };
 }
-function turretPad(tier, slot) {
-  const prices = [25, 55, 110, 220];
+function depotPad(slot, n = 1) {
+  const price = Math.round(24 * Math.pow(1.5, n - 1));
   return {
-    title: 'BUILD TURRET',
-    sub: `Turret #${tier + 1}`,
-    price: prices[tier],
-    color: 0x9aa6b0,
-    ringSlot: slot,
-    ...padSlotPos(slot),
+    title: 'SUPPLY DEPOT', sub: `+2.5 ◆/s  (#${n})`, price, color: 0x36b0e0, slot, ...LOT_SLOTS[slot],
+    onComplete(pad) {
+      state.incomePerSec += 2.5;
+      placeProp(pad.x, pad.z, 0x2f86b0);
+      toast('DEPOT ONLINE', `Income ${state.incomePerSec.toFixed(1)} ◆/s`);
+      sound.build(); refreshUI();
+      spawnReplacementPad(slot, depotPad(slot, n + 1));
+    },
+  };
+}
+function armoryPad(slot, tier = 0) {
+  const prices = [40, 95, 200, 380];
+  return {
+    title: 'ARMORY', sub: `TIER ${ROMAN[tier + 1]} · stronger troops`, price: prices[tier] || 600,
+    color: 0xff9a3c, slot, ...LOT_SLOTS[slot],
+    onComplete(pad) {
+      state.armoryTier = tier + 1;
+      state.soldierDmgMul = 1 + 0.5 * state.armoryTier;
+      state.soldierHpMul = 1 + 0.5 * state.armoryTier;
+      placeProp(pad.x, pad.z, 0xc06a26);
+      toast('ARMORY UPGRADED', `Troop power +${Math.round(state.armoryTier*50)}%`);
+      sound.upgrade();
+      if (tier + 1 < 4) spawnReplacementPad(slot, armoryPad(slot, tier + 1));
+    },
+  };
+}
+function medTentPad(slot, n = 1) {
+  const price = Math.round(34 * Math.pow(1.5, n - 1));
+  return {
+    title: 'MED TENT', sub: `Heal aura (#${n})`, price, color: 0xff5a6a, slot, ...LOT_SLOTS[slot],
+    onComplete(pad) {
+      spawnMedTent(pad.x, pad.z);
+      toast('MED TENT BUILT', 'Troops heal nearby');
+      sound.build();
+      spawnReplacementPad(slot, medTentPad(slot, n + 1));
+    },
+  };
+}
+function turretPad(slot, n = 1) {
+  const price = Math.round(42 * Math.pow(1.5, n - 1));
+  return {
+    title: 'TURRET', sub: `Auto-cannon (#${n})`, price, color: 0x9aa6b0, slot, ...LOT_SLOTS[slot],
     onComplete(pad) {
       spawnTurret();
-      toast('TURRET ONLINE', 'Auto-defense engaged');
+      toast('TURRET ONLINE', 'Covering the line');
       sound.build();
-      if (tier + 1 < 4) spawnReplacementPad(pad, turretPad(tier + 1, slot));
+      spawnReplacementPad(slot, turretPad(slot, n + 1));
     },
   };
 }
-
-function expandBasePad(n = 1) {
-  // EXPAND BASE always lives at (0, -5) behind the core, with a smaller footprint.
-  // Rolled back: +4 radius / +50 HP per buy (was +7 / +80). Pricier to stretch out the curve.
-  const price = 45 + n * 30;
+function fortifyPad(slot, tier = 0) {
+  const prices = [30, 70, 150, 300];
   return {
-    title: 'EXPAND BASE',
-    sub: `+4 RADIUS  +50 HP`,
-    price,
-    color: 0xb070ff,
-    ringSlot: -1,
-    x: 0, z: -5, w: 3.6, d: 3.6,
+    title: 'FORTIFY LINE', sub: `+wall HP · full repair`, price: prices[tier] || 500,
+    color: 0xb88a4a, slot, ...LOT_SLOTS[slot],
     onComplete(pad) {
-      state.base.radius = Math.min(36, state.base.radius + 4);
-      state.base.maxHp += 50;
-      state.base.hp = Math.min(state.base.maxHp, state.base.hp + 50);
-      rebuildWalls();
-      toast('BASE EXPANDED', `Radius ${state.base.radius}`);
+      state.wallMaxHp = (state.wallMaxHp || 44) + 26;
+      for (const w of state.walls) {
+        if (w.dead) { w.dead = false; w.group.scale.y = 0.001; addFX((k)=> w.group.scale.y = easeOutBack(Math.min(1,k)), 0.4); }
+        w.maxHp = state.wallMaxHp; w.hp = w.maxHp;
+        w.post.material.color.setHex(0x8a5a36);
+        setBar(w.bar, 1);
+      }
+      toast('LINE FORTIFIED', `Wall HP ${state.wallMaxHp}`);
       sound.build();
-      makePad(expandBasePad(n + 1));
+      if (tier + 1 < 4) spawnReplacementPad(slot, fortifyPad(slot, tier + 1));
+    },
+  };
+}
+function coreRepairPad(slot, tier = 0) {
+  const prices = [26, 58, 120, 240];
+  return {
+    title: 'HQ REPAIR', sub: `+70 HP · +30 max`, price: prices[tier] || 400,
+    color: 0xff4060, slot, ...LOT_SLOTS[slot],
+    onComplete(pad) {
+      state.core.maxHp += 30;
+      state.core.hp = Math.min(state.core.maxHp, state.core.hp + 70);
+      toast('HQ REPAIRED', `${Math.round(state.core.hp)} / ${state.core.maxHp}`);
+      sound.build(); refreshUI();
+      if (tier + 1 < 4) spawnReplacementPad(slot, coreRepairPad(slot, tier + 1));
     },
   };
 }
 
 function seedInitialPads() {
-  // 9 slots around the perimeter inside the wall ring
-  makePad(saberReachPad(0, 0));
-  makePad(saberDmgPad(0, 1));
-  makePad(saberSpinPad(0, 2));
-  makePad(hireGathererPad(3));
-  makePad(hireGuardPad(4));
-  makePad(hireBuilderPad(5));
-  makePad(carryCapacityPad(0, 6));
-  makePad(coreRepairPad(0, 7));
-  makePad(turretPad(0, 8));
-  // EXPAND BASE — fixed slot behind the core (handled inside its factory)
-  makePad(expandBasePad(1));
+  makePad(barracksPad(0, 1));
+  makePad(depotPad(1, 1));
+  makePad(turretPad(2, 1));
+  makePad(medTentPad(3, 1));
+  makePad(armoryPad(4, 0));
+  makePad(fortifyPad(5, 0));
+  makePad(coreRepairPad(6, 0));
+  makePad(barracksPad(7, 1)); // second barracks plot so the army scales early
 }
 
-// ---------- Workers ----------
-function spawnWorker(kind) {
+// Small decorative prop dropped where a non-unit building is placed.
+function placeProp(x, z, color) {
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  const b = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 3.2),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.2 }));
+  b.position.y = 1.1; b.castShadow = true; g.add(b);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 3.6),
+    new THREE.MeshStandardMaterial({ color: 0x33271c, roughness: 0.8 }));
+  roof.position.y = 2.45; g.add(roof);
+  g.scale.setScalar(0.001); scene.add(g);
+  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.45);
+}
+
+// ---------- Barracks (spawn soldiers) ----------
+function spawnBarracks(x, z) {
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  const hut = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.4, 3.4),
+    new THREE.MeshStandardMaterial({ color: 0x4f7a38, roughness: 0.7 }));
+  hut.position.y = 1.2; hut.castShadow = true; g.add(hut);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 2.7, 1.2, 4),
+    new THREE.MeshStandardMaterial({ color: 0x2f3a22, roughness: 0.8 }));
+  roof.position.y = 3.0; roof.rotation.y = Math.PI / 4; g.add(roof);
+  const flag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.6, 0.08), new THREE.MeshStandardMaterial({ color: 0x888 }));
+  flag.position.set(1.3, 3.6, 1.3); g.add(flag);
+  const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.05), new THREE.MeshStandardMaterial({ color: 0x9effc4, emissive: 0x46e88a, emissiveIntensity: 0.4 }));
+  cloth.position.set(1.75, 4.1, 1.3); g.add(cloth);
+  g.scale.setScalar(0.001); scene.add(g);
+  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
+  state.barracks.push({ group: g, x, z, spawnCd: 1.5, interval: 4.0 });
+}
+
+// ---------- Soldiers (friendly army) ----------
+function spawnSoldier(bx, bz) {
+  if (state.soldiers.length >= SOLDIER_CAP) return;
   const g = new THREE.Group();
-  const palette = { gatherer: 0xffd24a, guard: 0xff5a3c, builder: 0x9effc4 };
-  const c = palette[kind];
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 1.8, 14),
-    new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.18, roughness: 0.5 }));
-  body.position.y = 0.9; body.castShadow = true; g.add(body);
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.4, 0.3),
-    new THREE.MeshStandardMaterial({ color: 0x113355, emissive: 0x113355, emissiveIntensity: 0.6 }));
-  visor.position.set(0, 1.45, 0.6); g.add(visor);
-  const blob = new THREE.Mesh(new THREE.CircleGeometry(1.1, 16),
-    new THREE.MeshBasicMaterial({ color: 0x000, transparent: true, opacity: 0.28 }));
-  blob.rotation.x = -Math.PI / 2; blob.position.y = 0.06; g.add(blob);
-
-  // spawn near core, just inside ring
-  const a = Math.random() * TAU, r = 4;
-  g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-
-  const stackG = new THREE.Group(); stackG.position.y = 1.9; g.add(stackG);
-
-  // small saber for guards (visual only — guards use straight hit checks)
-  let saber = null;
-  if (kind === 'guard') {
-    saber = new THREE.Group(); saber.position.y = 1.1; g.add(saber);
-    const blade = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.08, 4, 10),
-      new THREE.MeshBasicMaterial({ color: 0xff7a3c, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
-    blade.rotation.z = Math.PI / 2; blade.position.x = 2.6; saber.add(blade);
-  }
-
-  scene.add(g);
-  const w = {
-    kind, group: g, body, stackGroup: stackG, carry: [], saber,
-    state: 'idle', target: null, actCd: 0, speed: 6.5,
-    sweepAngle: 0,
-  };
-  state.workers.push(w);
+  const c = COLORS.soldier;
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.0, 0.45),
+    new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 }));
+  torso.position.y = 1.0; torso.castShadow = true; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xddd2b0, roughness: 0.7 }));
+  head.position.y = 1.75; g.add(head);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.36, 10, 6, 0, TAU, 0, Math.PI/2),
+    new THREE.MeshStandardMaterial({ color: 0x4f7a38, roughness: 0.6 }));
+  helmet.position.y = 1.86; g.add(helmet);
+  const gun = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.16, 0.16),
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.4 }));
+  gun.position.set(0.5, 1.1, 0.3); g.add(gun);
+  const blob2 = new THREE.Mesh(new THREE.CircleGeometry(0.55, 12),
+    new THREE.MeshBasicMaterial({ color: 0x000, transparent: true, opacity: 0.26 }));
+  blob2.rotation.x = -Math.PI / 2; blob2.position.y = 0.05; g.add(blob2);
+  g.position.set(bx + (Math.random()-0.5)*3, 0, bz + (Math.random()-0.5)*2);
+  g.scale.setScalar(0.001); scene.add(g);
+  addFX((k) => g.scale.setScalar(Math.min(1, k)), 0.3);
+  const maxHp = Math.round(7 * state.soldierHpMul);
+  const bar = makeBar(1.2, 0x9effc4); bar.position.y = 2.4; bar.visible = false; g.add(bar);
+  state.soldiers.push({
+    group: g, gun, bar, hp: maxHp, maxHp,
+    dmg: 2 * state.soldierDmgMul, range: 11, fireRate: 0.55, atkCd: Math.random()*0.4,
+    speed: 7.5, muzzle: 0, target: null,
+  });
 }
 
-function workerAddToStack(w, band) {
-  const mesh = new THREE.Mesh(carryBoxGeo, ringPickupMats[band]);
-  mesh.scale.setScalar(STACK_SCALE * 0.55);
-  mesh.userData = { band };
-  w.stackGroup.add(mesh);
-  w.carry.push({ band, mesh });
-  layoutWorkerStack(w);
-}
-function layoutWorkerStack(w) {
-  for (let i = 0; i < w.carry.length; i++) {
-    w.carry[i].mesh.position.set(0, i * ITEM_H * 0.55 + 0.3, 0);
-  }
+function killSoldier(s) {
+  const i = state.soldiers.indexOf(s); if (i >= 0) state.soldiers.splice(i, 1);
+  const p = s.group.position.clone(); p.y = 1.0;
+  effects.burst(p, 0x8fd66a, 8, 5);
+  sound.soldierDie();
+  const start = s.group.scale.x;
+  addFX((k) => { s.group.scale.setScalar(start*(1-k)); s.group.rotation.z += 0.3; if (k>=1) scene.remove(s.group); }, 0.3);
+  refreshUI();
 }
 
-function moveTowardXZ(w, tx, tz, dt) {
-  const dx = tx - w.group.position.x, dz = tz - w.group.position.z;
-  const d = Math.hypot(dx, dz);
-  if (d < 0.01) return 0;
-  const step = Math.min(d, w.speed * dt);
-  w.group.position.x += (dx / d) * step;
-  w.group.position.z += (dz / d) * step;
-  w.group.rotation.y = Math.atan2(dx, dz);
-  return d - step;
-}
-
-function pickNearestCrystal(w) {
-  let best = null, bd = Infinity;
-  for (const g of state.nodes) {
-    if (g.userData.maxHp > SABER_DMG_TIERS[0] * 1.5) continue; // gatherers stick to band-0 crystals
-    const dx = g.position.x - w.group.position.x, dz = g.position.z - w.group.position.z;
-    const d2 = dx*dx + dz*dz;
-    if (d2 < bd) { bd = d2; best = g; }
-  }
-  return best;
-}
-function pickCheapestActivePad() {
-  let best = null, bestRemain = Infinity;
-  for (const p of state.pads) {
-    if (p.complete) continue;
-    const remain = p.price - p.paid;
-    if (remain <= 0) continue;
-    if (remain < bestRemain) { bestRemain = remain; best = p; }
-  }
-  return best;
-}
-function pickEnemyForGuard(w) {
-  let best = null, bd = Infinity;
+function nearestEnemyTo(x, z, maxR) {
+  let best = null, bd = maxR * maxR;
   for (const e of state.enemies) {
-    const dx = e.position.x - w.group.position.x, dz = e.position.z - w.group.position.z;
+    const dx = e.position.x - x, dz = e.position.z - z;
     const d2 = dx*dx + dz*dz;
-    if (d2 < bd && d2 < 35*35) { bd = d2; best = e; }
+    if (d2 < bd) { bd = d2; best = e; }
   }
   return best;
 }
+
+function updateSoldier(s, dt, time) {
+  s.atkCd -= dt;
+  if (s.muzzle > 0) { s.muzzle -= dt; s.gun.scale.x = 1 + Math.max(0, s.muzzle) * 4; } else s.gun.scale.x = 1;
+  // bob
+  s.group.position.y = 0;
+  // acquire / validate target
+  if (!s.target || !state.enemies.includes(s.target)) s.target = nearestEnemyTo(s.group.position.x, s.group.position.z, 60);
+  if (s.target) {
+    const tp = s.target.position;
+    const d = distXZ(s.group.position, tp);
+    const dx = tp.x - s.group.position.x, dz = tp.z - s.group.position.z;
+    s.group.rotation.y = Math.atan2(dx, dz);
+    if (d > s.range * 0.85) {
+      const step = s.speed * dt;
+      s.group.position.x += (dx / d) * step;
+      s.group.position.z += (dz / d) * step;
+    } else if (s.atkCd <= 0) {
+      s.target.userData.hp -= s.dmg;
+      s.target.userData.flashTimer = 0.1;
+      setBar(s.target.userData.bar, Math.max(0, s.target.userData.hp / s.target.userData.maxHp));
+      hitSpark(tp, 0xbfff8a);
+      sound.shoot();
+      s.muzzle = 0.08;
+      if (s.target.userData.hp <= 0) killEnemy(s.target);
+      s.atkCd = s.fireRate;
+    }
+  } else {
+    // no enemies: form up along the hold line at the soldier's x
+    const hx = THREE.MathUtils.clamp(s.group.position.x, -LINE_HALF, LINE_HALF);
+    const dx = hx - s.group.position.x, dz = HOLD_Z - s.group.position.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 0.6) {
+      const step = s.speed * 0.8 * dt;
+      s.group.position.x += (dx / d) * step;
+      s.group.position.z += (dz / d) * step;
+      s.group.rotation.y = Math.atan2(0, -1);
+    }
+  }
+  // bar billboard
+  if (s.bar.visible) s.bar.quaternion.copy(camera.quaternion);
+}
+
+// ---------- Med tents (heal aura) ----------
+function spawnMedTent(x, z) {
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  const tent = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 2.4, 2.2, 4),
+    new THREE.MeshStandardMaterial({ color: 0xeae0d0, roughness: 0.8 }));
+  tent.position.y = 1.1; tent.rotation.y = Math.PI/4; tent.castShadow = true; g.add(tent);
+  for (const [ax, az] of [[0,1],[0,-1]]) {
+    const cross1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.05), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
+    cross1.position.set(ax*0.0, 1.5, az*1.6); g.add(cross1);
+    const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.05), new THREE.MeshBasicMaterial({ color: 0xff3b30 }));
+    cross2.position.set(ax*0.0, 1.5, az*1.6); g.add(cross2);
+  }
+  const aura = new THREE.Mesh(new THREE.RingGeometry(13.4, 14, 40),
+    new THREE.MeshBasicMaterial({ color: 0xff8a9a, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
+  aura.rotation.x = -Math.PI / 2; aura.position.y = 0.15; g.add(aura);
+  g.scale.setScalar(0.001); scene.add(g);
+  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
+  state.medTents.push({ group: g, x, z, radius: 14, heal: 4 });
+}
+
+// ---------- Turrets ----------
+let turretSlotCounter = 0;
+function spawnTurret() {
+  // line turrets up along the front, just south of the wall
+  const idx = turretSlotCounter++;
+  const x = THREE.MathUtils.clamp(-LINE_HALF + 6 + (idx % 6) * (LINE_HALF*2 - 12) / 5, -LINE_HALF+2, LINE_HALF-2);
+  const z = -FRONT_Z + 3 + Math.floor(idx / 6) * 5;
+  const g = new THREE.Group(); g.position.set(x, 0, z);
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.05, 1.8, 12),
+    new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.7, roughness: 0.3 }));
+  stand.position.y = 0.9; stand.castShadow = true; g.add(stand);
+  const top = new THREE.Group(); top.position.y = 1.8;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.75, 14, 8, 0, TAU, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x6a7480, metalness: 0.8, roughness: 0.3 }));
+  top.add(head);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.45, 0.45),
+    new THREE.MeshStandardMaterial({ color: 0x7a8a96, metalness: 0.85, roughness: 0.3, emissive: 0x113355, emissiveIntensity: 0.5 }));
+  barrel.position.set(1.2, 0.2, 0); top.add(barrel);
+  g.add(top); g.scale.setScalar(0.001); scene.add(g);
+  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
+  state.turrets.push({ group: g, top, slot: idx, cd: 0.6, range: 40, dmg: 4, fireRate: 0.65 });
+}
+function updateTurret(t, dt) {
+  t.cd -= dt;
+  const best = nearestEnemyTo(t.group.position.x, t.group.position.z, t.range);
+  if (!best) return;
+  const dx = best.position.x - t.group.position.x, dz = best.position.z - t.group.position.z;
+  t.top.rotation.y = Math.atan2(dx, dz);
+  if (t.cd > 0) return;
+  const startPos = t.group.position.clone(); startPos.y = 2.4;
+  const endPos = best.position.clone();
+  const tracer = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0x7af0ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+  scene.add(tracer); sound.turretFire();
+  const target = best;
+  addFX((k) => {
+    tracer.position.lerpVectors(startPos, endPos, k);
+    if (k >= 1) {
+      scene.remove(tracer);
+      if (state.enemies.includes(target)) {
+        target.userData.hp -= t.dmg; target.userData.flashTimer = 0.12;
+        setBar(target.userData.bar, Math.max(0, target.userData.hp / target.userData.maxHp));
+        hitSpark(target.position, 0x7af0ff); sound.enemyHit();
+        if (target.userData.hp <= 0) killEnemy(target);
+      }
+    }
+  }, 0.1);
+  t.cd = t.fireRate;
+}
+
+// ---------- Mechanics (optional repair worker — reserved, none seeded by default) ----------
 function pickDamagedWall() {
   let best = null, bestFrac = 1;
   for (const w of state.walls) {
@@ -1276,252 +1079,81 @@ function pickDamagedWall() {
   return best;
 }
 
-function updateWorker(w, dt, time) {
-  switch (w.kind) {
-    case 'gatherer': {
-      if (w.state === 'idle') {
-        if (w.carry.length > 0) w.state = 'seekPad';
-        else { w.target = pickNearestCrystal(w); if (w.target) w.state = 'seekCrystal'; }
-      } else if (w.state === 'seekCrystal') {
-        if (!w.target || !state.nodes.includes(w.target)) { w.state = 'idle'; break; }
-        moveTowardXZ(w, w.target.position.x, w.target.position.z, dt);
-        if (distXZ(w.group.position, w.target.position) < 2.2) w.state = 'chop';
-      } else if (w.state === 'chop') {
-        if (!w.target || !state.nodes.includes(w.target)) { w.state = 'idle'; break; }
-        w.actCd -= dt;
-        if (w.actCd <= 0) {
-          w.target.userData.hp -= 1;
-          w.target.userData.bar.visible = true; w.target.userData.barTimer = 1.2;
-          setBar(w.target.userData.bar, Math.max(0, w.target.userData.hp / w.target.userData.maxHp));
-          hitSpark(w.target.position, RING_COLORS[w.target.userData.band]);
-          if (w.target.userData.hp <= 0) {
-            for (let k = 0; k < 2; k++) workerAddToStack(w, w.target.userData.band);
-            destroyNode(w.target);
-            w.target = null;
-            w.state = w.carry.length >= 5 ? 'seekPad' : 'idle';
-          }
-          w.actCd = 0.45;
-        }
-      } else if (w.state === 'seekPad') {
-        const pad = pickCheapestActivePad();
-        if (!pad || w.carry.length === 0) { w.state = 'idle'; break; }
-        w.target = pad;
-        moveTowardXZ(w, pad.x, pad.z, dt);
-        if (Math.abs(w.group.position.x - pad.x) < pad.w/2 && Math.abs(w.group.position.z - pad.z) < pad.d/2) w.state = 'deposit';
-      } else if (w.state === 'deposit') {
-        const pad = w.target;
-        if (!pad || pad.complete || w.carry.length === 0) { w.state = 'idle'; break; }
-        w.actCd -= dt;
-        if (w.actCd <= 0) {
-          const target = new THREE.Vector3(pad.x, 1.5, pad.z);
-          payIntoPad(pad, () => popWorkerStackToTarget(w, target));
-          w.actCd = 0.18;
-        }
-      }
-      break;
-    }
-    case 'guard': {
-      w.sweepAngle += dt * 6;
-      if (w.saber) w.saber.rotation.y = w.sweepAngle;
-      const e = pickEnemyForGuard(w);
-      if (e) {
-        moveTowardXZ(w, e.position.x, e.position.z, dt);
-        if (distXZ(w.group.position, e.position) < 4.0) {
-          w.actCd -= dt;
-          if (w.actCd <= 0) {
-            e.userData.hp -= 2;
-            setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
-            hitSpark(e.position, 0xff7a3c);
-            if (e.userData.hp <= 0) killEnemy(e);
-            w.actCd = 0.4;
-          }
-        }
-      } else {
-        // patrol: orbit the wall radius
-        const R = state.base.radius + 2;
-        const a = (time * 0.4) + w.group.id * 0.7;
-        moveTowardXZ(w, Math.cos(a) * R, Math.sin(a) * R, dt);
-      }
-      break;
-    }
-    case 'builder': {
-      if (w.state === 'idle' || !w.target || w.target.dead || (w.target.hp >= w.target.maxHp)) {
-        w.target = pickDamagedWall();
-        w.state = w.target ? 'goto' : 'idle';
-      } else if (w.state === 'goto') {
-        moveTowardXZ(w, w.target.group.position.x, w.target.group.position.z, dt);
-        if (distXZ(w.group.position, w.target.group.position) < 2.6) w.state = 'repair';
-      } else if (w.state === 'repair') {
-        if (!w.target || w.target.dead) { w.state = 'idle'; break; }
-        w.target.hp = Math.min(w.target.maxHp, w.target.hp + 9 * dt);
-        setBar(w.target.bar, w.target.hp / w.target.maxHp);
-        w.target.bar.visible = true; w.target.barTimer = 0.6;
-        if (w.target.hp >= w.target.maxHp) { w.target.bar.visible = false; w.state = 'idle'; }
-      }
-      break;
-    }
-  }
-}
-
-// ---------- Enemies ----------
+// ---------- Enemies (advance from the north) ----------
 const ENEMY_TYPES = {
-  beetle:   { color: 0x141018, eye: 0xff3b30, baseHp: 4,  hpPerWave: 1.0, speed: 5.0, wallDmg: 4, coreDmg: 3, scale: 1.0, minWave: 1, weight: 1.0 },
-  sprinter: { color: 0x6a2010, eye: 0xffaa00, baseHp: 2,  hpPerWave: 0.6, speed: 8.6, wallDmg: 2, coreDmg: 2, scale: 0.72, minWave: 2, weight: 0.8 },
-  brute:    { color: 0x14202a, eye: 0x00ff8a, baseHp: 14, hpPerWave: 2.2, speed: 3.1, wallDmg: 9, coreDmg: 6, scale: 1.6, minWave: 4, weight: 0.35 },
+  grunt:  { color: 0x141018, eye: 0xff3b30, baseHp: 5,  hpPerWave: 1.1, speed: 3.3, dmg: 4, scale: 1.0, minWave: 1, weight: 1.0 },
+  runner: { color: 0x6a2010, eye: 0xffaa00, baseHp: 3,  hpPerWave: 0.6, speed: 5.6, dmg: 2, scale: 0.74, minWave: 2, weight: 0.8 },
+  tank:   { color: 0x14202a, eye: 0x00ff8a, baseHp: 20, hpPerWave: 2.4, speed: 2.0, dmg: 9, scale: 1.6, minWave: 4, weight: 0.35 },
 };
-
 function chooseEnemyType() {
   const pool = [];
-  for (const [name, def] of Object.entries(ENEMY_TYPES)) {
-    if (state.wave >= def.minWave) pool.push([name, def.weight]);
-  }
+  for (const [name, def] of Object.entries(ENEMY_TYPES)) if (state.threatLevel >= def.minWave) pool.push([name, def.weight]);
   const total = pool.reduce((s, [, w]) => s + w, 0);
   let r = Math.random() * total;
   for (const [name, w] of pool) { r -= w; if (r <= 0) return name; }
-  return 'beetle';
+  return 'grunt';
 }
-
-function spawnEnemy(typeOverride, bearingOverride) {
+function spawnEnemy(typeOverride, xOverride) {
   const type = typeOverride || chooseEnemyType();
   const def = ENEMY_TYPES[type];
   const g = new THREE.Group();
   const shellMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.6, metalness: 0.2, emissive: def.color, emissiveIntensity: 0.55 });
   const shell = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12), shellMat);
-  shell.scale.y = 0.7; shell.castShadow = true; g.add(shell);
+  shell.scale.y = 0.75; shell.castShadow = true; g.add(shell);
   for (const sx of [-0.5, 0.5]) {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshBasicMaterial({ color: def.eye }));
     eye.position.set(sx, 0.5, 1.05); g.add(eye);
   }
-  if (type === 'brute') {
+  if (type === 'tank') {
     for (let s = 0; s < 4; s++) {
-      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.7, 5),
-        new THREE.MeshStandardMaterial({ color: 0x405560, roughness: 0.6 }));
-      sp.position.set(Math.cos(s/4*TAU)*0.9, 0.8, Math.sin(s/4*TAU)*0.9);
-      sp.rotation.x = Math.PI; g.add(sp);
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.7, 5), new THREE.MeshStandardMaterial({ color: 0x405560, roughness: 0.6 }));
+      sp.position.set(Math.cos(s/4*TAU)*0.9, 0.8, Math.sin(s/4*TAU)*0.9); sp.rotation.x = Math.PI; g.add(sp);
     }
   }
   g.scale.setScalar(def.scale);
-  const a = bearingOverride !== undefined ? bearingOverride : Math.random() * TAU;
-  const r = WORLD * 0.8 + Math.random() * 8;
-  g.position.set(Math.cos(a) * r, 1.1 * def.scale, Math.sin(a) * r);
+  const x = xOverride !== undefined ? xOverride : (Math.random() * 2 - 1) * ENEMY_SPAWN_HALF;
+  g.position.set(x, 1.1 * def.scale, ENEMY_SPAWN_Z - Math.random() * 10);
   const hp = Math.round(def.baseHp + state.threatLevel * def.hpPerWave);
-  const bar = makeBar(2.0 * def.scale, 0x46e88a);
+  const bar = makeBar(2.0 * def.scale, 0xff5a3c);
   bar.position.y = 2.4 * def.scale; g.add(bar); setBar(bar, 1);
   g.userData = {
     type, hp, maxHp: hp, bar, wob: Math.random()*6,
-    lastHit: -99, target: null, targetCd: 0, attackCd: 0,
-    speed: def.speed, wallDmg: def.wallDmg, coreDmg: def.coreDmg, scale: def.scale,
-    shellMat, flashTimer: 0,
+    target: null, targetCd: 0, attackCd: 0,
+    speed: def.speed, dmg: def.dmg, scale: def.scale, shellMat, flashTimer: 0,
   };
   scene.add(g);
   state.enemies.push(g);
 }
-
 function killEnemy(g) {
   const idx = state.enemies.indexOf(g); if (idx >= 0) state.enemies.splice(idx, 1);
   state.kills++;
   const start = g.scale.x;
   const burstPos = g.position.clone(); burstPos.y = 1.2 * g.userData.scale;
-  // pooled particle death burst (replaces ad-hoc spark spheres) + float text + sound
   effects.burst(burstPos, 0xff7a3c, 12, 7);
   effects.floatText(burstPos.clone().setY(2.4), '+1', '#9effc4');
   sound.enemyDie();
   addFX((k) => { g.scale.setScalar(start * (1 - k)); g.rotation.y += 0.7; g.position.y = 1.1 + k * 2.4; if (k>=1) scene.remove(g); }, 0.3);
-  state.shake = Math.min(1, state.shake + 0.3);
+  state.shake = Math.min(1, state.shake + 0.12);
   refreshUI();
 }
 
-function hitSpark(pos, color) {
-  for (let i = 0; i < 3; i++) {
-    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 5, 5), new THREE.MeshBasicMaterial({ color }));
-    sp.position.copy(pos); sp.position.y += 1.2;
-    const dir = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5)).normalize().multiplyScalar(4);
-    scene.add(sp);
-    addFX((k) => { sp.position.addScaledVector(dir, 0.04*(1-k)); sp.scale.setScalar(1-k); if (k>=1) scene.remove(sp); }, 0.25);
-  }
-}
-
-// ---------- Turrets (auto-firing defense) ----------
-const TURRET_SLOTS = 8;
-function spawnTurret() {
-  const used = new Set(state.turrets.map(t => t.slot));
-  let slot = 0;
-  for (let i = 0; i < TURRET_SLOTS; i++) if (!used.has(i)) { slot = i; break; }
-  const ang = (slot / TURRET_SLOTS) * TAU + Math.PI / TURRET_SLOTS;
-  const R = state.base.radius + 1.2;
-  const g = new THREE.Group();
-  g.position.set(Math.cos(ang) * R, 0, Math.sin(ang) * R);
-  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 1.05, 1.8, 12),
-    new THREE.MeshStandardMaterial({ color: 0x556070, metalness: 0.7, roughness: 0.3 }));
-  stand.position.y = 0.9; stand.castShadow = true; g.add(stand);
-  const top = new THREE.Group(); top.position.y = 1.8;
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.75, 14, 8, 0, TAU, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0x6a7480, metalness: 0.8, roughness: 0.3 }));
-  top.add(dome);
-  const barrel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.45, 0.45),
-    new THREE.MeshStandardMaterial({ color: 0x7a8a96, metalness: 0.85, roughness: 0.3, emissive: 0x113355, emissiveIntensity: 0.5 }));
-  barrel.position.set(1.2, 0.2, 0); top.add(barrel);
-  g.add(top);
-  g.scale.setScalar(0.001);
-  scene.add(g);
-  addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
-  state.turrets.push({ group: g, top, barrel, slot, ang, cd: 0.6, range: 32, dmg: 3, fireRate: 0.7 });
-}
-
-function updateTurret(t, dt, time) {
-  t.cd -= dt;
-  let best = null, bd = t.range * t.range;
-  for (const e of state.enemies) {
-    const dx = e.position.x - t.group.position.x, dz = e.position.z - t.group.position.z;
-    const d2 = dx*dx + dz*dz;
-    if (d2 < bd) { bd = d2; best = e; }
-  }
-  if (!best) return;
-  const dx = best.position.x - t.group.position.x, dz = best.position.z - t.group.position.z;
-  t.top.rotation.y = Math.atan2(dx, dz);
-  if (t.cd > 0) return;
-  // fire tracer
-  const startPos = t.group.position.clone(); startPos.y = 2.4;
-  const endPos = best.position.clone();
-  const tracer = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 6),
-    new THREE.MeshBasicMaterial({ color: 0x7af0ff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
-  scene.add(tracer);
-  sound.turretFire();
-  const target = best;
-  addFX((k) => {
-    tracer.position.lerpVectors(startPos, endPos, k);
-    if (k >= 1) {
-      scene.remove(tracer);
-      if (state.enemies.includes(target)) {
-        target.userData.hp -= t.dmg;
-        target.userData.flashTimer = 0.12;
-        setBar(target.userData.bar, Math.max(0, target.userData.hp / target.userData.maxHp));
-        hitSpark(target.position, 0x7af0ff);
-        sound.enemyHit();
-        if (target.userData.hp <= 0) killEnemy(target);
-      }
-    }
-  }, 0.1);
-  t.cd = t.fireRate;
-}
-
 function pickEnemyTarget(e) {
-  const ea = Math.atan2(e.position.z, e.position.x);
-  const live = state.walls.filter(w => !w.dead);
-  if (live.length === 0) return { type: 'core', x: 0, z: 0 };
-  // breach? any dead segment angularly near e
-  const segAng = TAU / state.walls.length;
-  for (const w of state.walls) {
-    if (!w.dead) continue;
-    if (Math.abs(angDiff(ea, w.angle)) < segAng * 1.3) return { type: 'core', x: 0, z: 0 };
-  }
-  let best = null, bd = Infinity;
-  for (const w of live) {
-    const dx = w.group.position.x - e.position.x, dz = w.group.position.z - e.position.z;
+  // 1) a friendly soldier very close → fight it
+  let bestS = null, bsd = 4.5 * 4.5;
+  for (const s of state.soldiers) {
+    const dx = s.group.position.x - e.position.x, dz = s.group.position.z - e.position.z;
     const d2 = dx*dx + dz*dz;
-    if (d2 < bd) { bd = d2; best = w; }
+    if (d2 < bsd) { bsd = d2; bestS = s; }
   }
-  return { type: 'wall', x: best.group.position.x, z: best.group.position.z, ref: best };
+  if (bestS) return { type: 'soldier', x: bestS.group.position.x, z: bestS.group.position.z, ref: bestS };
+  // 2) blocked by the wall line? if the nearest post in this column is alive and we
+  //    haven't crossed the line yet, attack it.
+  const post = nearestPostByX(e.position.x);
+  if (post && !post.dead && e.position.z < -FRONT_Z + 2.0) {
+    return { type: 'wall', x: post.group.position.x, z: post.group.position.z, ref: post };
+  }
+  // 3) otherwise march on the HQ core
+  return { type: 'core', x: 0, z: 0 };
 }
 
 // ---------- Game over ----------
@@ -1531,7 +1163,7 @@ function triggerGameOver() {
   state.survived = state.elapsed;
   const mins = Math.floor(state.survived / 60);
   const secs = Math.floor(state.survived % 60).toString().padStart(2, '0');
-  ui.goStats.innerHTML = `Survived <b>${mins}:${secs}</b><br>Kills <b>${state.kills}</b>  ·  Peak threat <b>${state.threatPeak}</b>  ·  Shards banked <b>${state.shards}</b>`;
+  ui.goStats.innerHTML = `Held for <b>${mins}:${secs}</b><br>Enemies destroyed <b>${state.kills}</b>  ·  Peak wave <b>${state.threatPeak}</b>`;
   ui.gameOver.style.display = 'flex';
   sound.gameOver();
 }
@@ -1563,7 +1195,6 @@ stick.addEventListener('touchend', (e) => { e.preventDefault(); stickId = null; 
 
 // ---------- Main update ----------
 let velMag = 0, faceAngle = 0;
-const tmp = new THREE.Vector3();
 
 function update(dt, time) {
   if (state.gameOver) return;
@@ -1585,219 +1216,214 @@ function update(dt, time) {
   velMag += (speed - velMag) * Math.min(1, dt * 8);
   body.position.y = 1.2 + Math.sin(time * 10) * 0.08 * velMag;
 
-  // ---- saber sweep
-  const spin = SABER_SPIN_TIERS[state.saber.spinTier];
-  state.saberAngle = (state.saberAngle + spin * dt) % TAU;
+  // ---- saber sweep (fixed)
+  state.saberAngle = (state.saberAngle + SABER_SPIN * dt) % TAU;
   saberPivot.rotation.y = state.saberAngle;
-  if (saberPivotMirror) saberPivotMirror.rotation.y = state.saberAngle + Math.PI;
   const bladeAng = (player.rotation.y + state.saberAngle) % TAU;
-  const bladeAng2 = saberPivotMirror ? (bladeAng + Math.PI) % TAU : null;
-
-  const reach = SABER_REACH_TIERS[state.saber.reachTier];
-  const halfArc = SABER_ARC_TIERS[state.saber.spinTier];
-  const dmg = SABER_DMG_TIERS[state.saber.dmgTier];
-  const reach2 = reach * reach;
-
+  const reach2 = SABER_REACH * SABER_REACH;
   function inSaberHit(dx, dz, d2) {
     if (d2 > reach2) return false;
-    const bearing = Math.atan2(dx, dz);
-    if (Math.abs(angDiff(bearing, bladeAng)) <= halfArc) return true;
-    if (bladeAng2 != null && Math.abs(angDiff(bearing, bladeAng2)) <= halfArc) return true;
-    return false;
+    return Math.abs(angDiff(Math.atan2(dx, dz), bladeAng)) <= SABER_ARC;
   }
 
-  // ---- saber vs crystals
+  // ---- saber vs resource nodes (burst income)
   for (let i = state.nodes.length - 1; i >= 0; i--) {
     const g = state.nodes[i];
     g.rotation.y += g.userData.spin * dt;
     if (g.userData.barTimer > 0) { g.userData.barTimer -= dt; if (g.userData.barTimer <= 0) g.userData.bar.visible = false; }
     const dx = g.position.x - player.position.x, dz = g.position.z - player.position.z;
     const d2 = dx*dx + dz*dz;
-    if (d2 > reach2) continue;
     if (!inSaberHit(dx, dz, d2)) continue;
     if (time - g.userData.lastHit < SABER_CD) continue;
     g.userData.lastHit = time;
+    g.userData.hp -= SABER_DMG;
     g.userData.bar.visible = true; g.userData.barTimer = 1.2;
-    hitSpark(g.position, RING_COLORS[g.userData.band]);
-    // gating: outer crystals beyond your damage tier just flash.
-    if (g.userData.maxHp > dmg * 5) { sound.denied(); continue; }
-    g.userData.hp -= dmg;
     setBar(g.userData.bar, Math.max(0, g.userData.hp / g.userData.maxHp));
-    sound.crystalHit();
+    hitSpark(g.position, RESOURCE_COLOR); sound.saberHit();
     if (g.userData.hp <= 0) destroyNode(g);
   }
   topUpNodes();
 
-  // ---- saber vs enemies
+  // ---- saber vs enemies (emergency defense)
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
     const dx = e.position.x - player.position.x, dz = e.position.z - player.position.z;
     const d2 = dx*dx + dz*dz;
-    if (d2 > reach2) continue;
     if (!inSaberHit(dx, dz, d2)) continue;
-    if (time - e.userData.lastHit < SABER_CD) continue;
-    e.userData.lastHit = time;
-    e.userData.hp -= dmg;
-    e.userData.flashTimer = 0.12;  // hit-flash tint
+    if (time - (e.userData.saberHit || -99) < SABER_CD) continue;
+    e.userData.saberHit = time;
+    e.userData.hp -= SABER_DMG;
+    e.userData.flashTimer = 0.12;
     setBar(e.userData.bar, Math.max(0, e.userData.hp / e.userData.maxHp));
-    hitSpark(e.position, 0x7af0ff);
-    sound.enemyHit();
-    state.shake = Math.min(1, state.shake + 0.06);
+    hitSpark(e.position, 0x7af0ff); sound.enemyHit();
+    state.shake = Math.min(1, state.shake + 0.05);
     if (e.userData.hp <= 0) killEnemy(e);
   }
 
-  // ---- pickups vacuum to player stack
-  for (let i = state.pickups.length - 1; i >= 0; i--) {
-    const m = state.pickups[i];
-    m.rotation.y += dt * 4;
-    if (m.userData.delay > 0) { m.userData.delay -= dt; m.position.y = 1.2 + Math.sin(time*6)*0.2; continue; }
-    if (state.carry.length >= state.carryMax) continue;
-    const target = player.position.clone().add(new THREE.Vector3(0, 2.6, 0));
-    m.position.lerp(target, Math.min(1, dt * 9));
-    if (m.position.distanceTo(target) < 1.0) {
-      scene.remove(m); state.pickups.splice(i, 1); addToStack(m.userData.band);
+  // ---- passive supply income (hybrid economy)
+  state.incomeAcc += state.incomePerSec * dt;
+  while (state.incomeAcc >= 1) { state.shards += 1; state.incomeAcc -= 1; }
+
+  // ---- pads: fund from supply bank while standing on them
+  for (const pad of state.pads) {
+    if (pad.complete) continue;
+    const onPad = Math.abs(player.position.x - pad.x) < pad.w/2 && Math.abs(player.position.z - pad.z) < pad.d/2;
+    if (onPad && Math.floor(state.shards) > 0) {
+      pad.depositCd -= dt;
+      while (pad.depositCd <= 0 && Math.floor(state.shards) > 0 && !pad.complete) {
+        if (!fundPad(pad)) break;
+        pad.depositCd += 0.035;
+      }
+    } else pad.depositCd = 0;
+    pad.labelSprite.position.y = 4.2 + Math.sin(time * 2 + pad.x) * 0.18;
+  }
+
+  // ---- barracks deploy soldiers
+  for (const b of state.barracks) {
+    b.spawnCd -= dt;
+    if (b.spawnCd <= 0) {
+      spawnSoldier(b.x, b.z);
+      b.spawnCd = b.interval;
     }
   }
 
-  // ---- pads: player-on-pad deposit
-  for (const pad of state.pads) {
-    if (pad.complete) continue;
-    const halfW = pad.w/2, halfD = pad.d/2;
-    const onPad = Math.abs(player.position.x - pad.x) < halfW && Math.abs(player.position.z - pad.z) < halfD;
-    if (onPad && state.carry.length > 0) {
-      pad.depositCd -= dt;
-      while (pad.depositCd <= 0 && state.carry.length > 0 && !pad.complete) {
-        const target = new THREE.Vector3(pad.x, 1.5, pad.z);
-        const ok = payIntoPad(pad, () => popPlayerStackToward(target));
-        if (!ok) break;
-        pad.depositCd += 0.06;
+  // ---- soldiers
+  for (let i = state.soldiers.length - 1; i >= 0; i--) updateSoldier(state.soldiers[i], dt, time);
+
+  // ---- med tents heal nearby soldiers
+  for (const m of state.medTents) {
+    for (const s of state.soldiers) {
+      if (s.hp >= s.maxHp) continue;
+      if (distXZ(s.group.position, m) <= m.radius) {
+        s.hp = Math.min(s.maxHp, s.hp + m.heal * dt);
+        s.bar.visible = true; setBar(s.bar, s.hp / s.maxHp);
+        if (s.hp >= s.maxHp) s.bar.visible = false;
       }
-    } else pad.depositCd = 0;
-    // pad label always faces camera (Sprite does this automatically; gentle bob)
-    pad.labelSprite.position.y = 4.0 + Math.sin(time * 2 + pad.x) * 0.18;
+    }
+    m.group.children[m.group.children.length-1].rotation.z += dt; // spin aura ring
   }
 
-  // ---- workers
-  for (const w of state.workers) updateWorker(w, dt, time);
-  for (const t of state.turrets) updateTurret(t, dt, time);
+  // ---- turrets
+  for (const t of state.turrets) updateTurret(t, dt);
 
-  // ---- threat-scaled enemy spawning (ported from EnemySpawner.ts)
-  // threat level ticks up every 28s. Spawn cadence shrinks ~7%/level (floor 0.85s).
+  // ---- directional threat spawner + INCOMING timer
   state.elapsed += dt;
   const THREAT_INTERVAL = 28;
   const prevThreat = state.threatLevel;
   state.threatLevel = 1 + Math.floor(state.elapsed / THREAT_INTERVAL);
   if (state.threatLevel > prevThreat) {
     state.threatPeak = Math.max(state.threatPeak, state.threatLevel);
+    toast(`WAVE ${state.threatLevel}`, 'A heavier assault advances');
+    sound.waveIncoming();
     refreshUI();
-    toast(`THREAT ${state.threatLevel}`, 'The swarm escalates');
-    // Keep state.wave in sync for code paths that still read it (chooseEnemyType, spawnEnemy hp formula).
-    state.wave = state.threatLevel;
   }
+  // countdown HUD
+  const nextAt = state.threatLevel * THREAT_INTERVAL;
+  const remain = Math.max(0, nextAt - state.elapsed);
+  ui.timer.textContent = Math.floor(remain / 60) + ':' + Math.floor(remain % 60).toString().padStart(2, '0');
+  ui.incoming.classList.toggle('warn', remain < 5);
+
   state.spawnTimer -= dt;
-  const spawnEvery = Math.max(0.85, 3.2 * Math.pow(0.93, state.threatLevel - 1));
-  const enemyCap = 10 + state.threatLevel * 4;
+  const spawnEvery = Math.max(0.8, 3.0 * Math.pow(0.93, state.threatLevel - 1));
+  const enemyCap = 12 + state.threatLevel * 5;
   if (state.spawnTimer <= 0 && state.enemies.length < enemyCap) {
-    // Pack spawning: higher threats occasionally drop multiple from one bearing.
     let pack = 1;
     if (state.threatLevel >= 3 && Math.random() < Math.min(0.55, state.threatLevel * 0.05)) pack++;
     if (state.threatLevel >= 6 && Math.random() < 0.35) pack++;
-    const baseAngle = Math.random() * TAU;
-    for (let i = 0; i < pack; i++) {
-      // pack members spawn in a tight bearing cluster for the "focused assault" feel
-      spawnEnemy(undefined, baseAngle + (Math.random() - 0.5) * 0.4);
-    }
+    const baseX = (Math.random() * 2 - 1) * ENEMY_SPAWN_HALF;
+    for (let i = 0; i < pack; i++) spawnEnemy(undefined, THREE.MathUtils.clamp(baseX + (Math.random()-0.5)*8, -ENEMY_SPAWN_HALF, ENEMY_SPAWN_HALF));
     state.spawnTimer = spawnEvery;
   }
 
-  // ---- enemies: retarget, move, attack
+  // ---- enemies: retarget, advance, attack
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
     e.userData.targetCd -= dt;
     if (!e.userData.target || e.userData.targetCd <= 0) {
       e.userData.target = pickEnemyTarget(e);
-      e.userData.targetCd = 0.45;
+      e.userData.targetCd = 0.35;
     }
     const t = e.userData.target;
-    const dx = t.x - e.position.x, dz = t.z - e.position.z;
+    // validate dynamic refs
+    if (t.type === 'soldier' && !state.soldiers.includes(t.ref)) { e.userData.target = pickEnemyTarget(e); }
+    const tg = e.userData.target;
+    const dx = tg.x - e.position.x, dz = tg.z - e.position.z;
     const d = Math.hypot(dx, dz);
-    if (d > 0.01) {
+    const reach = tg.type === 'core' ? CORE_HIT_R : 2.6;
+    if (d > reach) {
       const step = e.userData.speed * dt;
       e.position.x += (dx / d) * step;
       e.position.z += (dz / d) * step;
       e.rotation.y = Math.atan2(dx, dz);
     }
     e.userData.wob += dt * 12;
-    e.position.y = 1.1 * (e.userData.scale || 1) + Math.abs(Math.sin(e.userData.wob)) * 0.3;
+    e.position.y = 1.1 * e.userData.scale + Math.abs(Math.sin(e.userData.wob)) * 0.3;
     e.userData.bar.quaternion.copy(camera.quaternion);
 
-    // hit-flash tint (porting Outpost Zero's enemy material flash pattern)
     if (e.userData.flashTimer > 0) {
       e.userData.flashTimer -= dt;
-      e.userData.shellMat.emissiveIntensity = 1.3;
-      e.userData.shellMat.emissive.setHex(0xffffff);
+      e.userData.shellMat.emissiveIntensity = 1.3; e.userData.shellMat.emissive.setHex(0xffffff);
     } else {
-      e.userData.shellMat.emissiveIntensity = 0.55;
-      e.userData.shellMat.emissive.setHex(ENEMY_TYPES[e.userData.type].color);
+      e.userData.shellMat.emissiveIntensity = 0.55; e.userData.shellMat.emissive.setHex(ENEMY_TYPES[e.userData.type].color);
     }
 
     // attack
-    if (d < ENEMY_HIT_R) {
+    if (d <= reach) {
       e.userData.attackCd -= dt;
       if (e.userData.attackCd <= 0) {
-        if (t.type === 'wall' && t.ref && !t.ref.dead) {
-          t.ref.hp -= e.userData.wallDmg;
-          t.ref.bar.visible = true; t.ref.barTimer = 1.5;
-          setBar(t.ref.bar, Math.max(0, t.ref.hp / t.ref.maxHp));
+        if (tg.type === 'soldier' && state.soldiers.includes(tg.ref)) {
+          tg.ref.hp -= e.userData.dmg;
+          tg.ref.bar.visible = true; setBar(tg.ref.bar, Math.max(0, tg.ref.hp / tg.ref.maxHp));
+          hitSpark(tg.ref.group.position, 0xff5a3c);
+          if (tg.ref.hp <= 0) killSoldier(tg.ref);
+          e.userData.target = null;
+        } else if (tg.type === 'wall' && tg.ref && !tg.ref.dead) {
+          tg.ref.hp -= e.userData.dmg;
+          tg.ref.bar.visible = true; tg.ref.barTimer = 1.5;
+          setBar(tg.ref.bar, Math.max(0, tg.ref.hp / tg.ref.maxHp));
           sound.wallHit();
-          if (t.ref.hp / t.ref.maxHp < 0.4) t.ref.post.material.color.setHex(0xb14a2a);
-          if (t.ref.hp <= 0) {
-            t.ref.dead = true;
-            effects.burst(t.ref.group.position.clone().setY(1.8), 0xa05030, 8, 4);
-            addFX((k) => { t.ref.post.position.y -= 0.06; t.ref.bar.visible = false; }, 0.5);
+          if (tg.ref.hp / tg.ref.maxHp < 0.4) tg.ref.post.material.color.setHex(0xb14a2a);
+          if (tg.ref.hp <= 0) {
+            tg.ref.dead = true;
+            effects.burst(tg.ref.group.position.clone().setY(1.8), 0xa05030, 10, 4);
+            addFX((k) => { tg.ref.group.scale.y = Math.max(0.001, 1 - k); tg.ref.bar.visible = false; }, 0.5);
+            e.userData.target = null;
           }
-        } else {
-          state.base.hp -= e.userData.coreDmg;
+        } else if (tg.type === 'core') {
+          state.core.hp -= e.userData.dmg;
           state.shake = Math.min(1, state.shake + 0.25);
-          sound.coreHit();
-          refreshUI();
-          if (state.base.hp <= 0) { triggerGameOver(); return; }
+          sound.coreHit(); refreshUI();
+          if (state.core.hp <= 0) { triggerGameOver(); return; }
         }
-        e.userData.attackCd = ENEMY_ATTACK_CD;
+        e.userData.attackCd = 0.65;
       }
     }
   }
 
-  // ---- walls: bar billboards / hide on timer
+  // ---- wall bar billboards / hide on timer
   for (const w of state.walls) {
     if (w.bar.visible) {
       w.bar.quaternion.copy(camera.quaternion);
-      w.barTimer -= dt;
-      if (w.barTimer <= 0 && !w.dead && w.hp >= w.maxHp) w.bar.visible = false;
+      if (w.barTimer > 0) { w.barTimer -= dt; if (w.barTimer <= 0 && !w.dead && w.hp >= w.maxHp) w.bar.visible = false; }
     }
   }
-
-  // ---- node bars billboard (crystals)
+  // node bars billboard
   for (const g of state.nodes) if (g.userData.bar.visible) g.userData.bar.quaternion.copy(camera.quaternion);
 
-  // ---- core hp bar pulse + glow scale
+  // ---- core glow + dome
   coreGlow.rotation.y += dt * 1.5; coreGlow.rotation.x += dt * 0.8;
   coreGlow.scale.lerp(new THREE.Vector3(1,1,1), Math.min(1, dt*6));
   domeRing.rotation.z += dt * 0.4;
 
-  // stack wobble (the headline visual)
-  const wob = velMag * 0.14;
-  stackGroup.rotation.z = Math.sin(time * 6) * wob;
-  stackGroup.rotation.x = Math.cos(time * 5) * wob * 0.6;
-
-  // FX (tween pool + pooled particles + floating text)
+  // ---- FX
   for (let i = state.fx.length - 1; i >= 0; i--) {
     const f = state.fx[i]; f.t += dt; const k = Math.min(1, f.t / f.dur); f.fn(k); if (k >= 1) state.fx.splice(i, 1);
   }
   effects.update(dt);
   updateContextPrompt();
+  refreshUI();
 
-  // camera chase + shake
+  // ---- camera chase + shake (look slightly north toward the front)
   const desired = player.position.clone().add(CAM_OFFSET);
   camera.position.lerp(desired, Math.min(1, dt * 4));
   if (state.shake > 0) {
@@ -1805,7 +1431,7 @@ function update(dt, time) {
     camera.position.x += (Math.random()*2-1) * state.shake * 1.3;
     camera.position.y += (Math.random()*2-1) * state.shake * 0.9;
   }
-  camera.lookAt(player.position.x, 1.5, player.position.z);
+  camera.lookAt(player.position.x, 1.5, player.position.z - 10);
 }
 
 // ---------- Loop ----------
@@ -1822,14 +1448,14 @@ requestAnimationFrame(animate);
 addEventListener('resize', () => { camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
 // ---------- Boot ----------
-rebuildWalls();
+state.wallMaxHp = 44;
+buildFrontLine();
 seedInitialPads();
 topUpNodes();
-rebuildSaber();
 refreshUI();
 
-window.__game = { state, player, saberPivot, spawnEnemy, spawnNode, rebuildSaber, triggerGameOver,
-                  forceComplete(title) { const p = state.pads.find(x => x.title === title); if (p) { p.paid = p.price; p.complete = true; p.onComplete && p.onComplete(p); const i = state.pads.indexOf(p); if (i >= 0) state.pads.splice(i,1); scene.remove(p.group); } } };
+window.__game = { state, player, spawnEnemy, spawnNode, spawnSoldier, triggerGameOver,
+  forceComplete(title) { const p = state.pads.find(x => x.title === title); if (p) { p.paid = p.price - 1; state.shards += 2; fundPad(p); } } };
 
 document.getElementById('playBtn').addEventListener('click', () => {
   document.getElementById('start').style.display = 'none';
@@ -1839,7 +1465,7 @@ document.getElementById('playBtn').addEventListener('click', () => {
   state.threatLevel = 1;
   state.threatPeak = 1;
   last = performance.now();
-  toast('SABER IGNITED', 'Carve your way out — then build');
+  toast('HOLD THE LINE', 'Build barracks — your army deploys north');
   sound.upgrade();
 });
 </script>
