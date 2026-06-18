@@ -2,67 +2,60 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
-## Mars Colony: Base Defense
+## Mars Colony: War Front
 
-A single-file 3D **base-defense hauler** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — open `index.html` in a modern browser.
+A single-file 3D **base-builder war game** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — open `index.html` in a modern browser.
 
 **Play it live:** https://creativedexy.github.io/endless-game/mars-colony/
 
+You're the **commander** of a frontier outpost. You don't win by fighting — you win by **building**. Raise an army from barracks, fund it with supply depots, and hold a single front line against waves that advance from the north. Step in personally with your saber only when the wall buckles.
+
 ### How to play
 
-- **Move** with `WASD` / arrows (touch joystick on mobile). Your **lightsaber swings automatically**.
-- You start hemmed in by **dense crystal forests**. Carve a path out — band-0 crystals are weak, outer rings are tougher and need saber upgrades to break.
-- Cleared crystals drop shards that **vacuum onto a chunky tall stack on your back**.
-- **Stand on a buy pad** inside the base — your stack drains into it; when the price is met it unlocks (saber upgrade, hire worker, expand base).
-- **Sand-beetles target your walls and core**, not you. Hold them off with your saber + hired guards + turrets.
-- If your **core HP hits 0** → game over. Restart and try a different upgrade path.
+- **Move** your commander with `WASD` / arrows (touch joystick on mobile).
+- **Stand on a build pad** to fund it from your **supply bank**. Supply accrues passively (depots speed it up); you can also saber the scattered **resource crystals** for a burst.
+- **Barracks** deploy soldiers automatically. They march north and hold the **front line** — a single wall of posts — engaging the incoming assault.
+- **Turrets**, **med tents**, and **fortify** upgrades back the line up. **Armory** upgrades make every soldier hit harder and live longer.
+- Enemies attack your wall; when a post falls they pour through the **breach** toward your **HQ core**. If the core's HP hits 0 → game over.
+- Your **saber swings automatically** — use it as an emergency hero to plug a breach. It has a fixed size; there are no saber upgrades.
 
 ### The core loop
 
-Carve crystals → haul shards → step on a pad → upgrade saber / hire workers / expand → break harder crystals → defend your walls → repeat.
+Build barracks → soldiers deploy → fund depots for faster supply → reinforce the line (turrets / med tents / fortify) → survive escalating waves → repeat.
 
-### Walk-on buy pads
+### Build pads (walk-on, funded from supply)
 
-Ten pads ring the inside of your base:
+Eight build plots ring the south lot beside your HQ. Each rebuilds at the next tier when completed.
 
 | Pad | Effect |
 |-----|--------|
-| **Saber Reach** | Blade physically grows longer (tier I–V) |
-| **Saber Power** | Per-hit damage I–V — needed to break outer crystal rings |
-| **Saber Spin** | Sweep speed I–V — more hits per second |
-| **Build Turret** | Spawns an auto-firing turret on the wall ring (4 tiers, 8 slots) |
-| **Carry Capacity** | +4 stack slots per tier — haul more before depositing |
-| **Core Repair** | +60 core HP and +30 max HP per tier — buy when under siege |
-| **Hire Gatherer** | Worker NPCs that auto-chop band-0 crystals and dump shards into the cheapest active pad (idle income) |
-| **Hire Guard** | Patrols the perimeter, sabers nearby beetles |
-| **Hire Builder** | Repairs damaged wall segments |
-| **Expand Base** | Pushes the walls outward +4 radius, +50 base HP (pads stay in place) |
+| **Barracks** | Deploys a garrison that spawns soldiers on a timer (the heart of your army) |
+| **Supply Depot** | +2.5 supply/sec passive income |
+| **Turret** | Auto-cannon stationed on the front line |
+| **Med Tent** | Heal aura that mends nearby soldiers |
+| **Armory** | +50% soldier damage & HP per tier |
+| **Fortify Line** | +wall HP and a full repair of the front line |
+| **HQ Repair** | +70 core HP and +30 max HP |
 
-Reach all three core saber stats to **Tier V** and a **second mirrored blade** ignites for full 360° coverage.
+### Soldiers & the front line
 
-### Crystals & ring gating
+- **Soldiers** spawn from barracks (capped), march to the nearest enemy, and fire from range. With no enemies near, they form up along the hold line.
+- The **front line** is one readable wall of posts spanning the north edge of your base — no rings, no bastions, no inner court. Damage a post and it tints red; destroy it and enemies stream through the gap.
+- **Enemies** advance from the north: **grunts** (default), faster fragile **runners** (wave 2+), and slow heavy **tanks** with spiked shells (wave 4+). They fight soldiers in the way, batter the wall, then make for the core.
 
-| Ring | Color | HP | Saber tier needed |
-|------|-------|----|--|
-| 0 | cyan | 2 | I (start) |
-| 1 | purple | 5 | II |
-| 2 | pink | 12 | III |
-| 3 | orange | 24 | IV+ |
+### Waves
 
-Tier 0 saber visually flashes outer crystals but bounces off — clearing more of the map is gated by **saber power upgrades**.
+A countdown HUD shows the next wave's ETA (it flashes red in the final seconds). Each wave ramps spawn rate, enemy HP, and enemy variety; higher waves drop focused packs from the same bearing.
 
 ### Features
 
-- **Swinging lightsaber** that grows visibly with upgrades (reach scales the cylinder mesh, spin/arc rebuilds the trail sector; mirrored second pivot at max tier).
-- **Chunky vertical carry stack** with velocity wobble.
-- **Walk-on priced pads** with floating canvas-texture price labels and progress rings.
-- **Workers with FSM**: gatherers carry their own mini-stacks, guards swing small sabers, builders repair walls.
-- **Auto-firing turrets** mounted on the outer wall — scan for the nearest enemy in range, rotate to aim, fire glowing cyan tracers.
-- **Three enemy types** with distinct stats and silhouettes — beetles (default), faster fragile sprinters (wave 2+), and slow heavy brutes with spiked shells (wave 4+).
-- **Layered base defense** — outer wall ring + four cardinal **bastions** (jutting wall spurs that funnel enemies into alleys) + an inner court wall around the core.
-- **Damageable walls** with HP bars; enemies target nearest live segment, route through breaches.
-- **Wave system** that ramps spawn rate, enemy HP, and enemy variety over time.
-- **Real game over** with restart, plus dune terrain, fog, starfield, and chase camera.
+- **Build-focused economy** — passive supply income from depots plus optional resource-crystal bursts you can saber for a push.
+- **Friendly army** — barracks deploy soldiers that march, hold, fire, take casualties, and heal at med tents.
+- **Single front line** — one damageable wall of posts; breaches open real holes enemies exploit.
+- **Auto-firing turrets** on the line, scanning for the nearest enemy and tracing it down.
+- **Directional waves** — three enemy types advancing from the north with an INCOMING countdown.
+- **Emergency-hero saber** — fixed-size auto-swinging blade for plugging breaches and clearing resource crystals.
+- **Real game over** with restart, plus dune terrain, fog, starfield, procedural audio, pooled particles, and a chase camera.
 
 ### Run it
 
