@@ -8,38 +8,36 @@ A single-file 3D **base-builder war game** built with [Three.js](https://threejs
 
 **Play it live:** https://creativedexy.github.io/endless-game/mars-colony/
 
-You're the **commander** of a frontier outpost. You don't win by fighting — you win by **building**. Raise an army from barracks, fund it with supply depots, and hold a single front line against waves that advance from the north. Step in personally with your saber only when the wall buckles.
+You're the **commander** of a frontier outpost. You win by **building** — but supply doesn't come free. Drive **out into the field** to harvest crystals, haul the supply back, and spend it on barracks, turrets, and upgrades while your army holds a single front line against waves from the north. Leave the base to gather and you can't plug breaches yourself, so time your runs.
 
 ### How to play
 
 - **Move** your commander with `WASD` / arrows (touch joystick on mobile).
-- **Stand on a build pad** to fund it from your **supply bank**. Supply accrues passively (depots speed it up); you can also saber the scattered **resource crystals** for a burst.
-- **Barracks** deploy soldiers automatically. They march north and hold the **front line** — a single wall of posts — engaging the incoming assault.
-- **Turrets**, **med tents**, and **fortify** upgrades back the line up. **Armory** upgrades make every soldier hit harder and live longer.
-- Enemies attack your wall; when a post falls they pour through the **breach** toward your **HQ core**. If the core's HP hits 0 → game over.
-- Your **saber swings automatically** — use it as an emergency hero to plug a breach. It has a fixed size; there are no saber upgrades.
+- **Earn supply by harvesting**: drive out to the **crystal fields** and saber them — each cluster banks supply. Nodes near the front are richer but riskier; flank/rear nodes are a safer, longer drive.
+- **Stand on a build pad** to fund it from your supply bank.
+- **Barracks** deploy soldiers up to a cap (raise it by upgrading the barracks). They march north and hold the **front line** — a single wall of posts.
+- **Turrets**, **med tents**, **armory**, and **reinforce** back the line up. Enemies that break a post pour through the **breach** toward your **HQ core**. If the core's HP hits 0 → game over.
+- Your **saber swings automatically** — it's both your harvesting tool and an emergency blade for plugging breaches. Fixed size; no saber upgrades.
 
 ### The core loop
 
-Build barracks → soldiers deploy → fund depots for faster supply → reinforce the line (turrets / med tents / fortify) → survive escalating waves → repeat.
+Harvest crystals in the field → haul supply back → build/upgrade (barracks, turrets, med tents, armory, reinforce) → hold the line → survive escalating waves → repeat.
 
 ### Build pads (walk-on, funded from supply)
 
-Eight build plots ring the south lot beside your HQ. Each rebuilds at the next tier when completed.
+**Five** big build plots sit on an arc around the south side of your HQ. Each rebuilds at the next tier when completed.
 
 | Pad | Effect |
 |-----|--------|
-| **Barracks** | Deploys a garrison that spawns soldiers on a timer (the heart of your army) |
-| **Supply Depot** | +2.5 supply/sec passive income |
-| **Turret** | Auto-cannon stationed on the front line |
-| **Med Tent** | Heal aura that mends nearby soldiers |
+| **Barracks** | One upgradeable garrison — each tier raises the troop cap (8 → 24) and speeds deployment |
+| **Turret** | Auto-cannon stationed on the front line (repeatable) |
+| **Med Tent** | Heal aura that mends nearby soldiers (repeatable) |
 | **Armory** | +50% soldier damage & HP per tier |
-| **Fortify Line** | +wall HP and a full repair of the front line |
-| **HQ Repair** | +70 core HP and +30 max HP |
+| **Reinforce** | +wall & HQ HP and a full repair of both |
 
 ### Soldiers & the front line
 
-- **Soldiers** spawn from barracks (capped), march to the nearest enemy, and fire from range. With no enemies near, they form up along the hold line.
+- **Soldiers** spawn from the barracks up to its tier cap (no flooding), march to the nearest enemy, and fire from range. With no enemies near, they form up along the hold line.
 - The **front line** is one readable wall of posts spanning the north edge of your base — no rings, no bastions, no inner court. Damage a post and it tints red; destroy it and enemies stream through the gap.
 - **Enemies** advance from the north and **shoot back**: **grunts** (default riflemen), faster **runners** that rush into short range (wave 2+), and heavy **tanks** that outrange your soldiers and shrug off fire (wave 4+). They trade fire with soldiers in the way, batter the wall up close, then make for the core. A lone soldier line beats basic grunts but bleeds against tanks — back it with turrets, med tents, and armory upgrades.
 
@@ -49,7 +47,7 @@ A countdown HUD shows the next wave's ETA (it flashes red in the final seconds).
 
 ### Features
 
-- **Build-focused economy** — passive supply income from depots plus optional resource-crystal bursts you can saber for a push.
+- **Active harvest economy** — supply comes from sabering crystal fields out beyond the base, so you weigh gather runs against staying home to defend.
 - **Friendly army** — barracks deploy soldiers that march, hold, fire, take casualties, and heal at med tents.
 - **Single front line** — one damageable wall of posts; breaches open real holes enemies exploit.
 - **Auto-firing turrets** on the line, scanning for the nearest enemy and tracing it down.
