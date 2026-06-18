@@ -133,7 +133,6 @@
 
 <div id="hud">
   <div class="stat"><span class="swatch" style="background:#7af0ff"></span><span class="label">Supply</span><span class="value" id="uiShards">0</span></div>
-  <div class="stat"><span class="swatch" style="background:#46e88a"></span><span class="label">Income</span><span class="value" id="uiIncome">0</span><span class="sub">/s</span></div>
   <div class="stat"><span class="swatch" style="background:#bfe89a"></span><span class="label">Troops</span><span class="value" id="uiTroops">0</span></div>
   <div class="stat"><span class="swatch" style="background:#ff5a3c"></span><span class="label">HQ</span><span id="baseHpWrap"><span id="baseHpBar"></span></span></div>
 </div>
@@ -145,16 +144,16 @@
 
 <div id="hint">
   <b>WASD</b> / <b>Arrows</b> — move your commander<br>
-  Stand on a <b>build pad</b> to fund it from supply<br>
-  <b>Barracks</b> pump out soldiers — they hold the front line<br>
-  Your <b>saber</b> swings automatically — plug breaches in a pinch
+  Drive <b>out into the field</b> and saber <b>crystals</b> for supply<br>
+  Bring it back and stand on a <b>build pad</b> to fund it<br>
+  <b>Barracks</b> raise soldiers; plug breaches with your saber
 </div>
 
 <div id="stick"><div id="knob"></div></div>
 
 <div id="start" class="overlay">
   <h1>MARS COLONY<br><span>WAR FRONT</span></h1>
-  <p>You command a frontier outpost. Build <span class="keys">barracks</span> to raise an army, <span class="keys">supply depots</span> to fund it, and <span class="keys">turrets &amp; med tents</span> to hold the line. Your soldiers march north and fight the incoming assault at a single <span class="keys">front line</span>. You're the commander — build, reinforce, and plug breaches with your saber when the wall buckles. If the HQ core falls, it's over.</p>
+  <p>You command a frontier outpost. Drive <span class="keys">out into the field</span> to saber crystals for <span class="keys">supply</span>, then haul it back and spend it on <span class="keys">barracks</span>, <span class="keys">turrets</span>, <span class="keys">med tents</span> and <span class="keys">armories</span>. Your soldiers march north and fight the incoming assault at a single <span class="keys">front line</span> — but leave the base to gather and you can't plug the breaches yourself. If the HQ core falls, it's over.</p>
   <p class="keys">Move with WASD / Arrows — your army does the fighting</p>
   <button id="playBtn">▶ HOLD THE LINE</button>
 </div>
@@ -162,7 +161,7 @@
 <div id="gameOver" class="overlay">
   <h1><span class="red">HQ OVERRUN</span></h1>
   <div class="stats" id="goStats"></div>
-  <p>The assault broke through. Next run: build barracks earlier, stack supply depots for faster income, and fortify the line before the heavy waves hit.</p>
+  <p>The assault broke through. Next run: harvest crystals between waves to keep supply flowing, build barracks earlier, and reinforce the line before the heavy waves hit.</p>
   <button onclick="location.reload()">↻ NEW CAMPAIGN</button>
 </div>
 
@@ -209,7 +208,10 @@ const CORE_MAX_HP = 320;
 const CORE_HIT_R = 3.0;
 
 // ---------- Soldiers ----------
-const SOLDIER_CAP = 44;
+// Army size is gated by the barracks tier (state.soldierCap), so the field
+// never floods with troops — upgrade the barracks to raise the cap.
+function barracksCapForTier(t) { return t > 0 ? 4 + t * 4 : 0; }       // T1=8 … T5=24
+function barracksIntervalForTier(t) { return Math.max(4.0, 8.0 - t * 0.7); }
 
 const COLORS = {
   player: 0xf2f2f2,
@@ -412,14 +414,18 @@ const resourceMat = new THREE.MeshStandardMaterial({ color: RESOURCE_COLOR, emis
 
 // ---------- State ----------
 const state = {
-  shards: 25,            // supply bank (passive income + node bursts)
+  shards: 30,            // supply bank — earned by harvesting crystals in the field
   incomeAcc: 0,
-  incomePerSec: 2.0,     // base trickle; depots add to this
+  incomePerSec: 0.5,     // tiny base trickle so you're never fully soft-locked
   kills: 0,
   pads: [],
   walls: [],
   soldiers: [],
   barracks: [],
+  barracksTier: 0,
+  soldierCap: 0,
+  barracksInterval: 8.0,
+  barracksSpawnCd: 0,
   medTents: [],
   turrets: [],
   mechanics: [],
@@ -446,7 +452,6 @@ const state = {
 // ---------- UI refs ----------
 const ui = {
   shards: document.getElementById('uiShards'),
-  income: document.getElementById('uiIncome'),
   troops: document.getElementById('uiTroops'),
   baseHpBar: document.getElementById('baseHpBar'),
   wave: document.getElementById('uiWave'),
@@ -460,8 +465,7 @@ const ui = {
 
 function refreshUI() {
   ui.shards.textContent = Math.floor(state.shards);
-  ui.income.textContent = state.incomePerSec.toFixed(1);
-  ui.troops.textContent = state.soldiers.length;
+  ui.troops.textContent = state.soldierCap > 0 ? `${state.soldiers.length}/${state.soldierCap}` : state.soldiers.length;
   ui.baseHpBar.style.width = Math.max(0, (state.core.hp / state.core.maxHp) * 100) + '%';
   ui.wave.textContent = state.threatLevel;
 }
@@ -525,7 +529,7 @@ function makeLabelSprite(title, sub, priceLeft) {
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sp = new THREE.Sprite(mat);
-  sp.scale.set(6.5, 3.25, 1);
+  sp.scale.set(8.2, 4.1, 1);
   sp.userData = { canvas: cv, ctx, tex, title, sub };
   sp.renderOrder = 500;
   return sp;
@@ -701,16 +705,16 @@ function hitSpark(pos, color) {
   }
 }
 
-// ---------- Resource nodes (optional burst income) ----------
+// ---------- Resource nodes (your supply — harvested OUT in the field) ----------
 const NODE_TARGET = 30;
+const NODE_INNER = 40;   // crystals spawn well outside the build lot, forcing gather runs
+const NODE_OUTER = 96;
 function spawnNode() {
-  // scatter around the build lot, biased to the south/flanks (away from the front path)
-  let x, z;
-  for (let tries = 0; tries < 6; tries++) {
-    const a = Math.random() * TAU, r = 16 + Math.random() * 44;
-    x = Math.cos(a) * r; z = Math.sin(a) * r;
-    if (z > -FRONT_Z - 4) break; // keep most nodes south of / around the line, not deep in no-mans-land
-  }
+  // scatter out across the field. Nodes to the north sit near the enemy lane
+  // (risky); flank/rear nodes are safer but a longer drive.
+  const a = Math.random() * TAU;
+  const r = NODE_INNER + Math.random() * (NODE_OUTER - NODE_INNER);
+  const x = Math.cos(a) * r, z = Math.sin(a) * r;
   const g = new THREE.Group();
   const n = 2 + Math.floor(Math.random() * 3);
   for (let i = 0; i < n; i++) {
@@ -729,7 +733,7 @@ function spawnNode() {
 function topUpNodes() { while (state.nodes.length < NODE_TARGET) spawnNode(); }
 function destroyNode(g) {
   const i = state.nodes.indexOf(g); if (i >= 0) state.nodes.splice(i, 1);
-  const reward = 8 + Math.floor(Math.random() * 7);
+  const reward = 12 + Math.floor(Math.random() * 9);
   state.shards += reward;
   const burstPos = g.position.clone(); burstPos.y = 1.2;
   effects.burst(burstPos, RESOURCE_COLOR, 12, 6);
@@ -769,12 +773,11 @@ function nearestPostByX(x) {
 
 // ---------- Pads (walk-on build, funded from supply bank) ----------
 const LOT_SLOTS = [
-  // two rows of build plots on the south lot, flanking the core
-  { x: -21, z: 2 }, { x: -10.5, z: 2 }, { x: 10.5, z: 2 }, { x: 21, z: 2 },
-  { x: -21, z: 13 }, { x: -10.5, z: 13 }, { x: 10.5, z: 13 }, { x: 21, z: 13 },
+  // five big plots on a shallow arc wrapping the south side of the HQ core
+  { x: -25, z: 7 }, { x: -13, z: 15 }, { x: 0, z: 18 }, { x: 13, z: 15 }, { x: 25, z: 7 },
 ];
 
-function makePad({ x, z, w = 7.4, d = 7.4, title, sub, price, color, onComplete, slot }) {
+function makePad({ x, z, w = 9.2, d = 9.2, title, sub, price, color, onComplete, slot }) {
   const g = new THREE.Group(); g.position.set(x, 0, z);
   const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.18, d),
     new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.32, roughness: 0.5 }));
@@ -786,7 +789,7 @@ function makePad({ x, z, w = 7.4, d = 7.4, title, sub, price, color, onComplete,
     new THREE.MeshBasicMaterial({ color: 0xffd24a, side: THREE.DoubleSide, depthWrite: false, transparent: true }));
   progRing.rotation.x = -Math.PI / 2; progRing.position.y = 0.23; g.add(progRing);
   const labelSprite = makeLabelSprite(title, sub, price);
-  labelSprite.position.y = 4.2; g.add(labelSprite);
+  labelSprite.position.y = 4.8; g.add(labelSprite);
   scene.add(g);
   const pad = { group: g, plate, progRing, labelSprite, x, z, w, d, title, sub, price, color, onComplete, slot, paid: 0, complete: false, depositCd: 0 };
   state.pads.push(pad);
@@ -828,28 +831,22 @@ function spawnReplacementPad(slot, def) { makePad({ ...def, slot, ...LOT_SLOTS[s
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
 // ---------- Building definitions ----------
-function barracksPad(slot, n = 1) {
-  const price = Math.round(28 * Math.pow(1.55, n - 1));
+// Barracks is ONE upgradeable building: each tier raises the troop cap and
+// quickens deployment, so the army grows on a controlled curve.
+function barracksPad(slot, tier = 0) {
+  const prices = [30, 55, 95, 160, 260];
+  const nextCap = barracksCapForTier(tier + 1);
   return {
-    title: 'BARRACKS', sub: `Garrison ${n}`, price, color: 0x6fae46, slot, ...LOT_SLOTS[slot],
+    title: 'BARRACKS', sub: `TIER ${ROMAN[tier + 1]} · ${nextCap} troops`, price: prices[tier] || 400,
+    color: 0x6fae46, slot, ...LOT_SLOTS[slot],
     onComplete(pad) {
-      spawnBarracks(pad.x, pad.z);
-      toast('BARRACKS BUILT', 'Soldiers now deploying');
-      sound.build();
-      spawnReplacementPad(slot, barracksPad(slot, n + 1));
-    },
-  };
-}
-function depotPad(slot, n = 1) {
-  const price = Math.round(24 * Math.pow(1.5, n - 1));
-  return {
-    title: 'SUPPLY DEPOT', sub: `+2.5 ◆/s  (#${n})`, price, color: 0x36b0e0, slot, ...LOT_SLOTS[slot],
-    onComplete(pad) {
-      state.incomePerSec += 2.5;
-      placeProp(pad.x, pad.z, 0x2f86b0);
-      toast('DEPOT ONLINE', `Income ${state.incomePerSec.toFixed(1)} ◆/s`);
+      state.barracksTier = tier + 1;
+      state.soldierCap = barracksCapForTier(state.barracksTier);
+      state.barracksInterval = barracksIntervalForTier(state.barracksTier);
+      if (tier === 0) spawnBarracks(pad.x, pad.z);
+      toast('BARRACKS ' + ROMAN[tier + 1], `Army cap ${state.soldierCap}`);
       sound.build(); refreshUI();
-      spawnReplacementPad(slot, depotPad(slot, n + 1));
+      if (tier + 1 < 5) spawnReplacementPad(slot, barracksPad(slot, tier + 1));
     },
   };
 }
@@ -893,49 +890,37 @@ function turretPad(slot, n = 1) {
     },
   };
 }
-function fortifyPad(slot, tier = 0) {
-  const prices = [30, 70, 150, 300];
+// REINFORCE merges the old Fortify + HQ Repair into one pad: it heals and
+// boosts both the wall line and the HQ core.
+function reinforcePad(slot, tier = 0) {
+  const prices = [30, 65, 130, 240];
   return {
-    title: 'FORTIFY LINE', sub: `+wall HP · full repair`, price: prices[tier] || 500,
+    title: 'REINFORCE', sub: `+wall & HQ HP · repair`, price: prices[tier] || 400,
     color: 0xb88a4a, slot, ...LOT_SLOTS[slot],
     onComplete(pad) {
-      state.wallMaxHp = (state.wallMaxHp || 44) + 26;
+      state.wallMaxHp = (state.wallMaxHp || 44) + 24;
       for (const w of state.walls) {
         if (w.dead) { w.dead = false; w.group.scale.y = 0.001; addFX((k)=> w.group.scale.y = easeOutBack(Math.min(1,k)), 0.4); }
         w.maxHp = state.wallMaxHp; w.hp = w.maxHp;
         w.post.material.color.setHex(0x8a5a36);
         setBar(w.bar, 1);
       }
-      toast('LINE FORTIFIED', `Wall HP ${state.wallMaxHp}`);
-      sound.build();
-      if (tier + 1 < 4) spawnReplacementPad(slot, fortifyPad(slot, tier + 1));
-    },
-  };
-}
-function coreRepairPad(slot, tier = 0) {
-  const prices = [26, 58, 120, 240];
-  return {
-    title: 'HQ REPAIR', sub: `+70 HP · +30 max`, price: prices[tier] || 400,
-    color: 0xff4060, slot, ...LOT_SLOTS[slot],
-    onComplete(pad) {
-      state.core.maxHp += 30;
-      state.core.hp = Math.min(state.core.maxHp, state.core.hp + 70);
-      toast('HQ REPAIRED', `${Math.round(state.core.hp)} / ${state.core.maxHp}`);
+      state.core.maxHp += 40;
+      state.core.hp = Math.min(state.core.maxHp, state.core.hp + 80);
+      toast('REINFORCED', `Wall ${state.wallMaxHp} · HQ ${Math.round(state.core.hp)}`);
       sound.build(); refreshUI();
-      if (tier + 1 < 4) spawnReplacementPad(slot, coreRepairPad(slot, tier + 1));
+      if (tier + 1 < 4) spawnReplacementPad(slot, reinforcePad(slot, tier + 1));
     },
   };
 }
 
 function seedInitialPads() {
-  makePad(barracksPad(0, 1));
-  makePad(depotPad(1, 1));
-  makePad(turretPad(2, 1));
-  makePad(medTentPad(3, 1));
-  makePad(armoryPad(4, 0));
-  makePad(fortifyPad(5, 0));
-  makePad(coreRepairPad(6, 0));
-  makePad(barracksPad(7, 1)); // second barracks plot so the army scales early
+  // five focused buildings on the arc: army, defense ×2, troop power, fortify
+  makePad(barracksPad(0, 0));
+  makePad(turretPad(1, 1));
+  makePad(medTentPad(2, 1));
+  makePad(armoryPad(3, 0));
+  makePad(reinforcePad(4, 0));
 }
 
 // Small decorative prop dropped where a non-unit building is placed.
@@ -966,12 +951,13 @@ function spawnBarracks(x, z) {
   cloth.position.set(1.75, 4.1, 1.3); g.add(cloth);
   g.scale.setScalar(0.001); scene.add(g);
   addFX((k) => g.scale.setScalar(easeOutBack(Math.min(1, k))), 0.5);
-  state.barracks.push({ group: g, x, z, spawnCd: 1.5, interval: 4.0 });
+  state.barracks.push({ group: g, x, z });
+  state.barracksSpawnCd = 1.2;   // first soldier out shortly after building
 }
 
 // ---------- Soldiers (friendly army) ----------
 function spawnSoldier(bx, bz) {
-  if (state.soldiers.length >= SOLDIER_CAP) return;
+  if (state.soldiers.length >= state.soldierCap) return;
   const g = new THREE.Group();
   const c = COLORS.soldier;
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.0, 0.45),
@@ -1347,15 +1333,16 @@ function update(dt, time) {
         pad.depositCd += 0.035;
       }
     } else pad.depositCd = 0;
-    pad.labelSprite.position.y = 4.2 + Math.sin(time * 2 + pad.x) * 0.18;
+    pad.labelSprite.position.y = 4.8 + Math.sin(time * 2 + pad.x) * 0.18;
   }
 
-  // ---- barracks deploy soldiers
-  for (const b of state.barracks) {
-    b.spawnCd -= dt;
-    if (b.spawnCd <= 0) {
-      spawnSoldier(b.x, b.z);
-      b.spawnCd = b.interval;
+  // ---- barracks deploy soldiers on a single global timer, gated by the cap
+  if (state.barracksTier > 0 && state.soldiers.length < state.soldierCap) {
+    state.barracksSpawnCd -= dt;
+    if (state.barracksSpawnCd <= 0) {
+      const b = state.barracks[0];
+      spawnSoldier(b ? b.x : 0, b ? b.z : 8);
+      state.barracksSpawnCd = state.barracksInterval;
     }
   }
 
