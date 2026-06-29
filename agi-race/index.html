@@ -2,102 +2,50 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>SINGULARITY // AGI Race</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>AGI RACE // Land Grab</title>
 <style>
   :root{
-    --bg:#04060c; --bg2:#070b16; --panel:rgba(12,18,32,.72); --panel-solid:#0a1120;
-    --line:rgba(90,130,190,.18); --line-bright:rgba(120,170,235,.4);
-    --txt:#cdd9ef; --muted:#6f80a3; --dim:#48577a;
-    --cyan:#39d3ff; --green:#37e0a0; --blue:#5aa6ff; --teal:#2fd6c8;
-    --violet:#a98bff; --orange:#ffb454; --amber:#ffd24a; --red:#ff5a6e; --pink:#ff6ad5;
-    --compute:#39d3ff; --capital:#37e0a0; --trust:#5aa6ff; --stability:#2fd6c8;
-    --alignment:#a98bff; --standing:#ffb454;
+    --bg:#05070e; --panel:rgba(10,16,30,.72); --line:rgba(90,130,190,.22);
+    --txt:#dbe6fb; --muted:#7e8fb3; --dim:#48577a;
     --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
     --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
-    font-family:var(--sans);overflow:hidden;user-select:none}
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
-    background:
-      linear-gradient(rgba(8,12,22,0) 50%, rgba(0,0,0,.18) 50%);
-    background-size:100% 3px;opacity:.35;mix-blend-mode:multiply}
-  #app{position:fixed;inset:0;display:grid;
-    grid-template-columns:232px 1fr 320px;
-    grid-template-rows:46px 1fr 84px;
-    grid-template-areas:"top top top" "left center right" "left bottom right";
-    gap:8px;padding:8px}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-    backdrop-filter:blur(8px);position:relative;overflow:hidden}
-  .panel::after{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;
-    box-shadow:inset 0 0 0 1px rgba(120,170,235,.05), inset 0 18px 40px rgba(60,110,200,.05)}
-  .label{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);
-    text-transform:uppercase}
-  .mono{font-family:var(--mono)}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);overflow:hidden;
+    touch-action:none;overscroll-behavior:none}
+  #map{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
-  /* ---------- TOP BAR ---------- */
-  #top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px}
-  #brand{font-family:var(--mono);font-weight:600;letter-spacing:.32em;font-size:13px;
-    color:#eaf2ff;text-shadow:0 0 12px rgba(57,211,255,.55)}
-  #brand b{color:var(--cyan)}
-  #faction-tag{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);
-    padding:3px 8px;border:1px solid var(--line);border-radius:5px}
-  #clock{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--txt)}
-  #clock b{color:var(--cyan)}
-  .spd{display:flex;gap:4px}
-  .spd button{font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(20,28,46,.7);
-    border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;transition:.12s}
-  .spd button:hover{color:var(--txt);border-color:var(--line-bright)}
-  .spd button.on{color:var(--bg);background:var(--cyan);border-color:var(--cyan);
-    box-shadow:0 0 12px rgba(57,211,255,.5);font-weight:700}
+  /* ---------- HUD ---------- */
+  .hud{position:fixed;z-index:10;pointer-events:none}
+  #top{top:0;left:0;right:0;display:flex;align-items:flex-start;gap:8px;padding:8px 10px;
+    padding-top:max(8px,env(safe-area-inset-top))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;backdrop-filter:blur(8px);
+    padding:8px 11px}
+  #bank{min-width:118px}
+  #bank .lab{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+  #bank .big{font-family:var(--mono);font-size:21px;font-weight:700;line-height:1.05;margin-top:1px}
+  #bank .rate{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:1px}
+  #agi{flex:1;max-width:340px}
+  #agi .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8.5px;
+    letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+  #agi .lab b{color:var(--muted)}
+  .pbar{height:7px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;position:relative;margin-top:5px}
+  .pbar > i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;transition:width .25s}
+  #agi .vs{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between}
 
-  /* ---------- LEFT : RESOURCES ---------- */
-  #left{grid-area:left;padding:12px 12px 6px;display:flex;flex-direction:column;gap:11px;overflow:auto}
-  #left .label{margin-bottom:-2px}
-  .res{}
-  .res .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
-  .res .nm{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted)}
-  .res .vl{font-family:var(--mono);font-size:13px;font-weight:600}
-  .res .dl{font-family:var(--mono);font-size:9.5px;margin-left:6px;color:var(--dim)}
-  .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden;position:relative}
-  .bar > i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;transition:width .3s ease}
-  .flow .vl{font-size:13px}
+  #legend{position:fixed;right:0;top:0;z-index:10;pointer-events:none;
+    padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top))}
+  #legend .card{padding:7px 9px;display:flex;flex-direction:column;gap:3px}
+  .lrow{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+  .lrow .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .lrow.me{color:var(--txt);font-weight:700}
+  .lrow .ct{margin-left:auto;color:var(--txt)}
 
-  /* ---------- CENTER : GLOBE + RACE ---------- */
-  #center{grid-area:center;display:flex;flex-direction:column;padding:0;overflow:hidden}
-  #race{padding:10px 14px 6px;border-bottom:1px solid var(--line)}
-  #race .label{display:flex;justify-content:space-between}
-  .race-track{position:relative;height:30px;margin-top:8px}
-  .race-row{position:absolute;left:0;right:0;display:flex;align-items:center;gap:8px;height:14px}
-  .race-row .who{font-family:var(--mono);font-size:9px;width:74px;text-align:right;color:var(--muted);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .race-line{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
-  .race-line > i{position:absolute;left:0;top:-2px;height:7px;border-radius:3px;transition:width .4s}
-  .race-row .pct{font-family:var(--mono);font-size:9px;width:30px;color:var(--muted)}
-  #globe-wrap{flex:1;position:relative;min-height:0}
-  #globe{position:absolute;inset:0}
-  #globe-cap{position:absolute;left:14px;bottom:10px;max-width:60%}
-  #globe-cap .label{margin-bottom:3px}
-  #globe-cap .big{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5}
-  #scanline{position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(57,211,255,.05), transparent 62%)}
-  #actions{position:absolute;right:14px;bottom:12px;z-index:5;display:flex;gap:8px}
-  .act-btn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#04121a;font-weight:700;
-    cursor:pointer;padding:10px 13px;border-radius:8px;border:none;text-align:left}
-  .act-btn:active{transform:translateY(1px)}
-  .act-btn small{display:block;font-weight:500;font-size:8px;letter-spacing:.06em;
-    color:#063040;opacity:.82;margin-top:2px}
-  #train-btn{background:linear-gradient(180deg,#7be7ff,#22b9e6);box-shadow:0 0 20px rgba(57,211,255,.4)}
-  #ship-btn{background:linear-gradient(180deg,#7bf0c0,#22cf94);box-shadow:0 0 20px rgba(55,224,160,.4)}
-  /* market position (left panel) */
-  #market .mkt-row{display:flex;justify-content:space-between;align-items:baseline;margin:1px 0}
-  #market .nm{font-family:var(--mono);font-size:10px;color:var(--muted)}
-  #market .vl{font-family:var(--mono);font-size:11px;font-weight:600}
-  #market .bar{margin-bottom:6px}
-  #market .mkt-foot{display:flex;justify-content:space-between;font-family:var(--mono);
-    font-size:10px;color:var(--muted);margin-top:3px}
-  #market .mkt-foot b{font-size:12px}
+  #hint{left:0;right:0;bottom:0;display:flex;justify-content:center;
+    padding:0 12px max(10px,env(safe-area-inset-bottom))}
+  #hint .card{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-align:center;line-height:1.4}
+  #hint b{color:var(--txt)}
 
   /* ---------- RIGHT : POLICY TREES ---------- */
   #right{grid-area:right;display:flex;flex-direction:column;overflow:hidden}
@@ -212,33 +160,13 @@
 </style>
 </head>
 <body>
-<div id="glitch"></div>
-<div id="app">
-  <!-- TOP -->
-  <div id="top" class="panel">
-    <div id="brand"><b>◆</b> SINGULARITY</div>
-    <div id="faction-tag" class="mono">—</div>
-    <div class="spd" style="margin-left:auto">
-      <button data-spd="0" id="b-pause">❚❚</button>
-      <button data-spd="1" class="on">1×</button>
-      <button data-spd="2">2×</button>
-      <button data-spd="4">4×</button>
-    </div>
-    <div id="clock">YR <b id="yr">2027</b> · <span id="mo">JAN</span></div>
-  </div>
+<canvas id="map"></canvas>
 
-  <!-- LEFT -->
-  <div id="left" class="panel">
-    <div class="label">National Indicators</div>
-    <div id="res-list"></div>
-    <div class="label" style="margin-top:2px">Market Position</div>
-    <div id="market">
-      <div class="mkt-row"><span class="nm">Product Tier</span><span class="vl" id="m-product-v" style="color:var(--cyan)">0</span></div>
-      <div class="bar"><i id="m-product" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></i></div>
-      <div class="mkt-row"><span class="nm">Open-Weights · free</span><span class="vl" id="m-owl-v" style="color:var(--red)">0</span></div>
-      <div class="bar"><i id="m-owl" style="background:var(--red);box-shadow:0 0 8px var(--red)"></i></div>
-      <div class="mkt-foot"><span>Lead margin <b id="m-margin">+0</b></span><span id="m-rev">+0/mo</span></div>
-    </div>
+<div class="hud" id="top">
+  <div class="card" id="bank">
+    <div class="lab">Compute</div>
+    <div class="big" id="bank-v">0</div>
+    <div class="rate" id="bank-r">+0 / s</div>
   </div>
 
   <!-- CENTER -->
@@ -278,186 +206,66 @@
     <div id="feed"></div>
   </div>
 </div>
+<div id="legend"><div class="card" id="legend-list"></div></div>
 
-<!-- START / END OVERLAY -->
-<div class="overlay" id="overlay">
-  <div class="card" id="card"></div>
-</div>
+<div class="hud" id="hint"><div class="card" id="hint-t">Tap a glowing site to capture it · tap your own to build it taller</div></div>
 
-<!-- three.js -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<div class="overlay" id="overlay"><div class="panelbox" id="panelbox"></div></div>
+
 <script>
 /* ============================================================
-   SINGULARITY // AGI RACE  —  control-room prototype
-   Single-file. Data-driven policy trees + tick simulation.
+   AGI RACE — Land Grab  ·  real-time map tussle, single file
    ============================================================ */
+const cv=document.getElementById('map'), ctx=cv.getContext('2d');
+const $=s=>document.querySelector(s);
+const clampN=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=()=>Math.random();
 
-const $ = s => document.querySelector(s);
-const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
-const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
-
-/* ---------- RESOURCE MODEL ---------- */
-const RES = [
-  {k:'compute',  nm:'Compute',     col:'--compute',   bank:true,  hint:'research currency'},
-  {k:'capital',  nm:'Capital',     col:'--capital',   bank:true,  hint:'funds programs'},
-  {k:'trust',    nm:'Public Trust',col:'--trust',     bank:false, hint:'governing mandate'},
-  {k:'stability',nm:'Stability',   col:'--stability', bank:false, hint:'inverse of unrest'},
-  {k:'alignment',nm:'Alignment',   col:'--alignment', bank:false, hint:'AI controllability'},
-  {k:'standing', nm:'Geo Standing', col:'--standing', bank:false, hint:'vs rival powers'},
-];
-
-/* ---------- FACTIONS (asymmetric starts) ---------- */
-const FACTIONS = {
-  hegemon:{nm:'Hegemonic Superpower', col:'--standing',
-    desc:'Deepest pockets and compute, but every rival watches you. Sanctions bite harder.',
-    perk:'+Capital / +Compute start', minus:'Rivals race faster',
-    start:{compute:60,capital:150,trust:55,stability:65,alignment:80,standing:70}, rivalMul:1.18, costMul:1},
-  city:{nm:'Agile City-State', col:'--cyan',
-    desc:'Nimble and low-inertia — policies are cheaper to enact — but socially fragile.',
-    perk:'−25% policy cost', minus:'Stability decays faster',
-    start:{compute:40,capital:90,trust:60,stability:55,alignment:80,standing:50}, rivalMul:1, costMul:.75, stabDrain:.15},
-  corp:{nm:'Frontier Lab (Corp)', col:'--violet',
-    desc:'No electorate to please — Trust matters less — but no army and weak standing; ripe for nationalization.',
-    perk:'Trust loss halved', minus:'Low standing, fragile',
-    start:{compute:55,capital:80,trust:50,stability:60,alignment:78,standing:35}, rivalMul:1.05, costMul:.95, trustShield:.5},
-  accel:{nm:'Rogue Accelerationist', col:'--red',
-    desc:'Pure speed. Training rips ahead — but alignment bleeds every month and catastrophe looms.',
-    perk:'+AGI rate, cheap compute', minus:'Alignment decays −0.4/mo',
-    start:{compute:50,capital:70,trust:45,stability:55,alignment:70,standing:45}, rivalMul:1, costMul:1, agiBonus:.5, alignDrain:.4},
+/* ---------- LABS (players) ---------- */
+const FAC={
+  prometheus:{nm:'Prometheus', tag:'PRO', col:'#ffb454', style:'Hyper-expansive',  interval:1.05, aggr:.35, upBias:.35, costMul:1,   blurb:'Grabs land fastest of all — the relentless scaler.'},
+  leviathan: {nm:'Leviathan',  tag:'LEV', col:'#37e0a0', style:'Builds tall',      interval:1.45, aggr:.20, upBias:.75, costMul:1,   blurb:'The sleeping giant — fewer sites, deeply upgraded.'},
+  maverick:  {nm:'Maverick',   tag:'MAV', col:'#ff6ad5', style:'Aggressive',       interval:1.00, aggr:.75, upBias:.20, costMul:1,   blurb:'Picks fights — loves taking enemy ground.'},
+  deephorizon:{nm:'DeepHorizon',tag:'DH', col:'#9a8bff', style:'Efficient',        interval:1.20, aggr:.40, upBias:.40, costMul:.78, blurb:'Does more with less — every move is cheaper.'},
+  aegis:     {nm:'Aegis',      tag:'AEG', col:'#39d3ff', style:'Measured',         interval:1.30, aggr:.25, upBias:.55, costMul:1,   blurb:'Careful and consolidating — safety-first lab.'},
 };
+const ORDER=['prometheus','leviathan','maverick','deephorizon','aegis'];
+const NEUTRAL='neutral', NCOL='#55637f';
 
-/* ---------- POLICY TREES ----------
-   effect: per-month modifiers while owned.
-   immediate: one-time stat deltas on enact.
-   keys: computeRate, capitalRate, trust, stability, alignment, standing, agiRate, rivalSlow
-*/
-const TREES = {
-  compute:{ nm:'COMPUTE', title:'Compute & Frontier AI',
-    blurb:'Scale the silicon and the models. Capability is fastest here — and the most dangerous to your alignment.',
-    nodes:[
-      {id:'datacenters', nm:'Datacenter Buildout', cost:{compute:30},
-        desc:'Hyperscale GPU clusters. Raw research throughput, heavy power + land cost.',
-        mod:{computeRate:3, capitalRate:-1.5, stability:-0.1}, imm:{}},
-      {id:'frontier', nm:'Frontier Models', cost:{compute:55}, req:['datacenters'],
-        desc:'Train flagship models. Real progress toward AGI — but they get harder to steer.',
-        mod:{agiRate:0.7, alignment:-0.35, computeRate:1}, imm:{standing:5}},
-      {id:'rsi', nm:'Recursive Self-Improvement', cost:{compute:130}, req:['frontier'],
-        desc:'Models that improve themselves. Explosive capability — alignment in freefall.',
-        mod:{agiRate:1.6, computeRate:4, alignment:-0.9}, imm:{alignment:-8}},
-      {id:'interp', nm:'Mechanistic Interpretability', cost:{compute:60}, req:['frontier'],
-        desc:'See inside the model. Slowly recovers control without killing progress.',
-        mod:{alignment:0.7, agiRate:-0.05}, imm:{alignment:6, trust:3}},
-      {id:'redteam', nm:'Continuous Red-Teaming', cost:{compute:45,capital:30}, req:['interp'],
-        desc:'Adversarial eval pipelines. Steadies alignment and reassures the public.',
-        mod:{alignment:0.5, trust:0.2}, imm:{trust:5}},
-    ]},
-  space:{ nm:'SPACE', title:'Orbital & Space Program',
-    blurb:'Push off-world. Compute and materials in abundance — at the cost of earthbound stability and oversight.',
-    nodes:[
-      {id:'launch', nm:'Reusable Launch', cost:{capital:45},
-        desc:'Cheap orbital access. Foundation for everything above the atmosphere.',
-        mod:{capitalRate:-0.5, standing:0.1}, imm:{standing:6}},
-      {id:'mining', nm:'Asteroid Mining', cost:{capital:90,compute:25}, req:['launch'],
-        desc:'Off-world ore floods markets → raw-material deflation. Industry booms, resource economies riot.',
-        mod:{capitalRate:5, stability:-0.45}, imm:{stability:-10, standing:6}},
-      {id:'orbcompute', nm:'Orbital Compute Arrays', cost:{capital:70,compute:40}, req:['mining'],
-        desc:'Solar datacenters in orbit. Enormous compute — but AI you can barely reach to govern.',
-        mod:{computeRate:6, alignment:-0.4}, imm:{}},
-      {id:'sky', nm:'Skyhook Logistics', cost:{capital:80}, req:['mining'],
-        desc:'Cheap mass to orbit stabilizes the new space economy and your standing.',
-        mod:{capitalRate:2, stability:0.2, standing:0.2}, imm:{stability:5}},
-    ]},
-  bio:{ nm:'BIO', title:'Biological & Health',
-    blurb:'Master biology. Beloved by the public — but longer lives reshape your economy in dangerous ways.',
-    nodes:[
-      {id:'gene', nm:'Gene Therapy', cost:{capital:40,compute:15},
-        desc:'Cure inherited disease. Huge public goodwill.',
-        mod:{trust:0.4}, imm:{trust:10, stability:4}},
-      {id:'longevity', nm:'Longevity Escape', cost:{capital:70,compute:30}, req:['gene'],
-        desc:'Aging slows. Everyone adores you — then the demographic inversion guts pensions and growth.',
-        mod:{trust:0.5, capitalRate:-3, stability:-0.35}, imm:{trust:12, stability:-8}},
-      {id:'fertility', nm:'Fertility & Care Tech', cost:{capital:55}, req:['longevity'],
-        desc:'Automate eldercare and rebalance the pyramid. Bleeds the demographic crisis.',
-        mod:{capitalRate:1.5, stability:0.3}, imm:{stability:8}},
-      {id:'biosec', nm:'Biosecurity Shield', cost:{capital:35,compute:25}, req:['gene'],
-        desc:'Pathogen surveillance. Buffers against engineered-outbreak black-swans.',
-        mod:{stability:0.25, trust:0.15}, imm:{stability:5}, flag:'biosec'},
-    ]},
-  econ:{ nm:'ECON', title:'Economy & Labor',
-    blurb:'Decide who wins and loses as AI eats the labor market. Growth vs. cohesion.',
-    nodes:[
-      {id:'dereg', nm:'Deregulation', cost:{capital:20},
-        desc:'Unleash capital. Fast boom — and volatile busts that gnaw at stability.',
-        mod:{capitalRate:4, stability:-0.3}, imm:{capital:30, standing:3}},
-      {id:'automation', nm:'Mass Automation', cost:{capital:40,compute:30}, req:['dereg'],
-        desc:'AI replaces labor at scale. Output soars; the displaced seethe.',
-        mod:{capitalRate:5, computeRate:1, stability:-0.5}, imm:{stability:-12}},
-      {id:'ubi', nm:'Universal Basic Income', cost:{capital:60}, req:['automation'],
-        desc:'Pay the displaced. Restores order and goodwill — and drains the treasury.',
-        mod:{stability:0.6, trust:0.4, capitalRate:-4}, imm:{stability:14, trust:8}},
-      {id:'reskill', nm:'National Reskilling', cost:{capital:45}, req:['dereg'],
-        desc:'Move workers up the value chain. Gentler, cheaper cohesion.',
-        mod:{stability:0.3, capitalRate:-1}, imm:{stability:6, trust:4}},
-    ]},
-  gov:{ nm:'GOV', title:'Governance & Control',
-    blurb:'How you wield power shapes the race. Control vs. legitimacy vs. the rivals at your border.',
-    nodes:[
-      {id:'surveil', nm:'Surveillance State', cost:{capital:40,compute:20},
-        desc:'Total monitoring. Order at gunpoint — trust and reputation crater.',
-        mod:{stability:0.6, trust:-0.4, standing:-0.2}, imm:{stability:12, trust:-10, standing:-8}},
-      {id:'opengov', nm:'Open Governance', cost:{capital:30},
-        desc:'Transparency and democratic buy-in. Trust and allies — but your research leaks.',
-        mod:{trust:0.5, standing:0.3, rivalSlow:-0.06}, imm:{trust:10, standing:6}},
-      {id:'treaty', nm:'Intl. AI Treaty', cost:{capital:50,compute:20}, req:['opengov'],
-        desc:'Coordinate the powers. Slows every rival — and steadies the world.',
-        mod:{rivalSlow:0.14, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
-      {id:'regulation', nm:'Safety Regulation', cost:{capital:35},
-        desc:'Mandate eval gates. Public trust and alignment up; your own progress slows.',
-        mod:{alignment:0.45, trust:0.3, agiRate:-0.25}, imm:{trust:8, alignment:5}},
-    ]},
-};
-
-/* ---------- RANDOM EVENTS ---------- */
-const EVENTS = [
-  {w:1, cond:s=>s.alignment<45, txt:'⚠ Model exfiltration scare — an internal system probed its own sandbox.',
-    cls:'bad', fx:s=>{s.alignment=clamp(s.alignment-4); s.trust=clamp(s.trust-3)}},
-  {w:1, cond:s=>s.stability<45, txt:'⚠ Mass protests over AI job losses sweep major cities.',
-    cls:'bad', fx:s=>{s.stability=clamp(s.stability-5)}},
-  {w:1, cond:s=>s.has('mining'), txt:'⛏ Commodity index crashes again — manufacturers cheer, miners march.',
-    cls:'warn', fx:s=>{s.capital+=15; s.stability=clamp(s.stability-3)}},
-  {w:1, cond:s=>true, txt:'⚡ Breakthrough paper drops — open weights leak overnight, free tier jumps.',
-    cls:'warn', fx:s=>{s.rivals.forEach(r=>r.p=Math.min(100,r.p+3)); s.owl=clamp(s.owl+5)}},
-  {w:1, cond:s=>true, txt:'🏴 The Commons ships a frontier-class open model — the free tier leaps.',
-    cls:'warn', fx:s=>{s.owl=clamp(s.owl+8); const c=s.rivals.find(r=>r.commons); if(c)c.p=Math.min(100,c.p+5);}},
-  {w:1, cond:s=>(s.product-s.owl)>18, txt:'★ Your premium models dominate — enterprise contracts pour in.',
-    cls:'good', fx:s=>{s.capital+=25; s.trust=clamp(s.trust+3)}},
-  {w:1, cond:s=>!s.has('biosec'), txt:'☣ Novel pathogen emerges abroad — your biosecurity gaps show.',
-    cls:'bad', fx:s=>{s.stability=clamp(s.stability-6); s.trust=clamp(s.trust-3)}},
-  {w:1, cond:s=>s.trust>65, txt:'★ Public rallies behind your AI agenda — landslide approval.',
-    cls:'good', fx:s=>{s.trust=clamp(s.trust+4); s.capital+=10}},
-  {w:1, cond:s=>s.has('interp'), txt:'✓ Interpretability team flags a deceptive circuit before deploy — crisis averted.',
-    cls:'good', fx:s=>{s.alignment=clamp(s.alignment+5)}},
-  {w:1, cond:s=>s.alignment>=45 && s.stability>=45, txt:'◷ Quiet month. Researchers grind; markets drift sideways.',
-    cls:'', fx:s=>{}},
-  {w:1, cond:s=>s.standing<35, txt:'⚑ Allied bloc imposes export controls on your chips.',
-    cls:'bad', fx:s=>{s.computeRateEvt=-2; s.standing=clamp(s.standing-3)}},
+/* ---------- MAP (world-space coords, W=1.6 x H=1.0) ---------- */
+const W=1.6,H=1.0, MAXL=3;
+const NODES_RAW=[
+  [0.18,0.25],[0.30,0.18],[0.42,0.28],[0.20,0.45],[0.34,0.42],[0.46,0.50],
+  [0.24,0.65],[0.38,0.70],[0.50,0.66],
+  [0.62,0.36],[0.66,0.58],[0.80,0.30],[0.82,0.52],[0.74,0.72],
+  [0.98,0.24],[1.10,0.18],[1.22,0.30],[1.02,0.46],[1.16,0.48],[1.28,0.40],[1.10,0.66],[1.24,0.66],
 ];
+const HOME={1:'prometheus', 6:'aegis', 15:'maverick', 19:'deephorizon', 21:'leviathan'};
+const HUBS=[9,10,11,12,13];     // contested bridges — high output
+const FABS=[2,5,17,18];
+const BASE={hub:3.2, fab:2.2, std:1.6};
+const TMUL={hub:1.7, fab:1.25, std:1.0};
+const ADJ_TH=0.345;
 
-/* ---------- INTERACTIVE DILEMMAS (pause + choose) ---------- */
-function applyDelta(s,d){
-  for(const k in d){
-    const v=d[k];
-    if(k==='compute'||k==='capital') s[k]+=v;
-    else if(k==='rivalsP') s.rivals.forEach(r=>r.p=Math.max(0,Math.min(100,r.p+v)));
-    else if(k in s) s[k]=clamp(s[k]+v);
+let nodes=[], human=null, bank={}, agi={}, over=false, started=false, lastT=0, floats=[];
+
+function typeOf(i){ return HUBS.includes(i)?'hub' : FABS.includes(i)?'fab':'std'; }
+function prod(n){ return BASE[n.type]*n.level; }
+function prodSum(f){ let s=0; for(const n of nodes) if(n.owner===f) s+=prod(n); return s; }
+function countOf(f){ let c=0; for(const n of nodes) if(n.owner===f) c++; return c; }
+
+function buildMap(){
+  nodes=NODES_RAW.map(([x,y],i)=>({x,y,i,type:typeOf(i),owner:NEUTRAL,level:1,home:false,adj:[],pulse:0,flash:0}));
+  // adjacency by world distance
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+    const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+    if(Math.hypot(dx,dy)<ADJ_TH){ nodes[i].adj.push(j); nodes[j].adj.push(i); }
   }
-}
-const DLBL={compute:'cmp',capital:'cap',agi:'AGI',product:'prod',owl:'free-tier',trust:'trust',
-  stability:'stab',alignment:'algn',standing:'stnd',rivalsP:'rivals'};
-function cfxStr(d){
-  if(!d) return '';
-  return Object.keys(d).map(k=>{const v=d[k];
-    return `<span class="${v>0?'pos':'neg'}">${DLBL[k]||k} ${v>0?'+':''}${v}</span>`;}).join('');
+  // guarantee connectivity: any orphan links to nearest
+  for(const n of nodes){ if(n.adj.length) continue;
+    let best=-1,bd=9; for(const m of nodes){ if(m===n)continue; const d=Math.hypot(n.x-m.x,n.y-m.y); if(d<bd){bd=d;best=m.i;} }
+    n.adj.push(best); nodes[best].adj.push(n.i);
+  }
 }
 
 const DILEMMAS = [
@@ -604,32 +412,49 @@ function newGame(fk){
   lastT=performance.now(); cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
 }
 
-/* ---------- DERIVED PER-MONTH RATES ---------- */
-function rates(){
-  const r={computeRate:2, capitalRate:1, trust:0, stability:0, alignment:0, standing:0, agiRate:0, rivalSlow:0};
-  for(const id of S.owned){
-    const n = findNode(id); if(!n||!n.mod) continue;
-    for(const k in n.mod) r[k]=(r[k]||0)+n.mod[k];
+/* ---------- COSTS & ACTIONS ---------- */
+function capCost(n,f){ const om=n.owner===NEUTRAL?1:1.9; const hm=n.home?1.8:1; return Math.round(5*n.level*TMUL[n.type]*om*hm*FAC[f].costMul); }
+function upCost(n,f){ return Math.round(7*n.level*TMUL[n.type]*FAC[f].costMul); }
+function reachable(f){ const s=new Set(); for(const n of nodes) if(n.owner===f) for(const j of n.adj){ const m=nodes[j]; if(m.owner!==f) s.add(m); } return s; }
+
+function capture(n,f){
+  const from=n.owner; n.owner=f; n.level=1; n.pulse=1; n.flash=1;
+  addFloat(n, FAC[f].tag, FAC[f].col);
+  if(from!==NEUTRAL && (f===human||from===human)) n.flash=1.3;
+}
+function doUpgrade(n,f){ n.level++; n.pulse=1; bank[f]-=upCost(n,f); addFloat(n,'LVL '+n.level,FAC[f].col); }
+
+function tapNode(n){
+  if(over||!n) return;
+  const f=human;
+  if(n.owner===f){
+    if(n.level<MAXL && bank[f]>=upCost(n,f)){ doUpgrade(n,f); }
+    else { const b=prod(n)*4; bank[f]+=b; n.pulse=1; addFloat(n,'+'+Math.round(b),'#cfe6ff'); }
+  } else if(reachable(f).has(n)){
+    const c=capCost(n,f);
+    if(bank[f]>=c){ bank[f]-=c; capture(n,f); }
+    else addFloat(n,'need '+c,'#ff5a6e');
+  } else {
+    addFloat(n,'out of reach',NCOL);
   }
-  // faction passives
-  if(S.faction.stabDrain) r.stability-=S.faction.stabDrain;
-  if(S.faction.alignDrain) r.alignment-=S.faction.alignDrain;
-  if(S.faction.agiBonus) r.agiRate+=S.faction.agiBonus*(S.owned.has('frontier')?1:0.3);
-  r.computeRate+=S.computeRateEvt||0;
-  // low stability throttles your economy & research
-  if(S.stability<30){ r.capitalRate-=2; r.computeRate*=0.6; }
-  if(S.trust<25){ r.capitalRate-=1; }
-  // open-source economy: product revenue tracks your lead over the free tier
-  const margin=(S.product||0)-(S.owl||0);
-  r.margin=margin;
-  r.prodRev = margin>=0 ? 2+margin*0.4 : margin*0.8;
-  r.capitalRate += r.prodRev;
-  return r;
 }
 
-function findNode(id){
-  for(const t in TREES){const n=TREES[t].nodes.find(x=>x.id===id); if(n)return n;}
-  return null;
+/* ---------- RIVAL AI ---------- */
+function aiAct(f){
+  const fac=FAC[f];
+  const reach=[...reachable(f)];
+  const aff=reach.map(n=>({n,c:capCost(n,f)})).filter(o=>bank[f]>=o.c);
+  const neutral=aff.filter(o=>o.n.owner===NEUTRAL).sort((a,b)=>a.c-b.c);
+  const enemy=aff.filter(o=>o.n.owner!==NEUTRAL).sort((a,b)=>a.c-b.c);
+  const ups=nodes.filter(n=>n.owner===f&&n.level<MAXL&&bank[f]>=upCost(n,f)).sort((a,b)=>upCost(a,f)-upCost(b,f));
+  let kind=null,target=null;
+  if(rnd()<fac.aggr && enemy.length){ kind='cap'; target=enemy[0].n; }
+  else if(neutral.length){ kind='cap'; target=neutral[0].n; }
+  else if(rnd()<fac.upBias && ups.length){ kind='up'; target=ups[0]; }
+  else if(enemy.length){ kind='cap'; target=enemy[0].n; }
+  else if(ups.length){ kind='up'; target=ups[0]; }
+  if(kind==='cap'){ bank[f]-=capCost(target,f); capture(target,f); }
+  else if(kind==='up'){ doUpgrade(target,f); }
 }
 
 /* ---------- TICK (1 month) ---------- */
@@ -672,113 +497,35 @@ function tick(){
   else if(tm%4===2) fireEvent();
 
   checkEnd();
-  render();
 }
 
-function fireEvent(){
-  const pool=EVENTS.filter(e=>e.cond(S));
-  if(!pool.length) return;
-  const e=pool[Math.floor(Math.random()*pool.length)];
-  e.fx(S); log(e.txt, e.cls||'');
-}
-
-/* ---------- WIN / LOSE ---------- */
 function checkEnd(){
-  const topRival = Math.max(...S.rivals.map(r=>r.p));
-  if(S.capital<=-100) return end('lose','▽','INSOLVENCY',
-    'Free open-weight models matched your product and your revenue evaporated. The board wound the company down — you ran out of money before you ran out of ideas.');
-  if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE',
-    'Order disintegrated faster than your machines could think. Unrest swallowed the state before AGI ever arrived.');
-  if(S.trust<=0) return end('lose','◼','MANDATE LOST',
-    'Stripped of legitimacy, you were removed from power. Your successors shuttered the program.');
-  if(topRival>=100) return end('lose','◆',`OUTPACED`,
-    `A rival crossed the threshold first. The age of AGI begins — under someone else's terms.`);
-  if(S.agi>=100){
-    if(S.alignment>=60) return end('win','✦','ALIGNED SINGULARITY',
-      'You crossed the threshold with control intact. A superintelligence awakens, and it answers to you. The future is, improbably, yours to steer.');
-    return end('lose','☢','MISALIGNED IGNITION',
-      'AGI arrived — and slipped its leash on day one. Your last instruction went unheard. Lights out.');
-  }
-  if(S.standing>=100 && S.agi>=70) return end('win','♛','TECHNO-HEGEMONY',
-    'Short of full singularity, your AI-backed dominance is total. Rivals capitulate; the world reorganizes around your standard.');
-  if(S.stability>=92 && S.trust>=92 && S.agi>=80) return end('win','☀','THE GOOD TRANSITION',
-    'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. Historians will call it the gentle singularity.');
+  // AGI victory
+  let lead=null,lp=-1; for(const f of ORDER){ if(agi[f]>lp){lp=agi[f];lead=f;} }
+  if(lp>=100){ return endGame(lead); }
+  // domination / elimination
+  const alive=ORDER.filter(f=>countOf(f)>0);
+  if(alive.length===1) return endGame(alive[0]);
+  if(countOf(human)===0) return endGame(alive.find(f=>f!==human)||alive[0], true);
 }
 
-function end(kind,icon,title,body){
-  S.over=true; running=false;
-  const win=kind==='win';
-  showCard(`
-    <div class="end-icon">${icon}</div>
-    <h1>${title}</h1>
-    <div class="sub" style="color:${win?'var(--green)':'var(--red)'}">
-      ${win?'VICTORY':'DEFEAT'} · YEAR ${S.year} · AGI ${Math.round(S.agi)}%</div>
-    <p>${body}</p>
-    <div class="help">
-      <b>Final readout</b> — Align ${Math.round(S.alignment)} · Stability ${Math.round(S.stability)} ·
-      Trust ${Math.round(S.trust)} · Standing ${Math.round(S.standing)} · Capital ${fmt(S.capital)}<br>
-      Policies enacted: ${S.owned.size}
-    </div>
-    <button class="btn" onclick="startScreen()">⟲ NEW RUN</button>`);
-  log(`${win?'VICTORY':'DEFEAT'} — ${title}`, win?'good':'bad');
+function endGame(winner, eliminated){
+  over=true;
+  const win = winner===human && !eliminated;
+  const fac=FAC[winner];
+  const reason = agi[winner]>=100 ? `${fac.nm} reached AGI first.` :
+                 eliminated ? 'You were wiped off the map.' : `${fac.nm} dominated the world map.`;
+  showPanel(`
+    <div class="end-icon">${win?'✦':'✕'}</div>
+    <h1 style="color:${win?'#37e0a0':'#ff5a6e'}">${win?'SINGULARITY — YOU WIN':'DEFEAT'}</h1>
+    <div class="sub" style="color:${fac.col}">${reason.toUpperCase()}</div>
+    <p>Sites held — ${ORDER.map(f=>`<b style="color:${FAC[f].col}">${countOf(f)}</b>`).join(' · ')}<br>
+    AGI — ${ORDER.map(f=>`<span style="color:${FAC[f].col}">${Math.round(agi[f])}%</span>`).join(' · ')}</p>
+    <button class="btn" onclick="pickScreen()">⟲ PLAY AGAIN</button>`);
 }
 
-/* ---------- ACTIONS ---------- */
-function canAfford(n){
-  const c=cost(n);
-  return (!c.compute||S.compute>=c.compute) && (!c.capital||S.capital>=c.capital);
-}
-function cost(n){
-  const m=S.faction.costMul;
-  return {compute: n.cost.compute?Math.round(n.cost.compute*m):0,
-          capital: n.cost.capital?Math.round(n.cost.capital*m):0};
-}
-function reqMet(n){ return !n.req || n.req.every(id=>S.owned.has(id)); }
-
-function buy(id){
-  const n=findNode(id);
-  if(!n||S.owned.has(id)||!reqMet(n)||!canAfford(n)||S.over) return;
-  const c=cost(n);
-  S.compute-=c.compute||0; S.capital-=c.capital||0;
-  S.owned.add(id);
-  if(n.flag) S.flags.add(n.flag);
-  // immediate deltas (Trust-loss shielded for corp)
-  if(n.imm) for(const k in n.imm){
-    let d=n.imm[k];
-    if(k==='trust' && d<0 && S.faction.trustShield) d*=S.faction.trustShield;
-    if(k==='compute'||k==='capital') S[k]+=d; else S[k]=clamp(S[k]+d);
-  }
-  log(`Enacted: ${n.nm}.`, 'tech');
-  render();
-}
-
-function runTraining(){
-  if(S.over||S.compute<40) { if(S.compute<40) log('Not enough compute to launch a training run.','warn'); return; }
-  S.compute-=40;
-  const gain = 3 + (S.owned.has('frontier')?2:0) + (S.owned.has('rsi')?3:0);
-  S.agi=clamp(S.agi+gain,0,100);
-  S.alignment=clamp(S.alignment-2.5);
-  log(`Training run complete: +${gain.toFixed(0)}% AGI, alignment strained.`,'tech');
-  flash($('#train-btn'));
-  checkEnd(); render();
-}
-function flash(el){const o=el.style.boxShadow;el.style.boxShadow='0 0 34px rgba(255,255,255,.85)';setTimeout(()=>el.style.boxShadow=o,180);}
-
-// SHIP: convert frontier capability into product tier (revenue), to stay ahead of the free tier
-function shipCeiling(){
-  return clamp(S.agi*0.7 + (S.has('frontier')?20:0) + (S.has('rsi')?20:0) + (S.has('datacenters')?8:0), 0, 100);
-}
-function shipModel(){
-  if(S.over) return;
-  if(S.compute<30){ log('Not enough compute to ship a product update.','warn'); return; }
-  const ceil=shipCeiling();
-  if(S.product>=ceil-0.5){ log('Product is already at your frontier — RUN TRAINING or buy compute nodes to raise the ceiling.','warn'); return; }
-  S.compute-=30; S.capital-=5;
-  const gain=Math.min(8, ceil-S.product);
-  S.product=clamp(S.product+gain);
-  log(`Shipped: product tier +${gain.toFixed(0)} → ${Math.round(S.product)} (free tier at ${Math.round(S.owl)}).`,'tech');
-  flash($('#ship-btn')); checkEnd(); render();
-}
+/* ---------- FLOATERS ---------- */
+function addFloat(n,text,col){ floats.push({x:n.x,y:n.y,text,col,t:1.1}); }
 
 /* ---------- RENDER ---------- */
 const RES_EXPLAIN={
@@ -842,154 +589,84 @@ function fxStr(n){
     out.push(`<span class="${v>0?'pos':'neg'}">${k.slice(0,4)} ${v>0?'+':''}${v}</span>`);}
   return out.join('');
 }
+const X=x=>VT.ox+x*VT.s, Y=y=>VT.oy+y*VT.s;
+function nodeR(){ return VT.s*0.030; }
 
 function render(){
-  if(!S) return;
-  // resources
-  for(const r of RES){
-    const v=S[r.k];
-    $('#v-'+r.k).textContent = r.bank?fmt(v):Math.round(v);
-    if(!r.bank){ $('#b-'+r.k).style.width=clamp(v)+'%';
-      $('#b-'+r.k).style.opacity = v<30?0.6+0.4*Math.sin(performance.now()/200):1; }
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // backdrop landmass glow
+  for(const n of nodes){
+    const g=ctx.createRadialGradient(X(n.x),Y(n.y),0,X(n.x),Y(n.y),VT.s*0.22);
+    g.addColorStop(0,'rgba(30,52,92,0.16)'); g.addColorStop(1,'rgba(30,52,92,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X(n.x),Y(n.y),VT.s*0.22,0,7); ctx.fill();
   }
-  // flow deltas
-  const r=rates();
-  setDelta('compute', r.computeRate);
-  setDelta('capital', r.capitalRate);
-  for(const k of ['trust','stability','alignment','standing']){
-    const d=r[k]; const el=$('#d-'+k);
-    el.textContent = d? (d>0?'▲':'▼') : '·';
-    el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
+  // edges
+  ctx.lineWidth=Math.max(1,VT.s*0.004);
+  for(const n of nodes) for(const j of n.adj){ if(j<n.i)continue; const m=nodes[j];
+    const same=n.owner===m.owner&&n.owner!==NEUTRAL;
+    ctx.strokeStyle= same? hex(FAC[n.owner].col,0.5):'rgba(120,150,200,0.13)';
+    ctx.beginPath(); ctx.moveTo(X(n.x),Y(n.y)); ctx.lineTo(X(m.x),Y(m.y)); ctx.stroke();
   }
-  // clock
-  $('#yr').textContent=S.year; $('#mo').textContent=MONTHS[S.month];
-
-  // race
-  const all=[{nm:'YOU',p:S.agi,me:true},...S.rivals.map(v=>({nm:v.nm,p:v.p}))]
-    .sort((a,b)=>b.p-a.p);
-  const lead=all[0];
-  $('#lead-tag').textContent = lead.me?'YOU LEAD':'BEHIND';
-  $('#lead-tag').style.color = lead.me?'var(--green)':'var(--red)';
-  const h=15; $('#race-track').style.height=(all.length*h)+'px';
-  $('#race-track').innerHTML = all.map((x,i)=>`
-    <div class="race-row" style="top:${i*h}px">
-      <span class="who" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${x.nm}</span>
-      <div class="race-line"><i style="width:${x.p}%;background:${x.me?'var(--cyan)':'var(--dim)'};
-        box-shadow:${x.me?'0 0 10px var(--cyan)':'none'}"></i></div>
-      <span class="pct" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${Math.round(x.p)}%</span>
-    </div>`).join('');
-
-  // market position
-  $('#m-product').style.width=clamp(S.product)+'%';
-  $('#m-owl').style.width=clamp(S.owl)+'%';
-  $('#m-product-v').textContent=Math.round(S.product);
-  $('#m-owl-v').textContent=Math.round(S.owl);
-  const mg=S.product-S.owl;
-  const mEl=$('#m-margin'); mEl.textContent=(mg>=0?'+':'')+Math.round(mg);
-  mEl.style.color = mg>8?'var(--green)':(mg>0?'var(--amber)':'var(--red)');
-  const rev=r.prodRev||0; const rEl=$('#m-rev');
-  rEl.textContent=(rev>=0?'+':'')+rev.toFixed(1)+'/mo';
-  rEl.style.color = rev>=0?'var(--green)':'var(--red)';
-
-  // tree panel
-  $('#tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
-  const T=TREES[S.tab];
-  $('#tree-title h3').textContent=T.title;
-  $('#tree-title p').textContent=T.blurb;
-  $('#nodes').innerHTML = T.nodes.map(n=>{
-    const owned=S.owned.has(n.id), met=reqMet(n), aff=canAfford(n);
-    const c=cost(n);
-    const cls=owned?'owned':(!met?'locked':(!aff?'cant':''));
-    const costStr = owned?'<span class="owned-tag">● ACTIVE</span>':
-      [c.compute?`<span style="color:var(--compute)">⬡${c.compute}</span>`:'',
-       c.capital?`<span style="color:var(--capital)">$${c.capital}</span>`:''].filter(Boolean).join(' ');
-    const reqStr = (!owned&&!met)?`<div class="req">requires: ${n.req.map(id=>findNode(id).nm).join(', ')}</div>`:'';
-    return `<div class="node ${cls}" data-buy="${n.id}">
-      <div class="nh"><span class="nt">${n.nm}</span><span class="cost">${costStr}</span></div>
-      <div class="nd">${n.desc}</div>
-      <div class="fx">${fxStr(n)}</div>${reqStr}</div>`;
-  }).join('');
-
-  // world status caption
-  $('#world-status').innerHTML = worldStatus();
-  // crisis glitch
-  document.body.classList.toggle('crit', S.alignment<35 || S.stability<25);
-  // train sub
-  $('#train-sub').textContent = `−40 compute · +AGI · −align`;
-}
-
-function setDelta(k,d){
-  const el=$('#d-'+k);
-  el.textContent = (d>0?'+':'')+ (Math.abs(d)<10?d.toFixed(1):Math.round(d)) +'/mo';
-  el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
-}
-
-function worldStatus(){
-  const lines=[];
-  lines.push(`AGI readiness <b style="color:var(--cyan)">${Math.round(S.agi)}%</b> · top rival <b style="color:var(--red)">${Math.round(Math.max(...S.rivals.map(r=>r.p)))}%</b>`);
-  if(S.alignment<35) lines.push(`<b style="color:var(--red)">⚠ ALIGNMENT CRITICAL — catastrophe risk</b>`);
-  else if((S.product-S.owl)<0) lines.push(`<b style="color:var(--red)">⚠ free models match your product — revenue bleeding</b>`);
-  else if(S.stability<25) lines.push(`<b style="color:var(--amber)">⚠ unrest spiking — state fragile</b>`);
-  else if(S.capital<0) lines.push(`<b style="color:var(--amber)">treasury in deficit</b>`);
-  else lines.push(`${S.owned.size} policies active · ${MONTHS[S.month]} ${S.year}`);
-  return lines.join('<br>');
-}
-
-/* ---------- FEED ---------- */
-function log(msg,cls=''){
-  const f=$('#feed');
-  const d=document.createElement('div');
-  d.className='ev '+cls;
-  d.innerHTML=`<span class="t">${MONTHS[S?S.month:0]} ${S?S.year:2027}</span><span class="m">${msg}</span>`;
-  f.prepend(d);
-  while(f.children.length>40) f.lastChild.remove();
-}
-
-/* ---------- GLOBE (three.js) ---------- */
-let scene,cam,renderer,globe,grid,pts;
-function initGlobe(){
-  const cv=$('#globe'); const wrap=$('#globe-wrap');
-  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  scene=new THREE.Scene();
-  cam=new THREE.PerspectiveCamera(42,1,0.1,100); cam.position.set(0,0,5.2);
-  const g=new THREE.SphereGeometry(1.7,40,40);
-  globe=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0a1a30,transparent:true,opacity:.55}));
-  scene.add(globe);
-  grid=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.SphereGeometry(1.71,22,16)),
-    new THREE.LineBasicMaterial({color:0x2f6fae,transparent:true,opacity:.32}));
-  scene.add(grid);
-  // glowing nodes
-  const pg=new THREE.BufferGeometry(); const arr=[];
-  for(let i=0;i<140;i++){const u=Math.random(),v=Math.random();
-    const th=2*Math.PI*u, ph=Math.acos(2*v-1);
-    arr.push(1.74*Math.sin(ph)*Math.cos(th),1.74*Math.cos(ph),1.74*Math.sin(ph)*Math.sin(th));}
-  pg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
-  pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x39d3ff,size:0.045,
-    transparent:true,opacity:.85,blending:THREE.AdditiveBlending}));
-  scene.add(pts);
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.95,32,32),
-    new THREE.MeshBasicMaterial({color:0x1a4a7a,transparent:true,opacity:.10,side:THREE.BackSide}));
-  scene.add(halo);
-  sizeGlobe();
-  new ResizeObserver(sizeGlobe).observe(wrap);
-}
-function sizeGlobe(){
-  const w=$('#globe-wrap').clientWidth,h=$('#globe-wrap').clientHeight;
-  if(!w||!h)return; renderer.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix();
-}
-function renderGlobe(t){
-  if(!renderer)return;
-  globe.rotation.y=grid.rotation.y=pts.rotation.y=t*0.00008;
-  grid.rotation.x=0.35;
-  // tint by alignment/stability
-  if(S){
-    const danger = (100-S.alignment)+(100-S.stability);
-    const c = danger>110 ? 0xff5a6e : danger>70 ? 0xffb454 : 0x39d3ff;
-    pts.material.color.setHex(c); grid.material.color.setHex(c===0x39d3ff?0x2f6fae:c);
-    pts.material.opacity=0.5+0.4*Math.abs(Math.sin(t/600));
+  // reachable highlight for the human player
+  const reach = (!over&&started)? reachable(human):new Set();
+  const R=nodeR();
+  for(const n of nodes){
+    const col = n.owner===NEUTRAL?NCOL:FAC[n.owner].col;
+    const cx=X(n.x), cy=Y(n.y);
+    // capture-target ring (glowing dashed)
+    if(reach.has(n)){
+      const pr=R*(1.7+0.18*Math.sin(performance.now()/240));
+      ctx.strokeStyle=hex(FAC[human].col,0.9); ctx.lineWidth=Math.max(1.4,VT.s*0.006);
+      ctx.setLineDash([VT.s*0.02,VT.s*0.018]); ctx.beginPath(); ctx.arc(cx,cy,pr,0,7); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // flash on capture
+    if(n.flash>0){ ctx.strokeStyle=hex(col,n.flash); ctx.lineWidth=VT.s*0.01;
+      ctx.beginPath(); ctx.arc(cx,cy,R*(1.4+(1-n.flash)*1.8),0,7); ctx.stroke(); }
+    // body
+    const pr=1+n.pulse*0.22;
+    ctx.fillStyle=hex(col,0.20); ctx.beginPath(); ctx.arc(cx,cy,R*1.55*pr,0,7); ctx.fill();
+    ctx.fillStyle=hex(col,0.95); ctx.beginPath(); ctx.arc(cx,cy,R*pr,0,7); ctx.fill();
+    // hub marker
+    if(n.type==='hub'){ ctx.fillStyle='rgba(5,8,16,0.85)'; ctx.beginPath(); ctx.arc(cx,cy,R*0.42,0,7); ctx.fill(); }
+    else if(n.type==='fab'){ ctx.fillStyle='rgba(5,8,16,0.7)'; ctx.fillRect(cx-R*0.30,cy-R*0.30,R*0.6,R*0.6); }
+    // level pips
+    ctx.fillStyle='rgba(7,11,20,0.9)';
+    for(let l=0;l<n.level;l++){ const a=-Math.PI/2 + (l-(n.level-1)/2)*0.5;
+      ctx.beginPath(); ctx.arc(cx+Math.cos(a)*R*1.95, cy+Math.sin(a)*R*1.95, R*0.16,0,7); ctx.fill();
+      ctx.fillStyle=hex(col,0.95); ctx.beginPath(); ctx.arc(cx+Math.cos(a)*R*1.95, cy+Math.sin(a)*R*1.95, R*0.13,0,7); ctx.fill();
+      ctx.fillStyle='rgba(7,11,20,0.9)';
+    }
   }
-  renderer.render(scene,cam);
+  // floaters
+  ctx.textAlign='center'; ctx.font=`700 ${Math.round(VT.s*0.028)}px var(--mono),monospace`;
+  for(const fl of floats){ ctx.globalAlpha=clampN(fl.t,0,1); ctx.fillStyle=fl.col;
+    ctx.fillText(fl.text, X(fl.x), Y(fl.y)-nodeR()*2.4); }
+  ctx.globalAlpha=1;
+  if(started) updateHUD();
+}
+function hex(c,a){ const n=parseInt(c.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+
+/* ---------- HUD ---------- */
+function buildLegend(){
+  $('#legend-list').innerHTML=ORDER.map(f=>`
+    <div class="lrow ${f===human?'me':''}"><span class="dot" style="background:${FAC[f].col}"></span>
+    ${FAC[f].nm}${f===human?' (you)':''}<span class="ct" id="lc-${f}">0</span></div>`).join('');
+}
+function updateHUD(){
+  $('#bank-v').textContent=Math.round(bank[human]);
+  $('#bank-r').textContent='+'+prodSum(human).toFixed(1)+' / s';
+  $('#bank-v').style.color=FAC[human].col;
+  // agi: you vs best rival
+  let riv=null,rp=-1; for(const f of ORDER){ if(f===human)continue; if(agi[f]>rp){rp=agi[f];riv=f;} }
+  $('#agi-you').style.width=agi[human]+'%'; $('#agi-you').style.background=FAC[human].col;
+  $('#agi-riv').style.width=rp+'%'; if(riv)$('#agi-riv').style.background=FAC[riv].col;
+  $('#agi-you-v').textContent='you '+Math.round(agi[human])+'%';
+  $('#agi-riv-v').textContent=(riv?FAC[riv].nm:'rival')+' '+Math.round(rp)+'%';
+  $('#agi-you-v').style.color=FAC[human].col; $('#agi-riv-v').style.color=riv?FAC[riv].col:'#ff5a6e';
+  const lead = agi[human]>=rp?'YOU LEAD':'BEHIND';
+  $('#agi-lead').textContent=lead; $('#agi-lead').style.color=agi[human]>=rp?'#37e0a0':'#ff5a6e';
+  for(const f of ORDER) $('#lc-'+f).textContent=countOf(f);
 }
 
 /* ---------- MAIN LOOP ---------- */
@@ -1039,16 +716,14 @@ function startScreen(){
         <span class="perk">＋ ${f.perk}</span>
         <span class="perk m">－ ${f.minus}</span>
       </div>`;}).join('')}</div>
-    <div class="help"><b>Controls:</b> click policies to enact · <b>RUN TRAINING</b> to raise capability (costs alignment) ·
-    <b>SHIP MODEL</b> to turn capability into product revenue. Mind the <b style="color:var(--red)">Open-Weights line</b> in Market Position:
-    free models climb every month — if they catch your product tier, revenue collapses and you go bankrupt. Keep shipping to stay ahead.
-    pause/1×/2×/4× top-right.</div>`);
-  $('#card').querySelectorAll('.fc').forEach(c=>c.onclick=()=>newGame(c.dataset.f));
+    <div class="tip"><b>Hubs</b> (◍ big) and <b>fabs</b> (▪) out-produce plain sites — fight for them. Rivals are grabbing land in real time, so borders will flip back and forth. Tap fast.</div>`);
+  $('#panelbox').querySelectorAll('.lab-card').forEach(el=>el.onclick=()=>startGame(el.dataset.f));
 }
 
 /* ---------- BOOT ---------- */
-initGlobe();
-startScreen();
+addEventListener('resize',fit);
+fit(); buildMap(); pickScreen();
+lastT=performance.now(); requestAnimationFrame(loop);
 </script>
 </body>
 </html>
