@@ -1,13 +1,16 @@
 name: Deploy to GitHub Pages
 
-# This repo's GitHub Pages is served from the `gh-pages` branch. The Mars
-# Colony game lives in the `/mars-colony/` subfolder so it is published
-# alongside the existing site without disturbing the root homepage.
+# This repo's GitHub Pages is served from the `gh-pages` branch. Each game
+# lives in its own subfolder so it is published alongside the existing site
+# without disturbing the root homepage:
+#   - Mars Colony  -> /mars-colony/   (root index.html)
+#   - AGI Race     -> /agi-race/      (agi-race/index.html)
 on:
   push:
     branches: [main]
     paths:
       - index.html
+      - agi-race/index.html
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
@@ -25,20 +28,21 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
 
-      - name: Publish index.html to gh-pages/mars-colony
+      - name: Publish games to gh-pages
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git worktree add ghp origin/gh-pages
-          mkdir -p ghp/mars-colony
+          mkdir -p ghp/mars-colony ghp/agi-race
           cp index.html ghp/mars-colony/index.html
+          cp agi-race/index.html ghp/agi-race/index.html
           cd ghp
-          git add mars-colony/index.html
+          git add mars-colony/index.html agi-race/index.html
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
-            git commit -m "Deploy Mars Colony ${GITHUB_SHA}"
+            git commit -m "Deploy games ${GITHUB_SHA}"
             git push origin HEAD:gh-pages
           fi
