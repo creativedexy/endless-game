@@ -2,6 +2,20 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
+## AGI Race (control-room strategy)
+
+A single-file, Plague Inc.–style **world-domination game built around the AGI race**. You steer a global power toward *aligned* AGI before society tears itself apart — or a rival crosses the threshold first. Control-room art: a glowing low-poly globe, neon dashboards, and a UI that glitches as alignment collapses.
+
+**Play it live:** https://creativedexy.github.io/endless-game/agi-race/
+
+- **Six indicators** — Compute, Capital, Public Trust, Stability, Alignment, Geo Standing.
+- **Five policy trees** (Compute, Space, Bio, Econ, Gov) with cascading trade-offs: asteroid mining deflates raw materials and sparks unrest; longevity is beloved then collapses the economy; recursive self-improvement rockets you ahead as alignment bleeds out.
+- **Open-source economy** — a relentless *Open-Weights line* rises every month. `SHIP MODEL` to keep your product tier ahead of free models, or your revenue collapses into bankruptcy. `RUN TRAINING` for an AGI burst at alignment's expense.
+- **Caricatured rivals** — Prometheus Labs, Leviathan, Maverick, DeepHorizon, and The Commons race you on the readiness bar.
+- **Multiple endings** — aligned singularity, techno-hegemony, or a gentle transition; vs. collapse, lost mandate, misaligned ignition, insolvency, or being outpaced.
+
+Source: `agi-race/index.html` (Three.js via CDN, no build step).
+
 ## Mars Colony: War Front
 
 A single-file 3D **base-builder war game** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — open `index.html` in a modern browser.
