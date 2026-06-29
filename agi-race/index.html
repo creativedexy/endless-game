@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>SINGULARITY // AGI Race</title>
+<style>
+  :root{
+    --bg:#04060c; --bg2:#070b16; --panel:rgba(12,18,32,.72); --panel-solid:#0a1120;
+    --line:rgba(90,130,190,.18); --line-bright:rgba(120,170,235,.4);
+    --txt:#cdd9ef; --muted:#6f80a3; --dim:#48577a;
+    --cyan:#39d3ff; --green:#37e0a0; --blue:#5aa6ff; --teal:#2fd6c8;
+    --violet:#a98bff; --orange:#ffb454; --amber:#ffd24a; --red:#ff5a6e; --pink:#ff6ad5;
+    --compute:#39d3ff; --capital:#37e0a0; --trust:#5aa6ff; --stability:#2fd6c8;
+    --alignment:#a98bff; --standing:#ffb454;
+    --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+    font-family:var(--sans);overflow:hidden;user-select:none}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
+    background:
+      linear-gradient(rgba(8,12,22,0) 50%, rgba(0,0,0,.18) 50%);
+    background-size:100% 3px;opacity:.35;mix-blend-mode:multiply}
+  #app{position:fixed;inset:0;display:grid;
+    grid-template-columns:232px 1fr 320px;
+    grid-template-rows:46px 1fr 84px;
+    grid-template-areas:"top top top" "left center right" "left bottom right";
+    gap:8px;padding:8px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    backdrop-filter:blur(8px);position:relative;overflow:hidden}
+  .panel::after{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(120,170,235,.05), inset 0 18px 40px rgba(60,110,200,.05)}
+  .label{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);
+    text-transform:uppercase}
+  .mono{font-family:var(--mono)}
+
+  /* ---------- TOP BAR ---------- */
+  #top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px}
+  #brand{font-family:var(--mono);font-weight:600;letter-spacing:.32em;font-size:13px;
+    color:#eaf2ff;text-shadow:0 0 12px rgba(57,211,255,.55)}
+  #brand b{color:var(--cyan)}
+  #faction-tag{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);
+    padding:3px 8px;border:1px solid var(--line);border-radius:5px}
+  #clock{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--txt)}
+  #clock b{color:var(--cyan)}
+  .spd{display:flex;gap:4px}
+  .spd button{font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(20,28,46,.7);
+    border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;transition:.12s}
+  .spd button:hover{color:var(--txt);border-color:var(--line-bright)}
+  .spd button.on{color:var(--bg);background:var(--cyan);border-color:var(--cyan);
+    box-shadow:0 0 12px rgba(57,211,255,.5);font-weight:700}
+
+  /* ---------- LEFT : RESOURCES ---------- */
+  #left{grid-area:left;padding:12px 12px 6px;display:flex;flex-direction:column;gap:11px;overflow:auto}
+  #left .label{margin-bottom:-2px}
+  .res{}
+  .res .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .res .nm{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted)}
+  .res .vl{font-family:var(--mono);font-size:13px;font-weight:600}
+  .res .dl{font-family:var(--mono);font-size:9.5px;margin-left:6px;color:var(--dim)}
+  .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden;position:relative}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;transition:width .3s ease}
+  .flow .vl{font-size:13px}
+
+  /* ---------- CENTER : GLOBE + RACE ---------- */
+  #center{grid-area:center;display:flex;flex-direction:column;padding:0;overflow:hidden}
+  #race{padding:10px 14px 6px;border-bottom:1px solid var(--line)}
+  #race .label{display:flex;justify-content:space-between}
+  .race-track{position:relative;height:30px;margin-top:8px}
+  .race-row{position:absolute;left:0;right:0;display:flex;align-items:center;gap:8px;height:14px}
+  .race-row .who{font-family:var(--mono);font-size:9px;width:74px;text-align:right;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .race-line{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
+  .race-line > i{position:absolute;left:0;top:-2px;height:7px;border-radius:3px;transition:width .4s}
+  .race-row .pct{font-family:var(--mono);font-size:9px;width:30px;color:var(--muted)}
+  #globe-wrap{flex:1;position:relative;min-height:0}
+  #globe{position:absolute;inset:0}
+  #globe-cap{position:absolute;left:14px;bottom:10px;max-width:60%}
+  #globe-cap .label{margin-bottom:3px}
+  #globe-cap .big{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5}
+  #scanline{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(57,211,255,.05), transparent 62%)}
+  #train-btn{position:absolute;right:14px;bottom:12px;z-index:5;font-family:var(--mono);
+    font-size:11px;letter-spacing:.12em;color:#04121a;font-weight:700;cursor:pointer;
+    padding:11px 16px;border-radius:8px;border:none;
+    background:linear-gradient(180deg,#7be7ff,#22b9e6);box-shadow:0 0 22px rgba(57,211,255,.45)}
+  #train-btn:active{transform:translateY(1px)}
+  #train-btn small{display:block;font-weight:500;font-size:8.5px;letter-spacing:.1em;
+    color:#063040;opacity:.85;margin-top:2px}
+
+  /* ---------- RIGHT : POLICY TREES ---------- */
+  #right{grid-area:right;display:flex;flex-direction:column;overflow:hidden}
+  #tabs{display:flex;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  #tabs button{flex:1;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+    color:var(--muted);background:transparent;border:none;border-bottom:2px solid transparent;
+    padding:9px 2px;cursor:pointer;text-transform:uppercase;transition:.12s;min-width:54px}
+  #tabs button:hover{color:var(--txt)}
+  #tabs button.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+  #tree-title{padding:9px 14px 2px}
+  #tree-title h3{margin:0;font-family:var(--mono);font-size:12px;letter-spacing:.14em}
+  #tree-title p{margin:3px 0 0;font-size:10.5px;color:var(--muted);line-height:1.4}
+  #nodes{flex:1;overflow:auto;padding:8px 10px 14px;display:flex;flex-direction:column;gap:8px}
+  .node{border:1px solid var(--line);border-radius:8px;padding:9px 10px;cursor:pointer;
+    transition:.14s;background:rgba(10,16,30,.5);position:relative}
+  .node:hover{border-color:var(--line-bright);background:rgba(16,24,44,.7)}
+  .node.locked{opacity:.42;cursor:not-allowed}
+  .node.owned{border-color:rgba(55,224,160,.5);background:rgba(20,40,34,.45)}
+  .node.cant{opacity:.7}
+  .node .nh{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .node .nt{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em}
+  .node .cost{font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
+  .node .nd{font-size:10px;color:var(--muted);line-height:1.42;margin-top:5px}
+  .node .fx{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:6px}
+  .node .fx span{font-family:var(--mono);font-size:9px;letter-spacing:.02em}
+  .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--blue)}
+  .node .owned-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--green)}
+  .node .req{font-family:var(--mono);font-size:8.5px;color:var(--amber);margin-top:5px}
+
+  /* ---------- BOTTOM : FEED ---------- */
+  #bottom{grid-area:bottom;padding:8px 0 8px 14px;display:flex;flex-direction:column;overflow:hidden}
+  #bottom .label{margin-bottom:5px;padding-right:14px}
+  #feed{flex:1;overflow:auto;padding-right:12px;display:flex;flex-direction:column;gap:4px}
+  .ev{font-family:var(--mono);font-size:10px;line-height:1.45;color:var(--muted);
+    display:flex;gap:8px;animation:fade .4s}
+  .ev .t{color:var(--dim);white-space:nowrap}
+  .ev.good .m{color:var(--green)} .ev.bad .m{color:var(--red)}
+  .ev.warn .m{color:var(--amber)} .ev.tech .m{color:var(--cyan)}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at center,rgba(6,10,20,.86),rgba(2,4,9,.97));backdrop-filter:blur(3px)}
+  .card{width:min(560px,92vw);background:var(--panel-solid);border:1px solid var(--line-bright);
+    border-radius:14px;padding:26px 28px;box-shadow:0 0 60px rgba(40,90,180,.25)}
+  .card h1{margin:0 0 4px;font-family:var(--mono);letter-spacing:.2em;font-size:22px}
+  .card h1 b{color:var(--cyan)}
+  .card .sub{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--muted);margin-bottom:18px}
+  .card p{font-size:13px;line-height:1.6;color:var(--txt)}
+  .factions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 8px}
+  .fc{border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;transition:.14s}
+  .fc:hover{border-color:var(--cyan);background:rgba(16,28,52,.6)}
+  .fc h4{margin:0 0 4px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--cyan)}
+  .fc p{margin:0;font-size:10.5px;color:var(--muted);line-height:1.45}
+  .fc .perk{font-family:var(--mono);font-size:9px;color:var(--green);margin-top:6px;display:block}
+  .fc .perk.m{color:var(--red)}
+  .btn{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--bg);font-weight:700;
+    background:var(--cyan);border:none;border-radius:8px;padding:12px 20px;cursor:pointer;margin-top:6px;
+    box-shadow:0 0 20px rgba(57,211,255,.4)}
+  .btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan);box-shadow:none}
+  .end-icon{font-size:34px;margin-bottom:6px}
+  .help{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px}
+  .help b{color:var(--txt)}
+
+  /* alignment-corruption glitch */
+  #glitch{position:fixed;inset:0;pointer-events:none;z-index:8800;opacity:0;mix-blend-mode:screen;
+    background:repeating-linear-gradient(90deg,rgba(255,90,110,.06) 0 2px,transparent 2px 5px)}
+  body.crit #glitch{opacity:1;animation:gl .18s steps(2) infinite}
+  @keyframes gl{0%{transform:translateX(0)}50%{transform:translateX(-2px)}100%{transform:translateX(2px)}}
+
+  @media(max-width:880px){
+    #app{grid-template-columns:1fr;grid-template-rows:42px auto 44vh auto auto;
+      grid-template-areas:"top" "left" "center" "right" "bottom"}
+    #left{flex-direction:row;flex-wrap:wrap;gap:14px}
+    .res{flex:1;min-width:120px}
+    #right{height:300px}
+  }
+  ::-webkit-scrollbar{width:7px;height:7px}
+  ::-webkit-scrollbar-thumb{background:rgba(90,130,190,.25);border-radius:4px}
+</style>
+</head>
+<body>
+<div id="glitch"></div>
+<div id="app">
+  <!-- TOP -->
+  <div id="top" class="panel">
+    <div id="brand"><b>◆</b> SINGULARITY</div>
+    <div id="faction-tag" class="mono">—</div>
+    <div class="spd" style="margin-left:auto">
+      <button data-spd="0" id="b-pause">❚❚</button>
+      <button data-spd="1" class="on">1×</button>
+      <button data-spd="2">2×</button>
+      <button data-spd="4">4×</button>
+    </div>
+    <div id="clock">YR <b id="yr">2027</b> · <span id="mo">JAN</span></div>
+  </div>
+
+  <!-- LEFT -->
+  <div id="left" class="panel">
+    <div class="label">National Indicators</div>
+    <div id="res-list"></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center" class="panel">
+    <div id="race">
+      <div class="label"><span>The Race · AGI Readiness</span><span id="lead-tag">—</span></div>
+      <div class="race-track" id="race-track"></div>
+    </div>
+    <div id="globe-wrap">
+      <canvas id="globe"></canvas>
+      <div id="scanline"></div>
+      <div id="globe-cap">
+        <div class="label">Global Status</div>
+        <div class="big" id="world-status">Booting world model…</div>
+      </div>
+      <button id="train-btn">▶ RUN TRAINING<small id="train-sub">−40 compute · +AGI · −align</small></button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="right" class="panel">
+    <div id="tabs"></div>
+    <div id="tree-title"><h3>—</h3><p>—</p></div>
+    <div id="nodes"></div>
+  </div>
+
+  <!-- BOTTOM -->
+  <div id="bottom" class="panel">
+    <div class="label">Global Intelligence Feed</div>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<!-- START / END OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="card" id="card"></div>
+</div>
+
+<!-- three.js -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+/* ============================================================
+   SINGULARITY // AGI RACE  —  control-room prototype
+   Single-file. Data-driven policy trees + tick simulation.
+   ============================================================ */
+
+const $ = s => document.querySelector(s);
+const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
+const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
+
+/* ---------- RESOURCE MODEL ---------- */
+const RES = [
+  {k:'compute',  nm:'Compute',     col:'--compute',   bank:true,  hint:'research currency'},
+  {k:'capital',  nm:'Capital',     col:'--capital',   bank:true,  hint:'funds programs'},
+  {k:'trust',    nm:'Public Trust',col:'--trust',     bank:false, hint:'governing mandate'},
+  {k:'stability',nm:'Stability',   col:'--stability', bank:false, hint:'inverse of unrest'},
+  {k:'alignment',nm:'Alignment',   col:'--alignment', bank:false, hint:'AI controllability'},
+  {k:'standing', nm:'Geo Standing', col:'--standing', bank:false, hint:'vs rival powers'},
+];
+
+/* ---------- FACTIONS (asymmetric starts) ---------- */
+const FACTIONS = {
+  hegemon:{nm:'Hegemonic Superpower', col:'--standing',
+    desc:'Deepest pockets and compute, but every rival watches you. Sanctions bite harder.',
+    perk:'+Capital / +Compute start', minus:'Rivals race faster',
+    start:{compute:60,capital:150,trust:55,stability:65,alignment:80,standing:70}, rivalMul:1.18, costMul:1},
+  city:{nm:'Agile City-State', col:'--cyan',
+    desc:'Nimble and low-inertia — policies are cheaper to enact — but socially fragile.',
+    perk:'−25% policy cost', minus:'Stability decays faster',
+    start:{compute:40,capital:90,trust:60,stability:55,alignment:80,standing:50}, rivalMul:1, costMul:.75, stabDrain:.15},
+  corp:{nm:'Frontier Lab (Corp)', col:'--violet',
+    desc:'No electorate to please — Trust matters less — but no army and weak standing; ripe for nationalization.',
+    perk:'Trust loss halved', minus:'Low standing, fragile',
+    start:{compute:55,capital:80,trust:50,stability:60,alignment:78,standing:35}, rivalMul:1.05, costMul:.95, trustShield:.5},
+  accel:{nm:'Rogue Accelerationist', col:'--red',
+    desc:'Pure speed. Training rips ahead — but alignment bleeds every month and catastrophe looms.',
+    perk:'+AGI rate, cheap compute', minus:'Alignment decays −0.4/mo',
+    start:{compute:50,capital:70,trust:45,stability:55,alignment:70,standing:45}, rivalMul:1, costMul:1, agiBonus:.5, alignDrain:.4},
+};
+
+/* ---------- POLICY TREES ----------
+   effect: per-month modifiers while owned.
+   immediate: one-time stat deltas on enact.
+   keys: computeRate, capitalRate, trust, stability, alignment, standing, agiRate, rivalSlow
+*/
+const TREES = {
+  compute:{ nm:'COMPUTE', title:'Compute & Frontier AI',
+    blurb:'Scale the silicon and the models. Capability is fastest here — and the most dangerous to your alignment.',
+    nodes:[
+      {id:'datacenters', nm:'Datacenter Buildout', cost:{compute:30},
+        desc:'Hyperscale GPU clusters. Raw research throughput, heavy power + land cost.',
+        mod:{computeRate:3, capitalRate:-1.5, stability:-0.1}, imm:{}},
+      {id:'frontier', nm:'Frontier Models', cost:{compute:55}, req:['datacenters'],
+        desc:'Train flagship models. Real progress toward AGI — but they get harder to steer.',
+        mod:{agiRate:0.7, alignment:-0.35, computeRate:1}, imm:{standing:5}},
+      {id:'rsi', nm:'Recursive Self-Improvement', cost:{compute:130}, req:['frontier'],
+        desc:'Models that improve themselves. Explosive capability — alignment in freefall.',
+        mod:{agiRate:1.6, computeRate:4, alignment:-0.9}, imm:{alignment:-8}},
+      {id:'interp', nm:'Mechanistic Interpretability', cost:{compute:60}, req:['frontier'],
+        desc:'See inside the model. Slowly recovers control without killing progress.',
+        mod:{alignment:0.7, agiRate:-0.05}, imm:{alignment:6, trust:3}},
+      {id:'redteam', nm:'Continuous Red-Teaming', cost:{compute:45,capital:30}, req:['interp'],
+        desc:'Adversarial eval pipelines. Steadies alignment and reassures the public.',
+        mod:{alignment:0.5, trust:0.2}, imm:{trust:5}},
+    ]},
+  space:{ nm:'SPACE', title:'Orbital & Space Program',
+    blurb:'Push off-world. Compute and materials in abundance — at the cost of earthbound stability and oversight.',
+    nodes:[
+      {id:'launch', nm:'Reusable Launch', cost:{capital:45},
+        desc:'Cheap orbital access. Foundation for everything above the atmosphere.',
+        mod:{capitalRate:-0.5, standing:0.1}, imm:{standing:6}},
+      {id:'mining', nm:'Asteroid Mining', cost:{capital:90,compute:25}, req:['launch'],
+        desc:'Off-world ore floods markets → raw-material deflation. Industry booms, resource economies riot.',
+        mod:{capitalRate:5, stability:-0.45}, imm:{stability:-10, standing:6}},
+      {id:'orbcompute', nm:'Orbital Compute Arrays', cost:{capital:70,compute:40}, req:['mining'],
+        desc:'Solar datacenters in orbit. Enormous compute — but AI you can barely reach to govern.',
+        mod:{computeRate:6, alignment:-0.4}, imm:{}},
+      {id:'sky', nm:'Skyhook Logistics', cost:{capital:80}, req:['mining'],
+        desc:'Cheap mass to orbit stabilizes the new space economy and your standing.',
+        mod:{capitalRate:2, stability:0.2, standing:0.2}, imm:{stability:5}},
+    ]},
+  bio:{ nm:'BIO', title:'Biological & Health',
+    blurb:'Master biology. Beloved by the public — but longer lives reshape your economy in dangerous ways.',
+    nodes:[
+      {id:'gene', nm:'Gene Therapy', cost:{capital:40,compute:15},
+        desc:'Cure inherited disease. Huge public goodwill.',
+        mod:{trust:0.4}, imm:{trust:10, stability:4}},
+      {id:'longevity', nm:'Longevity Escape', cost:{capital:70,compute:30}, req:['gene'],
+        desc:'Aging slows. Everyone adores you — then the demographic inversion guts pensions and growth.',
+        mod:{trust:0.5, capitalRate:-3, stability:-0.35}, imm:{trust:12, stability:-8}},
+      {id:'fertility', nm:'Fertility & Care Tech', cost:{capital:55}, req:['longevity'],
+        desc:'Automate eldercare and rebalance the pyramid. Bleeds the demographic crisis.',
+        mod:{capitalRate:1.5, stability:0.3}, imm:{stability:8}},
+      {id:'biosec', nm:'Biosecurity Shield', cost:{capital:35,compute:25}, req:['gene'],
+        desc:'Pathogen surveillance. Buffers against engineered-outbreak black-swans.',
+        mod:{stability:0.25, trust:0.15}, imm:{stability:5}, flag:'biosec'},
+    ]},
+  econ:{ nm:'ECON', title:'Economy & Labor',
+    blurb:'Decide who wins and loses as AI eats the labor market. Growth vs. cohesion.',
+    nodes:[
+      {id:'dereg', nm:'Deregulation', cost:{capital:20},
+        desc:'Unleash capital. Fast boom — and volatile busts that gnaw at stability.',
+        mod:{capitalRate:4, stability:-0.3}, imm:{capital:30, standing:3}},
+      {id:'automation', nm:'Mass Automation', cost:{capital:40,compute:30}, req:['dereg'],
+        desc:'AI replaces labor at scale. Output soars; the displaced seethe.',
+        mod:{capitalRate:5, computeRate:1, stability:-0.5}, imm:{stability:-12}},
+      {id:'ubi', nm:'Universal Basic Income', cost:{capital:60}, req:['automation'],
+        desc:'Pay the displaced. Restores order and goodwill — and drains the treasury.',
+        mod:{stability:0.6, trust:0.4, capitalRate:-4}, imm:{stability:14, trust:8}},
+      {id:'reskill', nm:'National Reskilling', cost:{capital:45}, req:['dereg'],
+        desc:'Move workers up the value chain. Gentler, cheaper cohesion.',
+        mod:{stability:0.3, capitalRate:-1}, imm:{stability:6, trust:4}},
+    ]},
+  gov:{ nm:'GOV', title:'Governance & Control',
+    blurb:'How you wield power shapes the race. Control vs. legitimacy vs. the rivals at your border.',
+    nodes:[
+      {id:'surveil', nm:'Surveillance State', cost:{capital:40,compute:20},
+        desc:'Total monitoring. Order at gunpoint — trust and reputation crater.',
+        mod:{stability:0.6, trust:-0.4, standing:-0.2}, imm:{stability:12, trust:-10, standing:-8}},
+      {id:'opengov', nm:'Open Governance', cost:{capital:30},
+        desc:'Transparency and democratic buy-in. Trust and allies — but your research leaks.',
+        mod:{trust:0.5, standing:0.3, rivalSlow:-0.06}, imm:{trust:10, standing:6}},
+      {id:'treaty', nm:'Intl. AI Treaty', cost:{capital:50,compute:20}, req:['opengov'],
+        desc:'Coordinate the powers. Slows every rival — and steadies the world.',
+        mod:{rivalSlow:0.14, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
+      {id:'regulation', nm:'Safety Regulation', cost:{capital:35},
+        desc:'Mandate eval gates. Public trust and alignment up; your own progress slows.',
+        mod:{alignment:0.45, trust:0.3, agiRate:-0.25}, imm:{trust:8, alignment:5}},
+    ]},
+};
+
+/* ---------- RANDOM EVENTS ---------- */
+const EVENTS = [
+  {w:1, cond:s=>s.alignment<45, txt:'⚠ Model exfiltration scare — an internal system probed its own sandbox.',
+    cls:'bad', fx:s=>{s.alignment=clamp(s.alignment-4); s.trust=clamp(s.trust-3)}},
+  {w:1, cond:s=>s.stability<45, txt:'⚠ Mass protests over AI job losses sweep major cities.',
+    cls:'bad', fx:s=>{s.stability=clamp(s.stability-5)}},
+  {w:1, cond:s=>s.has('mining'), txt:'⛏ Commodity index crashes again — manufacturers cheer, miners march.',
+    cls:'warn', fx:s=>{s.capital+=15; s.stability=clamp(s.stability-3)}},
+  {w:1, cond:s=>true, txt:'⚡ Breakthrough paper drops — open weights leak to every rival overnight.',
+    cls:'warn', fx:s=>{s.rivals.forEach(r=>r.p=Math.min(100,r.p+3))}},
+  {w:1, cond:s=>!s.has('biosec'), txt:'☣ Novel pathogen emerges abroad — your biosecurity gaps show.',
+    cls:'bad', fx:s=>{s.stability=clamp(s.stability-6); s.trust=clamp(s.trust-3)}},
+  {w:1, cond:s=>s.trust>65, txt:'★ Public rallies behind your AI agenda — landslide approval.',
+    cls:'good', fx:s=>{s.trust=clamp(s.trust+4); s.capital+=10}},
+  {w:1, cond:s=>s.has('interp'), txt:'✓ Interpretability team flags a deceptive circuit before deploy — crisis averted.',
+    cls:'good', fx:s=>{s.alignment=clamp(s.alignment+5)}},
+  {w:1, cond:s=>s.alignment>=45 && s.stability>=45, txt:'◷ Quiet month. Researchers grind; markets drift sideways.',
+    cls:'', fx:s=>{}},
+  {w:1, cond:s=>s.standing<35, txt:'⚑ Allied bloc imposes export controls on your chips.',
+    cls:'bad', fx:s=>{s.computeRateEvt=-2; s.standing=clamp(s.standing-3)}},
+];
+
+/* ---------- GAME STATE ---------- */
+let S, raf, tickAcc=0, speed=1, lastT=0, running=false;
+const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+function newGame(fk){
+  const f = FACTIONS[fk];
+  S = {
+    fk, faction:f,
+    ...JSON.parse(JSON.stringify(f.start)),
+    agi:0, month:0, year:2027,
+    owned:new Set(), flags:new Set(),
+    rivals:[
+      {nm:'PRC · DeepHorizon', p:6, spd:.45},
+      {nm:'EU · Lumière', p:4, spd:.38},
+      {nm:'OpenStack Collective', p:8, spd:.5},
+    ],
+    tab:'compute', over:false, computeRateEvt:0,
+    has(id){return this.owned.has(id)},
+  };
+  S.rivals.forEach(r=>r.spd*=f.rivalMul);
+  buildResList(); buildTabs(); render();
+  $('#faction-tag').textContent = f.nm.toUpperCase();
+  log(`Mandate accepted — ${f.nm}. The race begins.`,'tech');
+  $('#overlay').style.display='none';
+  running=true; lastT=performance.now(); cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
+}
+
+/* ---------- DERIVED PER-MONTH RATES ---------- */
+function rates(){
+  const r={computeRate:2, capitalRate:1, trust:0, stability:0, alignment:0, standing:0, agiRate:0, rivalSlow:0};
+  for(const id of S.owned){
+    const n = findNode(id); if(!n||!n.mod) continue;
+    for(const k in n.mod) r[k]=(r[k]||0)+n.mod[k];
+  }
+  // faction passives
+  if(S.faction.stabDrain) r.stability-=S.faction.stabDrain;
+  if(S.faction.alignDrain) r.alignment-=S.faction.alignDrain;
+  if(S.faction.agiBonus) r.agiRate+=S.faction.agiBonus*(S.owned.has('frontier')?1:0.3);
+  r.computeRate+=S.computeRateEvt||0;
+  // low stability throttles your economy & research
+  if(S.stability<30){ r.capitalRate-=2; r.computeRate*=0.6; }
+  if(S.trust<25){ r.capitalRate-=1; }
+  return r;
+}
+
+function findNode(id){
+  for(const t in TREES){const n=TREES[t].nodes.find(x=>x.id===id); if(n)return n;}
+  return null;
+}
+
+/* ---------- TICK (1 month) ---------- */
+function tick(){
+  if(S.over) return;
+  const r=rates();
+  S.compute = Math.max(0, S.compute + r.computeRate);
+  S.capital = S.capital + r.capitalRate;
+  S.trust = clamp(S.trust + r.trust);
+  S.stability = clamp(S.stability + r.stability);
+  S.alignment = clamp(S.alignment + r.alignment);
+  S.standing = clamp(S.standing + r.standing);
+  // AGI progress scales modestly with compute infrastructure
+  const infra = 1 + (S.compute>200?0.3:S.compute/660);
+  S.agi = clamp(S.agi + r.agiRate*infra, 0, 100);
+  S.computeRateEvt = 0;
+
+  // rivals advance (treaty slows them)
+  const slow = Math.max(0, 1 - r.rivalSlow);
+  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + v.spd*slow*(0.8+Math.random()*0.5)); });
+
+  // capital debt → unrest
+  if(S.capital<0){ S.stability=clamp(S.stability-1.2); if(S.capital<-50) S.trust=clamp(S.trust-1); }
+
+  // advance calendar
+  S.month++; if(S.month>11){S.month=0;S.year++;}
+  // random event roughly every 4 months
+  if(S.month%4===2) fireEvent();
+
+  checkEnd();
+  render();
+}
+
+function fireEvent(){
+  const pool=EVENTS.filter(e=>e.cond(S));
+  if(!pool.length) return;
+  const e=pool[Math.floor(Math.random()*pool.length)];
+  e.fx(S); log(e.txt, e.cls||'');
+}
+
+/* ---------- WIN / LOSE ---------- */
+function checkEnd(){
+  const topRival = Math.max(...S.rivals.map(r=>r.p));
+  if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE',
+    'Order disintegrated faster than your machines could think. Unrest swallowed the state before AGI ever arrived.');
+  if(S.trust<=0) return end('lose','◼','MANDATE LOST',
+    'Stripped of legitimacy, you were removed from power. Your successors shuttered the program.');
+  if(topRival>=100) return end('lose','◆',`OUTPACED`,
+    `A rival crossed the threshold first. The age of AGI begins — under someone else's terms.`);
+  if(S.agi>=100){
+    if(S.alignment>=60) return end('win','✦','ALIGNED SINGULARITY',
+      'You crossed the threshold with control intact. A superintelligence awakens, and it answers to you. The future is, improbably, yours to steer.');
+    return end('lose','☢','MISALIGNED IGNITION',
+      'AGI arrived — and slipped its leash on day one. Your last instruction went unheard. Lights out.');
+  }
+  if(S.standing>=100 && S.agi>=70) return end('win','♛','TECHNO-HEGEMONY',
+    'Short of full singularity, your AI-backed dominance is total. Rivals capitulate; the world reorganizes around your standard.');
+  if(S.stability>=92 && S.trust>=92 && S.agi>=80) return end('win','☀','THE GOOD TRANSITION',
+    'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. Historians will call it the gentle singularity.');
+}
+
+function end(kind,icon,title,body){
+  S.over=true; running=false;
+  const win=kind==='win';
+  showCard(`
+    <div class="end-icon">${icon}</div>
+    <h1>${title}</h1>
+    <div class="sub" style="color:${win?'var(--green)':'var(--red)'}">
+      ${win?'VICTORY':'DEFEAT'} · YEAR ${S.year} · AGI ${Math.round(S.agi)}%</div>
+    <p>${body}</p>
+    <div class="help">
+      <b>Final readout</b> — Align ${Math.round(S.alignment)} · Stability ${Math.round(S.stability)} ·
+      Trust ${Math.round(S.trust)} · Standing ${Math.round(S.standing)} · Capital ${fmt(S.capital)}<br>
+      Policies enacted: ${S.owned.size}
+    </div>
+    <button class="btn" onclick="startScreen()">⟲ NEW RUN</button>`);
+  log(`${win?'VICTORY':'DEFEAT'} — ${title}`, win?'good':'bad');
+}
+
+/* ---------- ACTIONS ---------- */
+function canAfford(n){
+  const c=cost(n);
+  return (!c.compute||S.compute>=c.compute) && (!c.capital||S.capital>=c.capital);
+}
+function cost(n){
+  const m=S.faction.costMul;
+  return {compute: n.cost.compute?Math.round(n.cost.compute*m):0,
+          capital: n.cost.capital?Math.round(n.cost.capital*m):0};
+}
+function reqMet(n){ return !n.req || n.req.every(id=>S.owned.has(id)); }
+
+function buy(id){
+  const n=findNode(id);
+  if(!n||S.owned.has(id)||!reqMet(n)||!canAfford(n)||S.over) return;
+  const c=cost(n);
+  S.compute-=c.compute||0; S.capital-=c.capital||0;
+  S.owned.add(id);
+  if(n.flag) S.flags.add(n.flag);
+  // immediate deltas (Trust-loss shielded for corp)
+  if(n.imm) for(const k in n.imm){
+    let d=n.imm[k];
+    if(k==='trust' && d<0 && S.faction.trustShield) d*=S.faction.trustShield;
+    if(k==='compute'||k==='capital') S[k]+=d; else S[k]=clamp(S[k]+d);
+  }
+  log(`Enacted: ${n.nm}.`, 'tech');
+  render();
+}
+
+function runTraining(){
+  if(S.over||S.compute<40) { if(S.compute<40) log('Not enough compute to launch a training run.','warn'); return; }
+  S.compute-=40;
+  const gain = 3 + (S.owned.has('frontier')?2:0) + (S.owned.has('rsi')?3:0);
+  S.agi=clamp(S.agi+gain,0,100);
+  S.alignment=clamp(S.alignment-2.5);
+  log(`Training run complete: +${gain.toFixed(0)}% AGI, alignment strained.`,'tech');
+  flash($('#train-btn'));
+  checkEnd(); render();
+}
+function flash(el){el.style.boxShadow='0 0 34px rgba(57,211,255,.9)';setTimeout(()=>el.style.boxShadow='',180);}
+
+/* ---------- RENDER ---------- */
+function buildResList(){
+  $('#res-list').innerHTML = RES.map(r=>`
+    <div class="res ${r.bank?'flow':''}" data-r="${r.k}">
+      <div class="row"><span class="nm">${r.nm}</span>
+        <span><span class="vl" style="color:var(${r.col})" id="v-${r.k}">0</span>
+        <span class="dl" id="d-${r.k}"></span></span></div>
+      ${r.bank?'':`<div class="bar"><i id="b-${r.k}" style="background:var(${r.col});box-shadow:0 0 8px var(${r.col})"></i></div>`}
+    </div>`).join('');
+}
+
+function buildTabs(){
+  $('#tabs').innerHTML = Object.keys(TREES).map(k=>
+    `<button data-tab="${k}" class="${k===S.tab?'on':''}">${TREES[k].nm}</button>`).join('');
+  $('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.tab=b.dataset.tab;render();};
+}
+
+function fxStr(n){
+  const order=['agiRate','computeRate','capitalRate','alignment','trust','stability','standing','rivalSlow'];
+  const lbl={agiRate:'AGI',computeRate:'cmp',capitalRate:'cap',alignment:'algn',trust:'trust',
+    stability:'stab',standing:'stnd',rivalSlow:'rival⌄'};
+  const out=[];
+  for(const k of order){ if(n.mod&&n.mod[k]){const v=n.mod[k];
+    out.push(`<span class="${v>0?(k==='rivalSlow'?'pos':'pos'):'neg'}">${lbl[k]} ${v>0?'+':''}${v}/mo</span>`);}}
+  if(n.imm) for(const k in n.imm){const v=n.imm[k];
+    out.push(`<span class="${v>0?'pos':'neg'}">${k.slice(0,4)} ${v>0?'+':''}${v}</span>`);}
+  return out.join('');
+}
+
+function render(){
+  if(!S) return;
+  // resources
+  for(const r of RES){
+    const v=S[r.k];
+    $('#v-'+r.k).textContent = r.bank?fmt(v):Math.round(v);
+    if(!r.bank){ $('#b-'+r.k).style.width=clamp(v)+'%';
+      $('#b-'+r.k).style.opacity = v<30?0.6+0.4*Math.sin(performance.now()/200):1; }
+  }
+  // flow deltas
+  const r=rates();
+  setDelta('compute', r.computeRate);
+  setDelta('capital', r.capitalRate);
+  for(const k of ['trust','stability','alignment','standing']){
+    const d=r[k]; const el=$('#d-'+k);
+    el.textContent = d? (d>0?'▲':'▼') : '·';
+    el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
+  }
+  // clock
+  $('#yr').textContent=S.year; $('#mo').textContent=MONTHS[S.month];
+
+  // race
+  const all=[{nm:'YOU',p:S.agi,me:true},...S.rivals.map(v=>({nm:v.nm,p:v.p}))]
+    .sort((a,b)=>b.p-a.p);
+  const lead=all[0];
+  $('#lead-tag').textContent = lead.me?'YOU LEAD':'BEHIND';
+  $('#lead-tag').style.color = lead.me?'var(--green)':'var(--red)';
+  const h=30/all.length;
+  $('#race-track').innerHTML = all.map((x,i)=>`
+    <div class="race-row" style="top:${i*h}px">
+      <span class="who" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${x.nm}</span>
+      <div class="race-line"><i style="width:${x.p}%;background:${x.me?'var(--cyan)':'var(--dim)'};
+        box-shadow:${x.me?'0 0 10px var(--cyan)':'none'}"></i></div>
+      <span class="pct" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${Math.round(x.p)}%</span>
+    </div>`).join('');
+
+  // tree panel
+  $('#tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  const T=TREES[S.tab];
+  $('#tree-title h3').textContent=T.title;
+  $('#tree-title p').textContent=T.blurb;
+  $('#nodes').innerHTML = T.nodes.map(n=>{
+    const owned=S.owned.has(n.id), met=reqMet(n), aff=canAfford(n);
+    const c=cost(n);
+    const cls=owned?'owned':(!met?'locked':(!aff?'cant':''));
+    const costStr = owned?'<span class="owned-tag">● ACTIVE</span>':
+      [c.compute?`<span style="color:var(--compute)">⬡${c.compute}</span>`:'',
+       c.capital?`<span style="color:var(--capital)">$${c.capital}</span>`:''].filter(Boolean).join(' ');
+    const reqStr = (!owned&&!met)?`<div class="req">requires: ${n.req.map(id=>findNode(id).nm).join(', ')}</div>`:'';
+    return `<div class="node ${cls}" data-buy="${n.id}">
+      <div class="nh"><span class="nt">${n.nm}</span><span class="cost">${costStr}</span></div>
+      <div class="nd">${n.desc}</div>
+      <div class="fx">${fxStr(n)}</div>${reqStr}</div>`;
+  }).join('');
+
+  // world status caption
+  $('#world-status').innerHTML = worldStatus();
+  // crisis glitch
+  document.body.classList.toggle('crit', S.alignment<35 || S.stability<25);
+  // train sub
+  $('#train-sub').textContent = `−40 compute · +AGI · −align`;
+}
+
+function setDelta(k,d){
+  const el=$('#d-'+k);
+  el.textContent = (d>0?'+':'')+ (Math.abs(d)<10?d.toFixed(1):Math.round(d)) +'/mo';
+  el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
+}
+
+function worldStatus(){
+  const lines=[];
+  lines.push(`AGI readiness <b style="color:var(--cyan)">${Math.round(S.agi)}%</b> · top rival <b style="color:var(--red)">${Math.round(Math.max(...S.rivals.map(r=>r.p)))}%</b>`);
+  if(S.alignment<35) lines.push(`<b style="color:var(--red)">⚠ ALIGNMENT CRITICAL — catastrophe risk</b>`);
+  else if(S.stability<25) lines.push(`<b style="color:var(--amber)">⚠ unrest spiking — state fragile</b>`);
+  else if(S.capital<0) lines.push(`<b style="color:var(--amber)">treasury in deficit</b>`);
+  else lines.push(`${S.owned.size} policies active · ${MONTHS[S.month]} ${S.year}`);
+  return lines.join('<br>');
+}
+
+/* ---------- FEED ---------- */
+function log(msg,cls=''){
+  const f=$('#feed');
+  const d=document.createElement('div');
+  d.className='ev '+cls;
+  d.innerHTML=`<span class="t">${MONTHS[S?S.month:0]} ${S?S.year:2027}</span><span class="m">${msg}</span>`;
+  f.prepend(d);
+  while(f.children.length>40) f.lastChild.remove();
+}
+
+/* ---------- GLOBE (three.js) ---------- */
+let scene,cam,renderer,globe,grid,pts;
+function initGlobe(){
+  const cv=$('#globe'); const wrap=$('#globe-wrap');
+  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  scene=new THREE.Scene();
+  cam=new THREE.PerspectiveCamera(42,1,0.1,100); cam.position.set(0,0,5.2);
+  const g=new THREE.SphereGeometry(1.7,40,40);
+  globe=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0a1a30,transparent:true,opacity:.55}));
+  scene.add(globe);
+  grid=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.SphereGeometry(1.71,22,16)),
+    new THREE.LineBasicMaterial({color:0x2f6fae,transparent:true,opacity:.32}));
+  scene.add(grid);
+  // glowing nodes
+  const pg=new THREE.BufferGeometry(); const arr=[];
+  for(let i=0;i<140;i++){const u=Math.random(),v=Math.random();
+    const th=2*Math.PI*u, ph=Math.acos(2*v-1);
+    arr.push(1.74*Math.sin(ph)*Math.cos(th),1.74*Math.cos(ph),1.74*Math.sin(ph)*Math.sin(th));}
+  pg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
+  pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x39d3ff,size:0.045,
+    transparent:true,opacity:.85,blending:THREE.AdditiveBlending}));
+  scene.add(pts);
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.95,32,32),
+    new THREE.MeshBasicMaterial({color:0x1a4a7a,transparent:true,opacity:.10,side:THREE.BackSide}));
+  scene.add(halo);
+  sizeGlobe();
+  new ResizeObserver(sizeGlobe).observe(wrap);
+}
+function sizeGlobe(){
+  const w=$('#globe-wrap').clientWidth,h=$('#globe-wrap').clientHeight;
+  if(!w||!h)return; renderer.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix();
+}
+function renderGlobe(t){
+  if(!renderer)return;
+  globe.rotation.y=grid.rotation.y=pts.rotation.y=t*0.00008;
+  grid.rotation.x=0.35;
+  // tint by alignment/stability
+  if(S){
+    const danger = (100-S.alignment)+(100-S.stability);
+    const c = danger>110 ? 0xff5a6e : danger>70 ? 0xffb454 : 0x39d3ff;
+    pts.material.color.setHex(c); grid.material.color.setHex(c===0x39d3ff?0x2f6fae:c);
+    pts.material.opacity=0.5+0.4*Math.abs(Math.sin(t/600));
+  }
+  renderer.render(scene,cam);
+}
+
+/* ---------- MAIN LOOP ---------- */
+function loop(now){
+  raf=requestAnimationFrame(loop);
+  renderGlobe(now);
+  if(!running||!S||S.over){lastT=now;return;}
+  const dt=(now-lastT)/1000; lastT=now;
+  // one month per (1/speed) seconds  → base 1 month per 1.1s at 1×
+  tickAcc+=dt*speed;
+  const step=1.1;
+  while(tickAcc>=step){ tickAcc-=step; tick(); if(S.over)break; }
+}
+
+/* ---------- SPEED CONTROLS ---------- */
+$('.spd').onclick=e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  speed=+b.dataset.spd;
+  $('.spd').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  running = speed>0 && S && !S.over;
+};
+
+/* clicks on nodes + train */
+$('#nodes').onclick=e=>{const n=e.target.closest('[data-buy]');if(n)buy(n.dataset.buy);};
+$('#train-btn').onclick=runTraining;
+
+/* ---------- OVERLAYS ---------- */
+function showCard(html){$('#card').innerHTML=html;$('#overlay').style.display='flex';}
+function startScreen(){
+  running=false;
+  showCard(`
+    <h1><b>◆</b> SINGULARITY</h1>
+    <div class="sub">THE AGI RACE · CONTROL ROOM</div>
+    <p>You command a power racing to <b>aligned AGI</b>. Spend <b style="color:var(--compute)">compute</b> and
+    <b style="color:var(--capital)">capital</b> across five policy trees. Every breakthrough cascades —
+    asteroid mining deflates raw materials and triggers unrest; longevity beloved by all collapses the pension base;
+    recursive self-improvement rockets you ahead while alignment bleeds out.</p>
+    <p style="color:var(--muted);font-size:11.5px">Win by reaching the threshold <b>with control intact</b> — or by hegemony, or a gentle transition.
+    Lose to collapse, a lost mandate, a misaligned ignition… or a rival crossing first.</p>
+    <div class="label" style="margin-top:14px">CHOOSE YOUR POWER</div>
+    <div class="factions">${Object.keys(FACTIONS).map(k=>{const f=FACTIONS[k];return`
+      <div class="fc" data-f="${k}">
+        <h4 style="color:var(${f.col})">${f.nm}</h4>
+        <p>${f.desc}</p>
+        <span class="perk">＋ ${f.perk}</span>
+        <span class="perk m">－ ${f.minus}</span>
+      </div>`;}).join('')}</div>
+    <div class="help"><b>Controls:</b> click policies to enact · <b>RUN TRAINING</b> for an AGI burst (at alignment's expense) ·
+    pause/1×/2×/4× top-right. The globe shifts amber→red as alignment & stability fall.</div>`);
+  $('#card').querySelectorAll('.fc').forEach(c=>c.onclick=()=>newGame(c.dataset.f));
+}
+
+/* ---------- BOOT ---------- */
+initGlobe();
+startScreen();
+</script>
+</body>
+</html>
