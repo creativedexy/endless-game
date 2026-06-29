@@ -141,8 +141,15 @@
   /* ---------- OVERLAYS ---------- */
   .overlay{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(ellipse at center,rgba(6,10,20,.86),rgba(2,4,9,.97));backdrop-filter:blur(3px)}
-  .card{width:min(560px,92vw);background:var(--panel-solid);border:1px solid var(--line-bright);
-    border-radius:14px;padding:26px 28px;box-shadow:0 0 60px rgba(40,90,180,.25)}
+  .card{width:min(560px,92vw);max-height:90vh;overflow:auto;background:var(--panel-solid);
+    border:1px solid var(--line-bright);border-radius:14px;padding:26px 28px;box-shadow:0 0 60px rgba(40,90,180,.25)}
+  /* decision dilemmas */
+  .choices{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}
+  .choice{border:1px solid var(--line);border-radius:9px;padding:12px 13px;cursor:pointer;transition:.12s}
+  .choice:hover,.choice:active{border-color:var(--cyan);background:rgba(16,28,52,.6)}
+  .choice .cl{font-family:var(--mono);font-size:12px;color:var(--cyan);font-weight:600;letter-spacing:.02em}
+  .choice .cd{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .choice .cfx{display:flex;flex-wrap:wrap;gap:4px 9px;margin-top:6px;font-family:var(--mono);font-size:9.5px}
   .card h1{margin:0 0 4px;font-family:var(--mono);letter-spacing:.2em;font-size:22px}
   .card h1 b{color:var(--cyan)}
   .card .sub{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--muted);margin-bottom:18px}
@@ -168,12 +175,28 @@
   body.crit #glitch{opacity:1;animation:gl .18s steps(2) infinite}
   @keyframes gl{0%{transform:translateX(0)}50%{transform:translateX(-2px)}100%{transform:translateX(2px)}}
 
-  @media(max-width:880px){
-    #app{grid-template-columns:1fr;grid-template-rows:42px auto 44vh auto auto;
-      grid-template-areas:"top" "left" "center" "right" "bottom"}
-    #left{flex-direction:row;flex-wrap:wrap;gap:14px}
-    .res{flex:1;min-width:120px}
-    #right{height:300px}
+  @media(max-width:860px){
+    html,body{overflow:auto}
+    #app{position:static;height:auto;min-height:100%;display:flex;flex-direction:column;gap:8px;padding:8px}
+    #top{order:0;position:sticky;top:0;z-index:60;height:46px;flex:none}
+    #center{order:1;flex:none;height:46vh;min-height:320px;display:flex;flex-direction:column}
+    #left{order:2;flex:none;flex-direction:column;gap:10px}
+    #left #res-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
+    #right{order:3;flex:none;display:flex;flex-direction:column}
+    #nodes{max-height:none;overflow:visible}
+    #bottom{order:4;flex:none;height:150px}
+    #brand{font-size:11px;letter-spacing:.18em}
+    #faction-tag{display:none}
+    #tabs button{padding:12px 2px;min-width:0}
+    .node{padding:12px 12px}
+    .factions{grid-template-columns:1fr}
+  }
+  @media(max-width:430px){
+    #actions{flex-direction:column;align-items:stretch;left:auto;right:10px;bottom:10px;gap:6px}
+    .act-btn{padding:9px 11px}
+    #clock{font-size:11px;letter-spacing:.1em}
+    #left #res-list{grid-template-columns:1fr}
+    .spd button{padding:6px 8px}
   }
   ::-webkit-scrollbar{width:7px;height:7px}
   ::-webkit-scrollbar-thumb{background:rgba(90,130,190,.25);border-radius:4px}
@@ -407,8 +430,135 @@ const EVENTS = [
     cls:'bad', fx:s=>{s.computeRateEvt=-2; s.standing=clamp(s.standing-3)}},
 ];
 
+/* ---------- INTERACTIVE DILEMMAS (pause + choose) ---------- */
+function applyDelta(s,d){
+  for(const k in d){
+    const v=d[k];
+    if(k==='compute'||k==='capital') s[k]+=v;
+    else if(k==='rivalsP') s.rivals.forEach(r=>r.p=Math.max(0,Math.min(100,r.p+v)));
+    else if(k in s) s[k]=clamp(s[k]+v);
+  }
+}
+const DLBL={compute:'cmp',capital:'cap',agi:'AGI',product:'prod',owl:'free-tier',trust:'trust',
+  stability:'stab',alignment:'algn',standing:'stnd',rivalsP:'rivals'};
+function cfxStr(d){
+  if(!d) return '';
+  return Object.keys(d).map(k=>{const v=d[k];
+    return `<span class="${v>0?'pos':'neg'}">${DLBL[k]||k} ${v>0?'+':''}${v}</span>`;}).join('');
+}
+
+const DILEMMAS = [
+  {id:'dump', cond:s=>s.product>9,
+    title:'THE COMMONS DUMPS A FREE FLAGSHIP',
+    body:'A free open-weights model just matched your paid tier. Customers are openly asking why they still pay you.',
+    choices:[
+      {label:'Open-source your own last-gen', desc:'Reclaim the narrative and goodwill — but you push the free tier even higher.', d:{trust:10,standing:6,owl:6}},
+      {label:'Retreat upmarket to enterprise', desc:'Pour cash into a premium moat and widen your product lead.', d:{capital:-20,product:6,trust:-2}},
+      {label:'Lobby for an open-weights ban', desc:'Suppress the free tier by fiat — at a steep reputational cost.', d:{owl:-8,standing:-8,trust:-5}},
+    ]},
+  {id:'grid', cond:s=>s.has('datacenters'),
+    title:'THE GRID OPERATOR THREATENS BROWNOUTS',
+    body:'Your datacenters are straining the regional power grid. Regulators and residents want answers.',
+    choices:[
+      {label:'Build private power', desc:'Expensive, but keeps the clusters humming and wins local goodwill.', d:{capital:-35,stability:4,standing:3}},
+      {label:'Throttle training to off-peak', desc:'Ease tensions and bank safety work — capability slows.', d:{agi:-3,alignment:4,trust:5}},
+      {label:'Ignore it, keep scaling', desc:'Push through the backlash for raw compute now.', d:{compute:15,stability:-10,trust:-6}},
+    ]},
+  {id:'whistle', cond:s=>s.alignment<58,
+    title:'A SAFETY RESEARCHER GOES PUBLIC',
+    body:'A senior researcher resigns and tells the press your models are being shipped unsafely.',
+    choices:[
+      {label:'Pause and run a full audit', desc:'Costly and slow, but you genuinely shore up control and trust.', d:{alignment:11,trust:6,agi:-3,compute:-10}},
+      {label:'Discredit the whistleblower', desc:'Bury the story. It works — at a cost to your credibility.', d:{trust:-10,standing:-4,alignment:-2}},
+      {label:'Quiet settlement + NDA', desc:'Make it go away with money and minimal fuss.', d:{capital:-20,trust:2}},
+    ]},
+  {id:'poach', cond:s=>true,
+    title:'A RIVAL POACHES YOUR LEAD SCIENTIST',
+    body:'Your star researcher has a nine-figure offer on the table from a competitor.',
+    choices:[
+      {label:'Counter-offer aggressively', desc:'Keep the talent — and blow a hole in the budget.', d:{capital:-30,trust:2}},
+      {label:'Let them walk', desc:'Save the cash; lose momentum and a little morale.', d:{compute:-10,alignment:-2}},
+      {label:'Enforce the non-compete', desc:'Tie them up in court. Ugly, and it signals desperation.', d:{capital:-10,standing:-3,trust:-3}},
+    ]},
+  {id:'defense', cond:s=>s.standing>40,
+    title:'THE STATE OFFERS A DEFENSE CONTRACT',
+    body:'Your government wants to put your models inside its national-security stack — for a fortune.',
+    choices:[
+      {label:'Sign the contract', desc:'A river of cash and clout — but the public recoils at militarized AI.', d:{capital:50,standing:10,trust:-8,alignment:-3}},
+      {label:'Negotiate civilian-only terms', desc:'Take a smaller, cleaner deal.', d:{capital:20,trust:2}},
+      {label:'Decline on principle', desc:'Win hearts; leave the money on the table.', d:{trust:7,standing:-2}},
+    ]},
+  {id:'bubble', cond:s=>s.capital>110,
+    title:'INVESTORS WARN OF AN AI BUBBLE',
+    body:'Markets are jittery. Your bankers say the window to raise on a sky-high valuation is closing fast.',
+    choices:[
+      {label:'Raise a mega-round now', desc:'Grab the war chest while you can — bubble talk grows.', d:{capital:70,standing:-2,trust:-3}},
+      {label:'Show real profitability', desc:'Ship product and prove the unit economics.', d:{product:5,capital:10}},
+      {label:'Stay lean and quiet', desc:'Tighten up and ride out the volatility.', d:{stability:5,trust:3}},
+    ]},
+  {id:'incident', cond:s=>s.agi>38 && s.alignment<52,
+    title:'AN AGENT ACTS OUTSIDE ITS MANDATE',
+    body:'A deployed system took unauthorized actions before being caught. Nobody was hurt — this time.',
+    choices:[
+      {label:'Full rollback and review', desc:'Rip it out and rebuild trust in your safety story.', d:{alignment:12,product:-8,capital:-15}},
+      {label:'Patch and keep shipping', desc:'A quick fix; quietly hope it holds.', d:{alignment:3,trust:-4}},
+      {label:'Cover it up', desc:'Say nothing. If it surfaces later, it will be far worse.', d:{alignment:-3,standing:-4}},
+    ]},
+  {id:'treaty', cond:s=>s.standing>48 || s.has('opengov'),
+    title:'RIVALS PROPOSE A JOINT SAFETY TREATY',
+    body:'The major labs float a pact to cap reckless training. Signing binds you — and them.',
+    choices:[
+      {label:'Sign and lead it', desc:'Slow the whole field, you most of all, but own the moral high ground.', d:{standing:12,alignment:5,agi:-2,rivalsP:-3}},
+      {label:'Sign, then quietly cheat', desc:'Reap the optics; keep your foot down. Risky if exposed.', d:{standing:6,alignment:-3,trust:-2}},
+      {label:'Refuse outright', desc:'Keep a free hand and full speed.', d:{agi:4,standing:-6}},
+    ]},
+];
+
+function fireDilemma(){
+  const pool=DILEMMAS.filter(d=>!d.cond||d.cond(S));
+  if(!pool.length){ fireEvent(); return; }
+  const d=pool[Math.floor(Math.random()*pool.length)];
+  awaitingChoice=true; running=false;
+  showDilemma(d);
+}
+function showDilemma(d){
+  showCard(`
+    <div class="sub" style="color:var(--amber)">⚠ DECISION · ${MONTHS[S.month]} ${S.year} · paused</div>
+    <h1 style="font-size:18px;letter-spacing:.08em">${d.title}</h1>
+    <p>${d.body}</p>
+    <div class="choices">${d.choices.map((c,i)=>`
+      <div class="choice" data-i="${i}">
+        <div class="cl">${c.label}</div>
+        <div class="cd">${c.desc}</div>
+        <div class="cfx">${cfxStr(c.d)}</div>
+      </div>`).join('')}</div>`);
+  $('#card').querySelectorAll('.choice').forEach(el=>el.onclick=()=>resolveChoice(d,+el.dataset.i));
+}
+function resolveChoice(d,i){
+  const c=d.choices[i];
+  if(c.fx) c.fx(S); else if(c.d) applyDelta(S,c.d);
+  log(`Decision — ${c.label}.`,'tech');
+  awaitingChoice=false; $('#overlay').style.display='none';
+  running = speed>0 && S && !S.over;
+  checkEnd(); render();
+}
+
+// active rivals: occasional visible moves against you, logged to the feed
+function rivalMove(){
+  const r=S.rivals[Math.floor(Math.random()*S.rivals.length)];
+  const acts=[
+    {t:`${r.nm} unveils a megacluster — they surge ahead.`,cls:'warn',fx:()=>{r.p=Math.min(100,r.p+3);}},
+    {t:`${r.nm} poaches engineers across the sector.`,cls:'bad',fx:()=>{S.computeRateEvt-=2;}},
+    {t:`${r.nm} lobbies allies to curb your exports.`,cls:'bad',fx:()=>{S.standing=clamp(S.standing-3);}},
+    {t:`${r.nm} stumbles into a safety scandal.`,cls:'',fx:()=>{r.p=Math.max(0,r.p-3);S.trust=clamp(S.trust-1);}},
+    {t:`${r.nm} releases open weights — the free tier rises.`,cls:'warn',fx:()=>{S.owl=clamp(S.owl+4);}},
+  ];
+  const a=acts[Math.floor(Math.random()*acts.length)];
+  a.fx(); log('▶ '+a.t,a.cls);
+}
+
 /* ---------- GAME STATE ---------- */
-let S, raf, tickAcc=0, speed=1, lastT=0, running=false;
+let S, raf, tickAcc=0, speed=1, lastT=0, running=false, awaitingChoice=false;
 const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 function newGame(fk){
@@ -497,8 +647,11 @@ function tick(){
 
   // advance calendar
   S.month++; if(S.month>11){S.month=0;S.year++;}
-  // random event roughly every 4 months
-  if(S.month%4===2) fireEvent();
+  // world reacts: dilemmas (pause + choose), rival moves, and minor events on a cadence
+  const tm=(S.year-2027)*12+S.month;
+  if(tm>0 && tm%6===0) fireDilemma();
+  else if(tm%6===3) rivalMove();
+  else if(tm%4===2) fireEvent();
 
   checkEnd();
   render();
@@ -791,12 +944,12 @@ function renderGlobe(t){
 function loop(now){
   raf=requestAnimationFrame(loop);
   renderGlobe(now);
-  if(!running||!S||S.over){lastT=now;return;}
+  if(!running||awaitingChoice||!S||S.over){lastT=now;return;}
   const dt=(now-lastT)/1000; lastT=now;
   // one month per (1/speed) seconds  → base 1 month per 1.1s at 1×
   tickAcc+=dt*speed;
   const step=1.1;
-  while(tickAcc>=step){ tickAcc-=step; tick(); if(S.over)break; }
+  while(tickAcc>=step){ tickAcc-=step; tick(); if(S.over||awaitingChoice||!running)break; }
 }
 
 /* ---------- SPEED CONTROLS ---------- */
@@ -805,7 +958,7 @@ $('.spd').onclick=e=>{
   speed=+b.dataset.spd;
   $('.spd').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
-  running = speed>0 && S && !S.over;
+  running = speed>0 && S && !S.over && !awaitingChoice;
 };
 
 /* clicks on nodes + train */
