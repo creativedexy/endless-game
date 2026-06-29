@@ -2,18 +2,19 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
-## AGI Race — Land Grab
+## AGI Race (control-room strategy)
 
-A single-file, real-time **map land-grab** about the race to AGI. You **are** one of five caricatured labs; tap to capture compute sites across a node-network world and build them taller. Rival labs grab land in real time, so borders constantly flip — more territory means faster AGI. First lab to the singularity (or to dominate the map) wins. Mobile-first, instant to pick up, no build step.
+A single-file, Plague Inc.–style **world-domination game built around the AGI race**. You steer a global power toward *aligned* AGI before society tears itself apart — or a rival crosses the threshold first. Control-room art: a glowing low-poly globe, neon dashboards, and a UI that glitches as alignment collapses.
 
 **Play it live:** https://creativedexy.github.io/endless-game/agi-race/
 
-- **Tap to play** — tap a glowing neighbour to capture it, tap your own site to build it taller (more compute). One-tap, fast feedback.
-- **Five labs as players** — Prometheus (hyper-expansive), Leviathan (builds tall), Maverick (aggressive), DeepHorizon (efficient), Aegis (measured). Each rival has its own AI personality.
-- **A living map** — two landmasses joined by contested bridges; **hubs** and **fabs** out-produce plain sites, so the best ground is fought over. Defended home capitals give a gentler opening.
-- **Win** by reaching AGI first or wiping the map; **lose** if a rival hits AGI first or you're eliminated.
+- **Six indicators** — Compute, Capital, Public Trust, Stability, Alignment, Geo Standing.
+- **Five policy trees** (Compute, Space, Bio, Econ, Gov) with cascading trade-offs: asteroid mining deflates raw materials and sparks unrest; longevity is beloved then collapses the economy; recursive self-improvement rockets you ahead as alignment bleeds out.
+- **Open-source economy** — a relentless *Open-Weights line* rises every month. `SHIP MODEL` to keep your product tier ahead of free models, or your revenue collapses into bankruptcy. `RUN TRAINING` for an AGI burst at alignment's expense.
+- **Caricatured rivals** — Prometheus Labs, Leviathan, Maverick, DeepHorizon, and The Commons race you on the readiness bar.
+- **Multiple endings** — aligned singularity, techno-hegemony, or a gentle transition; vs. collapse, lost mandate, misaligned ignition, insolvency, or being outpaced.
 
-Control-room art: dark canvas, neon faction colours, glowing capture rings, flips that flash and float. Source: `agi-race/index.html` (pure 2D canvas, no dependencies).
+Source: `agi-race/index.html` (Three.js via CDN, no build step).
 
 ## Mars Colony: War Front
 
