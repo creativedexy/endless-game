@@ -205,6 +205,12 @@
   #coach{font-size:11.5px;color:var(--txt);margin-top:3px;line-height:1.35;min-height:15px}
   #coach b{color:var(--amber)}
   .res{cursor:help}
+  .node.asset .nt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .node.asset .cnt{font-family:var(--mono);font-size:9px;color:var(--txt);background:rgba(57,211,255,.14);
+    border:1px solid rgba(57,211,255,.3);border-radius:5px;padding:1px 5px}
+  .node.asset .tier{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--amber);
+    background:rgba(255,210,74,.12);border:1px solid rgba(255,210,74,.3);border-radius:5px;padding:1px 5px}
+  .node.asset .cost{font-size:11px}
   .spd button.hint{animation:pulse 1.05s ease-in-out infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(57,211,255,0)}50%{box-shadow:0 0 14px rgba(57,211,255,.9)}}
   ::-webkit-scrollbar{width:7px;height:7px}
@@ -335,10 +341,7 @@ const TREES = {
   compute:{ nm:'COMPUTE', title:'Compute & Frontier AI',
     blurb:'Scale the silicon and the models. Capability is fastest here — and the most dangerous to your alignment.',
     nodes:[
-      {id:'datacenters', nm:'Datacenter Buildout', cost:{compute:30},
-        desc:'Hyperscale GPU clusters. Raw research throughput, heavy power + land cost.',
-        mod:{computeRate:3, capitalRate:-1.5, stability:-0.1}, imm:{}},
-      {id:'frontier', nm:'Frontier Models', cost:{compute:55}, req:['datacenters'],
+      {id:'frontier', nm:'Frontier Models', cost:{compute:55},
         desc:'Train flagship models. Real progress toward AGI — but they get harder to steer.',
         mod:{agiRate:0.7, alignment:-0.35, computeRate:1}, imm:{standing:5}},
       {id:'rsi', nm:'Recursive Self-Improvement', cost:{compute:130}, req:['frontier'],
@@ -469,7 +472,7 @@ const DILEMMAS = [
       {label:'Retreat upmarket to enterprise', desc:'Pour cash into a premium moat and widen your product lead.', d:{capital:-20,product:6,trust:-2}},
       {label:'Lobby for an open-weights ban', desc:'Suppress the free tier by fiat — at a steep reputational cost.', d:{owl:-8,standing:-8,trust:-5}},
     ]},
-  {id:'grid', cond:s=>s.has('datacenters'),
+  {id:'grid', cond:s=>(s.assets&&s.assets.datacenter>=3),
     title:'THE GRID OPERATOR THREATENS BROWNOUTS',
     body:'Your datacenters are straining the regional power grid. Regulators and residents want answers.',
     choices:[
@@ -580,6 +583,7 @@ function newGame(fk){
     fk, faction:f,
     ...JSON.parse(JSON.stringify(f.start)),
     agi:0, owl:6, product:12, month:0, year:2027,
+    assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
     owned:new Set(), flags:new Set(),
     rivals:[
       {nm:'Prometheus Labs', p:7, spd:.48},
@@ -588,7 +592,7 @@ function newGame(fk){
       {nm:'DeepHorizon', p:8, spd:.46},
       {nm:'The Commons · open', p:6, spd:.40, commons:true},
     ],
-    tab:'compute', over:false, computeRateEvt:0,
+    tab:'build', over:false, computeRateEvt:0,
     has(id){return this.owned.has(id)},
   };
   S.rivals.forEach(r=>{ r.spd*=f.rivalMul; r.spd*=0.85; }); // ease early pressure
@@ -606,7 +610,7 @@ function newGame(fk){
 
 /* ---------- DERIVED PER-MONTH RATES ---------- */
 function rates(){
-  const r={computeRate:2, capitalRate:1, trust:0, stability:0, alignment:0, standing:0, agiRate:0, rivalSlow:0};
+  const r={computeRate:3, capitalRate:2, trust:0, stability:0, alignment:0, standing:0, agiRate:0, rivalSlow:0};
   for(const id of S.owned){
     const n = findNode(id); if(!n||!n.mod) continue;
     for(const k in n.mod) r[k]=(r[k]||0)+n.mod[k];
@@ -616,6 +620,13 @@ function rates(){
   if(S.faction.alignDrain) r.alignment-=S.faction.alignDrain;
   if(S.faction.agiBonus) r.agiRate+=S.faction.agiBonus*(S.owned.has('frontier')?1:0.3);
   r.computeRate+=S.computeRateEvt||0;
+  // BUILD assets — the tangible early-game economy
+  const A=S.assets||{};
+  const dcTier = 1 + 0.25*Math.floor((A.datacenter||0)/5);   // milestone tier-ups every 5
+  r.computeRate += (A.datacenter||0)*3*dcTier;
+  r.agiRate     += (A.scientist||0)*0.18;
+  r.capitalRate += (A.engineer||0)*2.5;
+  r.alignment   += (A.safety||0)*0.15;
   // low stability throttles your economy & research
   if(S.stability<30){ r.capitalRate-=2; r.computeRate*=0.6; }
   if(S.trust<25){ r.capitalRate-=1; }
@@ -642,8 +653,8 @@ function tick(){
   S.stability = clamp(S.stability + r.stability);
   S.alignment = clamp(S.alignment + r.alignment);
   S.standing = clamp(S.standing + r.standing);
-  // AGI progress scales modestly with compute infrastructure
-  const infra = 1 + (S.compute>200?0.3:S.compute/660);
+  // AGI progress scales with your datacenter count — more datacenters amplify your scientists
+  const infra = 1 + 0.12*(S.assets.datacenter||0);
   S.agi = clamp(S.agi + r.agiRate*infra, 0, 100);
   S.computeRateEvt = 0;
 
@@ -652,16 +663,16 @@ function tick(){
   S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + v.spd*slow*(0.8+Math.random()*0.5)); });
 
   // open-source market: free capability creeps up relentlessly; your product slowly ages
-  S.owl = clamp(S.owl + 0.4);
+  S.owl = clamp(S.owl + 0.32);
   const commons = S.rivals.find(v=>v.commons);
   if(commons) S.owl = clamp(Math.max(S.owl, commons.p*0.7));
-  S.product = clamp(S.product - 0.15);
+  S.product = clamp(S.product - 0.15 + (S.assets.engineer||0)*0.35);  // engineers ship → product climbs
   const mg = S.product - S.owl;
   if(mg<0){ S.stability=clamp(S.stability-0.3); S.trust=clamp(S.trust-0.2);
     if(mg<-15) S.stability=clamp(S.stability-0.4); }
 
-  // capital debt → unrest
-  if(S.capital<0){ S.stability=clamp(S.stability-1.2); if(S.capital<-50) S.trust=clamp(S.trust-1); }
+  // capital debt → unrest (lighter, more forgiving)
+  if(S.capital<0){ S.stability=clamp(S.stability-0.6); if(S.capital<-70) S.trust=clamp(S.trust-0.6); }
 
   // advance calendar
   S.month++; if(S.month>11){S.month=0;S.year++;}
@@ -685,7 +696,7 @@ function fireEvent(){
 /* ---------- WIN / LOSE ---------- */
 function checkEnd(){
   const topRival = Math.max(...S.rivals.map(r=>r.p));
-  if(S.capital<=-100) return end('lose','▽','INSOLVENCY',
+  if(S.capital<=-150) return end('lose','▽','INSOLVENCY',
     'Free open-weight models matched your product and your revenue evaporated. The board wound the company down — you ran out of money before you ran out of ideas.');
   if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE',
     'Order disintegrated faster than your machines could think. Unrest swallowed the state before AGI ever arrived.');
@@ -766,7 +777,7 @@ function flash(el){const o=el.style.boxShadow;el.style.boxShadow='0 0 34px rgba(
 
 // SHIP: convert frontier capability into product tier (revenue), to stay ahead of the free tier
 function shipCeiling(){
-  return clamp(S.agi*0.7 + (S.has('frontier')?20:0) + (S.has('rsi')?20:0) + (S.has('datacenters')?8:0), 0, 100);
+  return clamp(S.agi*0.7 + (S.has('frontier')?20:0) + (S.has('rsi')?20:0) + Math.min(20,(S.assets.datacenter||0)*2.5), 0, 100);
 }
 function shipModel(){
   if(S.over) return;
@@ -808,16 +819,18 @@ function coach(){
   if(!running){
     const tm=(S.year-2027)*12+S.month;
     return tm===0
-      ? 'Paused. Try buying <b>Datacenters</b> (Compute tab, right), then press <b>▶ 1×</b> (top-right) to start the clock.'
+      ? 'Paused. In the <b>★ BUILD</b> tab, buy a <b>Datacenter</b> and a <b>Scientist</b>, then press <b>▶ 1×</b> (top-right) to start.'
       : 'Paused — press <b>▶ 1×</b> to resume.';
   }
-  if(S.alignment<40) return 'Alignment is dangerously low — buy <b>Interpretability</b> (Compute) or enact <b>Safety Regulation</b> (Gov).';
-  if((S.product-S.owl)<3) return 'Free models are catching your product — press <b>SHIP MODEL</b> to defend your revenue.';
-  if(!S.has('datacenters')) return 'Grow your research engine: buy <b>Datacenters</b> in the Compute tab.';
-  if(S.capital<0) return 'You are losing money — <b>SHIP MODEL</b> or buy an economy policy (Econ tab).';
-  if(!S.has('frontier')) return 'Buy <b>Frontier Models</b> (Compute) to start advancing AGI, then <b>RUN TRAINING</b>.';
-  if(S.product < shipCeiling()-6) return 'Your research is ahead of your product — <b>SHIP MODEL</b> to turn it into revenue.';
-  return 'Push toward AGI with <b>RUN TRAINING</b> while keeping <b>Alignment ≥ 60</b>.';
+  const A=S.assets;
+  if(S.alignment<40) return 'Alignment is dangerously low — hire <b>Safety Researchers</b> (BUILD) before it causes a catastrophe.';
+  if((A.scientist||0)===0) return 'Hire your first <b>Scientist</b> (★ BUILD) to start advancing AGI.';
+  if((A.datacenter||0)>=dcCap()) return 'Out of datacenter capacity — build a <b>Power Plant</b> (BUILD).';
+  if((S.product-S.owl)<3) return 'Free models are catching up — hire <b>Engineers</b> (BUILD) or press <b>SHIP MODEL</b>.';
+  if(S.capital<0) return 'You are losing money — hire <b>Engineers</b> (BUILD) for revenue.';
+  if((A.datacenter||0)<4) return 'Add more <b>Datacenters</b> (BUILD) — more Compute means faster AGI.';
+  if(!S.has('frontier')) return 'Ready for depth: buy <b>Frontier Models</b> (Compute tab) to boost AGI.';
+  return 'Keep building, then push <b>RUN TRAINING</b> while holding <b>Alignment ≥ 60</b>.';
 }
 function updateGuide(){
   const el=$('#coach'); if(!el) return;
@@ -825,9 +838,64 @@ function updateGuide(){
   else { coachMsg=null; el.innerHTML=coach(); }
 }
 
+/* ---------- BUILD: tangible, tiered assets you buy & level ---------- */
+const ASSETS=[
+  {id:'datacenter', nm:'Datacenter',         icon:'🖥️', cur:'compute', base:15, growth:1.4,
+    desc:'GPU clusters. Each one adds Compute every month — and faster Compute means faster AGI.',
+    eff:'+2.5 compute / mo each', tierEvery:5},
+  {id:'scientist',  nm:'Scientist',          icon:'🧪', cur:'compute', base:20, growth:1.4,
+    desc:'Hire a researcher. Each one speeds your progress toward AGI.',
+    eff:'+AGI research each'},
+  {id:'engineer',   nm:'Engineer',           icon:'🛠️', cur:'compute', base:26, growth:1.4,
+    desc:'Ships product. Brings in Capital and keeps you ahead of free open models.',
+    eff:'+Capital & +product each'},
+  {id:'power',      nm:'Power Plant',         icon:'⚡', cur:'compute', base:35, growth:1.5,
+    desc:'Each plant powers 4 more datacenters. Build these to keep expanding compute.',
+    eff:'+4 datacenter slots each'},
+  {id:'safety',     nm:'Safety Researcher',   icon:'🛡️', cur:'compute', base:28, growth:1.4,
+    desc:'Keeps your AI controllable — slowly raises Alignment to offset the drift.',
+    eff:'+Alignment each'},
+];
+function assetCost(a){ return Math.round(a.base*Math.pow(a.growth, S.assets[a.id]||0)); }
+function dcCap(){ return (S.assets.power||0)*4; }
+function buyAsset(id){
+  const a=ASSETS.find(x=>x.id===id); if(!a||S.over) return;
+  if(id==='datacenter' && (S.assets.datacenter||0)>=dcCap()){ setCoach('Out of capacity — build a <b>Power Plant</b> first.'); return; }
+  const c=assetCost(a);
+  if(S[a.cur]<c){ setCoach(`Not enough ${a.cur==='compute'?'Compute':'Capital'} for a ${a.nm}.`); return; }
+  S[a.cur]-=c; S.assets[id]=(S.assets[id]||0)+1;
+  log(`Built ${a.nm} (now ×${S.assets[id]}).`,'tech');
+  render();
+}
+function renderBuild(){
+  $('#tree-title h3').textContent='BUILD YOUR LAB';
+  $('#tree-title p').textContent='Buy and grow the things that produce. Costs rise as you add more.';
+  const cap=dcCap();
+  $('#nodes').innerHTML = ASSETS.map(a=>{
+    const count=S.assets[a.id]||0, c=assetCost(a);
+    const blocked = a.id==='datacenter' && count>=cap;
+    const aff = S[a.cur]>=c && !blocked;
+    const cls = (!aff)?'cant':'';
+    const icon = a.cur==='compute'?'⬡':'$';
+    const tier = a.tierEvery ? ('T'+(1+Math.floor(count/a.tierEvery))) : '';
+    const countTag = a.id==='datacenter' ? `${count}/${cap}` : `×${count}`;
+    const costStr = blocked ? '<span style="color:var(--amber)">needs ⚡ power</span>'
+      : `<span style="color:var(--${a.cur})">${icon}${c}</span>`;
+    return `<div class="node asset ${cls}" data-asset="${a.id}">
+      <div class="nh"><span class="nt">${a.icon} ${a.nm}
+        <span class="cnt">${countTag}</span>${tier?` <span class="tier">${tier}</span>`:''}</span>
+        <span class="cost">${costStr}</span></div>
+      <div class="nd">${a.desc}</div>
+      <div class="fx"><span class="pos">${a.eff}</span></div></div>`;
+  }).join('');
+}
+
 function buildTabs(){
-  $('#tabs').innerHTML = Object.keys(TREES).map(k=>
-    `<button data-tab="${k}" class="${k===S.tab?'on':''}">${TREES[k].nm}</button>`).join('');
+  const tabs=['build',...Object.keys(TREES)];
+  $('#tabs').innerHTML = tabs.map(k=>{
+    const label = k==='build'?'★ BUILD':TREES[k].nm;
+    return `<button data-tab="${k}" class="${k===S.tab?'on':''}">${label}</button>`;
+  }).join('');
   $('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.tab=b.dataset.tab;render();};
 }
 
@@ -893,6 +961,8 @@ function render(){
 
   // tree panel
   $('#tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
+  if(S.tab==='build'){ renderBuild(); }
+  else {
   const T=TREES[S.tab];
   $('#tree-title h3').textContent=T.title;
   $('#tree-title p').textContent=T.blurb;
@@ -909,6 +979,7 @@ function render(){
       <div class="nd">${n.desc}</div>
       <div class="fx">${fxStr(n)}</div>${reqStr}</div>`;
   }).join('');
+  }
 
   // world status caption
   $('#world-status').innerHTML = worldStatus();
@@ -1015,7 +1086,10 @@ $('.spd').onclick=e=>{
 };
 
 /* clicks on nodes + train */
-$('#nodes').onclick=e=>{const n=e.target.closest('[data-buy]');if(n)buy(n.dataset.buy);};
+$('#nodes').onclick=e=>{
+  const a=e.target.closest('[data-asset]'); if(a){ buyAsset(a.dataset.asset); return; }
+  const n=e.target.closest('[data-buy]'); if(n) buy(n.dataset.buy);
+};
 $('#train-btn').onclick=runTraining;
 $('#ship-btn').onclick=shipModel;
 
