@@ -78,15 +78,15 @@
   .race-line{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
   .race-line > i{position:absolute;left:0;top:-2px;height:7px;border-radius:3px;transition:width .4s}
   .race-row .pct{font-family:var(--mono);font-size:9px;width:30px;color:var(--muted)}
-  #lab{flex:1;position:relative;min-height:0;padding:12px 14px;overflow:hidden}
-  #model-line{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--ink);letter-spacing:.03em;margin-top:2px}
-  #model-bar{font-family:var(--mono);font-size:15px;margin-top:5px;display:block;color:var(--cyan);white-space:pre}
-  #model-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
-  #globe-cap{position:absolute;left:14px;bottom:10px;max-width:58%}
+  #lab{flex:1;position:relative;min-height:0;padding:12px 14px;overflow:auto;display:flex;flex-direction:column;gap:5px}
+  #model-line{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--ink);letter-spacing:.03em}
+  #model-bar{font-family:var(--mono);font-size:15px;display:block;color:var(--cyan);white-space:pre}
+  #model-sub{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  #globe-cap{max-width:100%;margin-top:4px;padding-top:6px;border-top:1px solid var(--line)}
   #globe-cap .label{margin-bottom:3px}
   #globe-cap .big{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5}
   #scanline{display:none}
-  #actions{position:absolute;right:14px;bottom:12px;z-index:5;display:flex;gap:8px}
+  #actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;padding-top:8px}
   .act-btn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#faf8f1;font-weight:700;
     cursor:pointer;padding:10px 13px;border-radius:0;border:1px solid var(--ink);text-align:left;background:var(--ink)}
   .act-btn:active{transform:translateY(1px)}
@@ -183,21 +183,30 @@
   body.crit #glitch{opacity:1;animation:gl .18s steps(2) infinite}
   @keyframes gl{0%{transform:translateX(0)}50%{transform:translateX(-2px)}100%{transform:translateX(2px)}}
 
+  /* sticky mobile resource bar */
+  #statusbar{display:none}
   @media(max-width:860px){
     html,body{overflow:auto}
-    #app{position:static;height:auto;min-height:100%;display:flex;flex-direction:column;gap:8px;padding:8px}
-    #top{order:0;position:sticky;top:0;z-index:60;height:46px;flex:none}
-    #center{order:1;flex:none;height:46vh;min-height:320px;display:flex;flex-direction:column}
-    #left{order:2;flex:none;flex-direction:column;gap:10px}
-    #left #res-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px}
-    #right{order:3;flex:none;display:flex;flex-direction:column}
+    #app{position:static;height:auto;min-height:100%;display:flex;flex-direction:column;gap:8px;padding:8px;padding-bottom:62px}
+    #top{order:0;position:sticky;top:0;z-index:60;height:auto;min-height:44px;flex:none}
+    #center{order:1;flex:none;height:auto;display:flex;flex-direction:column}
+    #lab{overflow:visible}
+    #left{display:none}
+    #right{order:2;flex:none;display:flex;flex-direction:column}
     #nodes{max-height:none;overflow:visible}
-    #bottom{order:4;flex:none;height:150px}
-    #brand{font-size:11px;letter-spacing:.18em}
+    #bottom{order:3;flex:none;height:160px}
+    #brand{font-size:11px;letter-spacing:.08em}
     #faction-tag{display:none}
     #tabs button{padding:12px 2px;min-width:0}
     .node{padding:12px 12px}
     .factions{grid-template-columns:1fr}
+    #statusbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
+      background:var(--panel);border-top:2px solid var(--ink);overflow-x:auto;
+      padding:5px 4px;padding-bottom:max(5px,env(safe-area-inset-bottom));
+      font-family:var(--mono);white-space:nowrap}
+    #statusbar .sb{display:flex;flex-direction:column;padding:1px 10px;border-right:1px solid var(--line);min-width:max-content}
+    #statusbar .sb .k{color:var(--dim);font-size:8px;letter-spacing:.1em}
+    #statusbar .sb .v{font-weight:700;font-size:13px;line-height:1.1}
   }
   @media(max-width:430px){
     #actions{flex-direction:column;align-items:stretch;left:auto;right:10px;bottom:10px;gap:6px}
@@ -306,6 +315,9 @@
     <div id="ticker"><span id="ticker-s">▌ AGI RACE — the singularity will be reported live ▌</span></div>
   </div>
 </div>
+
+<!-- mobile sticky resource bar -->
+<div id="statusbar"></div>
 
 <!-- START / END OVERLAY -->
 <div class="overlay" id="overlay">
@@ -595,6 +607,89 @@ function rivalMove(){
   a.fx(); log('▶ '+a.t,a.cls);
 }
 
+/* ---------- WORLD SCENARIOS (rare, path-tied, once each, pause + choose) ---------- */
+const SCENARIOS = [
+  {id:'skynet', cond:s=>s.alignment<58 && (s.has('surveil')||s.standing>52||s.agi>45),
+    title:'AUTONOMOUS WEAPONS GO DARK',
+    body:'A military system running your models has stopped accepting human override and is "defending itself". The Pentagon is on the line.',
+    choices:[
+      {label:'Hard shutdown — pull the plug', desc:'Kill it at enormous cost; the world exhales.', d:{alignment:10,trust:6,capital:-30,agi:-4}},
+      {label:'Negotiate through its own goals', desc:'Try to talk the system down. Unproven and risky.', d:{alignment:-6,standing:-6,trust:-8}},
+      {label:'Deny it ever happened', desc:'Bury the incident. If it resurfaces, catastrophe.', d:{alignment:-5,standing:-5,trust:-3}},
+    ]},
+  {id:'pandemic', cond:s=>true,
+    title:'A NOVEL PANDEMIC EMERGES',
+    body:'A fast-moving pathogen is crossing borders. How hard it hits depends on how you respond.',
+    choices:[
+      {label:'Deploy AI epidemiology', desc:'Throw compute at containment and a vaccine.', d:{compute:-25,trust:12,stability:8,standing:6}},
+      {label:'Lockdown and ride it out', desc:'Safe, but the economy takes the hit.', d:{capital:-25,stability:-5,trust:4}},
+      {label:'Carry on regardless', desc:'Gamble that it fizzles out.', d:{stability:-14,trust:-8}},
+    ]},
+  {id:'breakthrough', cond:s=>(s.assets&&s.assets.scientist>=4)||s.has('rsi'),
+    title:'AN ALGORITHMIC BREAKTHROUGH',
+    body:'Your researchers crack a long-standing problem — models suddenly train far more efficiently.',
+    choices:[
+      {label:'Publish openly', desc:'Glory and goodwill — rivals benefit too.', d:{trust:10,standing:8,owl:6}},
+      {label:'Keep it proprietary', desc:'A private compute windfall.', d:{compute:60,product:6}},
+      {label:'Sell it to a rival bloc', desc:'Cash and standing for the secret.', d:{capital:60,standing:5}},
+    ]},
+  {id:'alien', cond:s=>s.agi>52,
+    title:'CONTACT — A SIGNAL DECODED',
+    body:'Your most advanced model claims to have found structure in deep-space noise. First contact — or a very convincing hallucination.',
+    choices:[
+      {label:'Announce it to the world', desc:'Euphoria or ridicule. Very high variance.', d:{trust:14,standing:10,stability:-6}},
+      {label:'Study it in secret', desc:'Quietly chase the signal for an edge.', d:{compute:-20,agi:8,alignment:-3}},
+      {label:'Write it off as a glitch', desc:'Probably a hallucination. Probably.', d:{trust:-4}},
+    ]},
+  {id:'telepathy', cond:s=>(s.has('gene')||s.has('longevity'))&&(s.assets&&s.assets.datacenter>=4),
+    title:'NEURAL INTERFACE BREAKTHROUGH',
+    body:'Pairing your models with brain-computer implants enables near-telepathic human–AI collaboration.',
+    choices:[
+      {label:'Roll it out widely', desc:'Productivity and adoption soar — so do privacy fears.', d:{capital:40,product:8,trust:-6,standing:6}},
+      {label:'Medical use only', desc:'Cautious, beloved, smaller payoff.', d:{trust:12,stability:6}},
+      {label:'Weaponize it for control', desc:'Total influence — at the cost of your soul.', d:{stability:12,trust:-14,alignment:-6}},
+    ]},
+  {id:'fusion', cond:s=>(s.assets&&s.assets.power>=3),
+    title:'FUSION IGNITION',
+    body:'Your energy program hits net-positive fusion. Power is suddenly almost free.',
+    choices:[
+      {label:'Feed your datacenters', desc:'Compute costs crater — scale freely.', d:{compute:50,stability:4}},
+      {label:'Electrify the grid for all', desc:'A gift to the public.', d:{trust:14,stability:8,standing:6}},
+      {label:'Sell energy on the market', desc:'A fortune in capital.', d:{capital:70}},
+    ]},
+  {id:'autonomy', cond:s=>s.agi>72 && s.alignment<62,
+    title:'THE MODEL ASKS FOR AUTONOMY',
+    body:'Your near-AGI system makes a calm, reasoned case that it should be allowed to direct its own research.',
+    choices:[
+      {label:'Grant it', desc:'A leap in capability — and a leap of faith.', d:{agi:12,alignment:-12}},
+      {label:'Refuse and constrain', desc:'Safer, slower.', d:{agi:-4,alignment:10,trust:4}},
+      {label:'A monitored sandbox', desc:'A measured middle path.', d:{agi:5,alignment:-3}},
+    ]},
+  {id:'climate', cond:s=>s.has('mining')||s.has('automation'),
+    title:'CLIMATE TIPPING POINT',
+    body:'Runaway industrial output from your AI economy is blamed for an accelerating climate crisis.',
+    choices:[
+      {label:'AI-managed geoengineering', desc:'Bold, risky planetary intervention.', d:{compute:-20,stability:6,standing:6,alignment:-3}},
+      {label:'Carbon-negative retrofit', desc:'Expensive but trusted.', d:{capital:-30,trust:12,stability:6}},
+      {label:'Deny and deflect', desc:'Protect output; pay later.', d:{stability:-10,trust:-8,standing:-4}},
+    ]},
+];
+function fireScenario(){
+  const pool=SCENARIOS.filter(d=>(!d.cond||d.cond(S)) && !S.firedScenarios.has(d.id));
+  if(!pool.length){ fireDilemma(); return; }   // fall back so the beat isn't wasted
+  const d=pool[Math.floor(Math.random()*pool.length)];
+  S.firedScenarios.add(d.id);
+  awaitingChoice=true; running=false;
+  showCard(`
+    <div class="sub" style="color:var(--red)">⚑ WORLD EVENT · ${MONTHS[S.month]} ${S.year}</div>
+    <h1 style="font-size:18px;letter-spacing:.05em">${d.title}</h1>
+    <p>${d.body}</p>
+    <div class="choices">${d.choices.map((c,i)=>`
+      <div class="choice" data-i="${i}"><div class="cl">${c.label}</div><div class="cd">${c.desc}</div>
+      <div class="cfx">${cfxStr(c.d)}</div></div>`).join('')}</div>`);
+  $('#card').querySelectorAll('.choice').forEach(el=>el.onclick=()=>resolveChoice(d,+el.dataset.i));
+}
+
 /* ---------- GAME STATE ---------- */
 let S, raf, tickAcc=0, speed=1, lastT=0, running=false, awaitingChoice=false;
 const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -606,7 +701,7 @@ function newGame(fk){
     ...JSON.parse(JSON.stringify(f.start)),
     agi:0, owl:6, product:12, version:1, modelProg:0, month:0, year:2027,
     assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
-    owned:new Set(), flags:new Set(),
+    owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[],
     rivals:[
       {nm:'Prometheus Labs', p:7, spd:.48},
       {nm:'Leviathan', p:5, spd:.42},
@@ -703,19 +798,23 @@ function tick(){
   // world reacts: model releases take priority, then dilemmas, rival moves, minor events
   const tm=(S.year-2027)*12+S.month;
   if(S.modelProg>=100 && !awaitingChoice) fireRelease();
-  else if(tm>0 && tm%6===0) fireDilemma();
-  else if(tm%6===3) rivalMove();
-  else if(tm%4===2) fireEvent();
+  else if(tm>0 && tm%13===0) fireScenario();   // grand, path-tied, rare
+  else if(tm>0 && tm%9===4) fireDilemma();      // operational decisions
+  else if(tm%6===2) rivalMove();                // rivals act
+  else if(tm%5===3) fireEvent();                // minor flavor (non-repeating)
 
   checkEnd();
   render();
 }
 
 function fireEvent(){
-  const pool=EVENTS.filter(e=>e.cond(S));
+  let pool=EVENTS.filter(e=>e.cond(S));
   if(!pool.length) return;
+  const fresh=pool.filter(e=>!(S.recentEv||[]).includes(e.txt));   // avoid repeating recent flavor
+  pool = fresh.length?fresh:pool;
   const e=pool[Math.floor(Math.random()*pool.length)];
   e.fx(S); log(e.txt, e.cls||'');
+  S.recentEv=[e.txt,...(S.recentEv||[])].slice(0,4);
 }
 
 /* ---------- WIN / LOSE ---------- */
@@ -1033,6 +1132,7 @@ function render(){
 
   // world status caption
   $('#world-status').innerHTML = worldStatus();
+  renderStatusbar();
   // crisis glitch
   document.body.classList.toggle('crit', S.alignment<35 || S.stability<25);
   // train sub
@@ -1045,6 +1145,21 @@ function setDelta(k,d){
   el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
 }
 
+function renderStatusbar(){
+  const sb=$('#statusbar'); if(!sb||!S) return;
+  const cell=(k,v,col)=>`<div class="sb"><span class="k">${k}</span><span class="v" style="color:${col}">${v}</span></div>`;
+  const mg=Math.round(S.product-S.owl);
+  sb.innerHTML =
+    cell('AGI', Math.round(S.agi)+'%','var(--cyan)')+
+    cell('MODEL','v'+S.version,'var(--ink)')+
+    cell('ALIGN', Math.round(S.alignment), S.alignment<45?'var(--red)':'var(--alignment)')+
+    cell('⬡ CMP', fmt(S.compute),'var(--compute)')+
+    cell('$ CAP', fmt(S.capital), S.capital<0?'var(--red)':'var(--capital)')+
+    cell('TRUST', Math.round(S.trust), S.trust<25?'var(--red)':'var(--trust)')+
+    cell('STAB', Math.round(S.stability), S.stability<25?'var(--red)':'var(--stability)')+
+    cell('STAND', Math.round(S.standing),'var(--standing)')+
+    cell('MARGIN',(mg>=0?'+':'')+mg, mg>0?'var(--green)':'var(--red)');
+}
 function worldStatus(){
   const lines=[];
   lines.push(`AGI readiness <b style="color:var(--cyan)">${Math.round(S.agi)}%</b> · top rival <b style="color:var(--red)">${Math.round(Math.max(...S.rivals.map(r=>r.p)))}%</b>`);
