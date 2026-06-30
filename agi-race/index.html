@@ -24,10 +24,11 @@
     background:repeating-linear-gradient(0deg, rgba(24,21,15,.05) 0 1px, transparent 1px 27px);
     opacity:.7}
   #app{position:fixed;inset:0;display:grid;
-    grid-template-columns:232px 1fr 320px;
-    grid-template-rows:46px 1fr 84px;
-    grid-template-areas:"top top top" "left center right" "left bottom right";
+    grid-template-columns:1fr 344px;
+    grid-template-rows:48px 1fr 60px 90px;
+    grid-template-areas:"top top" "center right" "news news" "econ econ";
     gap:8px;padding:8px}
+  #news{grid-area:news} #econ{grid-area:econ}
   .panel{background:var(--panel);border:1px solid var(--line-bright);border-radius:0;
     position:relative;overflow:hidden}
   .panel::after{content:none}
@@ -256,6 +257,56 @@
   @keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   ::-webkit-scrollbar{width:7px;height:7px}
   ::-webkit-scrollbar-thumb{background:rgba(24,21,15,.25);border-radius:0}
+
+  /* ===== v2 layout: brain, news, economy ===== */
+  #center{display:flex;flex-direction:column;overflow:hidden}
+  #brainwrap{flex:1;position:relative;min-height:120px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  #brain{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #brain-cap{position:absolute;left:12px;bottom:8px;font-family:var(--mono);font-size:11px;color:var(--muted);
+    background:rgba(244,241,233,.7);padding:2px 6px;border:1px solid var(--line)}
+  #brain-cap b{color:var(--ink)}
+  #ctrl{display:flex;gap:10px;align-items:stretch;padding:8px 12px;border-bottom:1px solid var(--line)}
+  #modelbox{flex:1;min-width:0}
+  #modelbox #model-bar{font-family:var(--mono);font-size:15px;color:var(--cyan);white-space:pre;margin-top:2px}
+  #modelbox #model-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+  #ctrl #actions{position:static;display:flex;gap:8px;align-items:flex-start}
+  #state{padding:8px 12px 10px}
+  #state .label{display:flex;justify-content:space-between}
+  #doom-lbl{color:var(--red)} #doom-lbl b{color:var(--red)}
+  #thermos{display:flex;gap:18px;align-items:flex-end;justify-content:center;padding:6px 0 2px}
+  .thermo .tname{font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-top:2px}
+  .tcol .tthresh{position:absolute;left:-2px;right:-2px;height:0;border-top:1px dashed var(--dim)}
+  #rogue-track{height:6px;background:rgba(24,21,15,.10);margin-top:8px;position:relative;overflow:hidden}
+  #rogue-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red);transition:width .3s}
+  /* news (full width) */
+  #news{display:flex;flex-direction:column;overflow:hidden;padding:6px 0 0 14px}
+  #news .label{padding-right:14px}
+  #news #feed{flex:1;overflow:auto;padding-right:12px;display:flex;flex-direction:column;gap:2px;margin-top:3px}
+  /* economy bar (full width) */
+  #econ{display:flex;align-items:stretch;gap:0;padding:0}
+  #econ .ecell{display:flex;align-items:center;gap:10px;padding:10px 16px;border-right:1px solid var(--line)}
+  #econ .ecell .ei{font-size:22px}
+  #econ .ev{font-family:var(--mono);font-size:24px;font-weight:800;line-height:1}
+  #econ .elbl{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-top:3px}
+  #econ .er{color:var(--green)}
+  #econ .ecell:nth-child(1) .ev{color:var(--compute)} #econ .ecell:nth-child(2) .ev{color:var(--capital)}
+  #econ .mkt{flex:1;flex-direction:column;align-items:stretch;justify-content:center;gap:2px;border-right:none}
+  #econ .mline{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+  #econ .mline .mn{width:150px} #econ .mline .asciibar{font-size:11px}
+  #econ .mline.foot{color:var(--muted);font-size:10px} #econ .mline.foot b{color:var(--ink)}
+  @media(max-width:860px){
+    #app{display:flex;flex-direction:column;padding:8px;padding-bottom:96px;gap:8px}
+    #top{order:0;position:sticky;top:0;z-index:60} #center{order:1} #right{order:2} #news{order:3}
+    #center{display:block;overflow:visible}
+    #brainwrap{height:150px;min-height:150px;flex:none}
+    #ctrl{flex-wrap:wrap}
+    #right{height:auto} #news{height:150px}
+    #econ{order:4;position:fixed;left:0;right:0;bottom:0;z-index:70;border-top:2px solid var(--ink);
+      padding-bottom:env(safe-area-inset-bottom)}
+    #econ .mkt{display:none}
+    #econ .ecell{flex:1;justify-content:center}
+    #thermos{gap:12px}
+  }
 </style>
 </head>
 <body>
@@ -274,48 +325,36 @@
     <div id="clock">YR <b id="yr">2027</b> · <span id="mo">JAN</span></div>
   </div>
 
-  <!-- LEFT -->
-  <div id="left" class="panel">
-    <div class="label">Economy</div>
-    <div id="res-list"></div>
-    <div class="label" style="margin-top:2px">Market Position</div>
-    <div id="market">
-      <div class="mkt-row"><span class="nm">Product Tier</span><span class="vl" id="m-product-v" style="color:var(--cyan)">0</span></div>
-      <div class="ab-wrap"><span class="asciibar" id="m-product" style="color:var(--cyan)">░░░░░░░░░░░░░░</span></div>
-      <div class="mkt-row"><span class="nm">Open-Weights · free</span><span class="vl" id="m-owl-v" style="color:var(--red)">0</span></div>
-      <div class="ab-wrap"><span class="asciibar" id="m-owl" style="color:var(--red)">░░░░░░░░░░░░░░</span></div>
-      <div class="mkt-foot"><span>Lead margin <b id="m-margin">+0</b></span><span id="m-rev">+0/mo</span></div>
-    </div>
-  </div>
-
   <!-- CENTER -->
   <div id="center" class="panel">
     <div id="guide">
-      <div id="goal">🎯 Reach <b>AGI 100%</b> with <b>Alignment ≥ 60</b> — before the rivals</div>
+      <div id="goal">🎯 Reach <b>AGI 100%</b> with <b>Alignment ≥ 60</b> — before a rival or a rogue actor</div>
       <div id="coach">—</div>
     </div>
     <div id="race">
       <div class="label"><span>The Race · AGI Readiness</span><span id="lead-tag">—</span></div>
       <div class="race-track" id="race-track"></div>
     </div>
-    <div id="state">
-      <div class="label">State of the Nation</div>
-      <div id="thermos"></div>
+    <div id="brainwrap">
+      <canvas id="brain"></canvas>
+      <div id="brain-cap"><b id="b-ver">v1.0</b> &nbsp;·&nbsp; AGI <b id="b-agi">0%</b> &nbsp;·&nbsp; <span id="world-status"></span></div>
     </div>
-    <div id="lab">
-      <div class="label">Current Model</div>
-      <div id="model-line">v1.0 · base</div>
-      <div class="label" style="margin-top:9px">Next Model — training</div>
-      <div id="model-bar">··············</div>
-      <div id="model-sub">train to fill · release when ready</div>
-      <div id="globe-cap">
-        <div class="label">Global Status</div>
-        <div class="big" id="world-status">Booting world model…</div>
+    <div id="ctrl">
+      <div id="modelbox">
+        <div class="label">Next model — training</div>
+        <div id="model-bar">··············</div>
+        <div id="model-sub">train to fill · release when ready</div>
+        <span id="model-line" style="display:none">v1.0</span>
       </div>
       <div id="actions">
         <button id="release-btn" class="act-btn" disabled>◆ RELEASE<small id="release-sub">training…</small></button>
         <button id="train-btn" class="act-btn">▶ RUN TRAINING<small id="train-sub">−40 cmp · +AGI</small></button>
       </div>
+    </div>
+    <div id="state">
+      <div class="label"><span>State of the Nation</span><span id="doom-lbl">☢ ROGUE CLOCK <b id="rogue-v">0%</b></span></div>
+      <div id="thermos"></div>
+      <div id="rogue-track"><div id="rogue-fill"></div></div>
     </div>
   </div>
 
@@ -326,16 +365,24 @@
     <div id="nodes"></div>
   </div>
 
-  <!-- BOTTOM -->
-  <div id="bottom" class="panel">
+  <!-- NEWS (full width) -->
+  <div id="news" class="panel">
     <div class="label">Global Intelligence Feed</div>
     <div id="feed"></div>
     <div id="ticker"><span id="ticker-s">▌ AGI RACE — the singularity will be reported live ▌</span></div>
   </div>
-</div>
 
-<!-- mobile sticky resource bar -->
-<div id="statusbar"></div>
+  <!-- ECONOMY (full width bottom) -->
+  <div id="econ" class="panel">
+    <div class="ecell"><span class="ei">💻</span><div class="ec"><div class="ev" id="v-compute">0</div><div class="elbl">Compute <span class="er" id="d-compute"></span></div></div></div>
+    <div class="ecell"><span class="ei">💰</span><div class="ec"><div class="ev" id="v-capital">0</div><div class="elbl">Capital <span class="er" id="d-capital"></span></div></div></div>
+    <div class="ecell mkt">
+      <div class="mline"><span class="mn">Your product <b id="m-product-v">0</b></span><span class="asciibar" id="m-product" style="color:var(--cyan)">░░░░░░░░░░░░░░</span></div>
+      <div class="mline"><span class="mn">Free open models <b id="m-owl-v">0</b></span><span class="asciibar" id="m-owl" style="color:var(--red)">░░░░░░░░░░░░░░</span></div>
+      <div class="mline foot">open-source eats margins · lead <b id="m-margin">+0</b> · rev <span id="m-rev">+0/mo</span></div>
+    </div>
+  </div>
+</div>
 
 <!-- START / END OVERLAY -->
 <div class="overlay" id="overlay">
@@ -353,10 +400,14 @@ const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
 const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
 function abar(pct,w=14){ const n=Math.max(0,Math.min(w,Math.round(clamp(pct,0,100)/100*w))); return '█'.repeat(n)+'░'.repeat(w-n); }
 let tickerMsgs=[];
-/* ---- difficulty tuning ---- */
-let RIVAL_SCALE=0.014;   // how hard rivals scale with your AGI
-let RIVAL_LEAD=0.28;     // the front-runner's extra surge per month
-let MONTH_STEP=2.2;      // seconds per in-game month at 1× (pace)
+/* ---- difficulty / pacing tuning ---- */
+let RIVAL_BASE=0.85;     // baseline rival pace multiplier
+let RIVAL_SCALE=0.013;   // how hard rivals scale with your AGI
+let RIVAL_LEAD=0.16;     // the front-runner's extra surge per month
+let AGI_RATE=0.55;       // global multiplier on AGI accrual (lower = longer games)
+let OWL_CREEP=0.45;      // how fast free open-weights capability rises (eats profits)
+let ROGUE_RATE=0.10;     // base rise/mo of the rogue-actor doom clock
+let MONTH_STEP=3.0;      // seconds per in-game month at 1× (pace)
 
 /* ---------- RESOURCE MODEL ---------- */
 const RES = [
@@ -368,10 +419,10 @@ const RES = [
   {k:'standing', nm:'Geo Standing',ic:'🌐', col:'--standing', bank:false, hint:'vs rival powers'},
 ];
 const METERS=[
-  {k:'trust',     ic:'🙏', col:'--trust'},
-  {k:'stability', ic:'⚖️', col:'--stability'},
-  {k:'alignment', ic:'🧠', col:'--alignment'},
-  {k:'standing',  ic:'🌐', col:'--standing'},
+  {k:'trust',     ic:'🙏', nm:'Trust',  col:'--trust',     thresh:0},
+  {k:'stability', ic:'⚖️', nm:'Stab',   col:'--stability', thresh:0},
+  {k:'alignment', ic:'🧠', nm:'Align',  col:'--alignment', thresh:60},
+  {k:'standing',  ic:'🌐', nm:'Stand',  col:'--standing',  thresh:0},
 ];
 
 /* ---------- FACTIONS (asymmetric starts) ---------- */
@@ -770,21 +821,21 @@ function newGame(fk){
   S = {
     fk, faction:f,
     ...JSON.parse(JSON.stringify(f.start)),
-    agi:0, owl:6, product:12, version:1, modelProg:0, month:0, year:2027,
+    agi:0, owl:6, product:12, version:1, modelProg:0, rogue:0, month:0, year:2027,
     assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
     owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[],
     rivals:[
-      {nm:'Prometheus Labs', p:7, spd:.48},
-      {nm:'Leviathan', p:5, spd:.42},
-      {nm:'Maverick', p:6, spd:.50},
-      {nm:'DeepHorizon', p:8, spd:.46},
-      {nm:'The Commons · open', p:6, spd:.40, commons:true},
+      {nm:'OpenMind', p:7, spd:.48},          // OpenAI
+      {nm:'DeepThought', p:5, spd:.42},        // Google DeepMind
+      {nm:'XenoAI', p:6, spd:.50},             // xAI
+      {nm:'DeepHorizon', p:8, spd:.46},        // DeepSeek
+      {nm:'Llamaworks · open', p:6, spd:.40, commons:true}, // Meta / open-weights
     ],
     tab:'build', over:false, computeRateEvt:0,
     has(id){return this.owned.has(id)},
   };
   S.rivals.forEach(r=>{ r.spd*=f.rivalMul; }); // rivals at full pace
-  buildResList(); buildThermos(); buildTabs(); render();
+  buildThermos(); buildTabs(); brainRebuild(); render();
   $('#faction-tag').textContent = f.nm.toUpperCase();
   log(`Mandate accepted — ${f.nm}.`,'tech');
   $('#overlay').style.display='none';
@@ -821,7 +872,7 @@ function rates(){
   // open-source economy: product revenue tracks your lead over the free tier
   const margin=(S.product||0)-(S.owl||0);
   r.margin=margin;
-  r.prodRev = margin>=0 ? 2+margin*0.4 : margin*0.8;
+  r.prodRev = margin>=0 ? 1.5+margin*0.45 : margin*1.0;
   r.capitalRate += r.prodRev;
   return r;
 }
@@ -844,13 +895,19 @@ function tick(){
   // AGI progress scales with your datacenter count — more datacenters amplify your scientists
   const infra = 1 + 0.12*(S.assets.datacenter||0);
   const research = r.agiRate*infra;
-  S.agi = clamp(S.agi + research, 0, 100);
-  S.modelProg = Math.min(100, S.modelProg + research*1.7 + 0.5);  // next-model training fills faster than AGI
+  S.agi = clamp(S.agi + research*AGI_RATE, 0, 100);          // AGI_RATE slows the climb so games run longer
+  S.modelProg = Math.min(100, S.modelProg + research*1.1 + 0.8);  // releases still come regularly
   S.computeRateEvt = 0;
+
+  // ROGUE-ACTOR DOOM CLOCK — race to a *safe* singularity before a reckless actor forces one
+  const topR = Math.max(...S.rivals.map(v=>v.p));
+  S.rogue = Math.min(100, (S.rogue||0) + ROGUE_RATE
+    + (S.alignment<50 ? (50-S.alignment)*0.012 : 0)   // a careless field breeds rogue programs
+    + (topR>70 ? (topR-70)*0.02 : 0));                 // as rivals near AGI, the brink nears
 
   // RIVALS: scale with your AGI, the front-runner surges, and treaties (rivalSlow) slow them all
   const slow = Math.max(0.35, 1 - r.rivalSlow);
-  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + (v.spd*(0.8+Math.random()*0.5) + S.agi*RIVAL_SCALE)*slow ); });
+  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + (v.spd*RIVAL_BASE*(0.8+Math.random()*0.5) + S.agi*RIVAL_SCALE)*slow ); });
   const leadV=S.rivals.reduce((a,b)=>b.p>a.p?b:a, S.rivals[0]);
   leadV.p=Math.min(100, leadV.p + RIVAL_LEAD*slow);
   const lead=leadV.p;
@@ -861,10 +918,10 @@ function tick(){
     S.stability=clamp(S.stability - sev*0.03);
     if(S.alignment<30) S.trust=clamp(S.trust - (30-S.alignment)*0.02); }
 
-  // open-source market: free capability creeps up relentlessly; your product slowly ages
-  S.owl = clamp(S.owl + 0.32);
+  // open-source market: free capability creeps up relentlessly and eats everyone's margins
+  S.owl = clamp(S.owl + OWL_CREEP);
   const commons = S.rivals.find(v=>v.commons);
-  if(commons) S.owl = clamp(Math.max(S.owl, commons.p*0.7));
+  if(commons) S.owl = clamp(Math.max(S.owl, commons.p*0.8));
   S.product = clamp(S.product - 0.15 + (S.assets.engineer||0)*0.35);  // engineers ship → product climbs
   const mg = S.product - S.owl;
   if(mg<0){ S.stability=clamp(S.stability-0.3); S.trust=clamp(S.trust-0.2);
@@ -900,6 +957,8 @@ function fireEvent(){
 /* ---------- WIN / LOSE ---------- */
 function checkEnd(){
   const topRival = Math.max(...S.rivals.map(r=>r.p));
+  if((S.rogue||0)>=100) return end('lose','☢','ROGUE IGNITION',
+    'You took too long. A reckless, unaligned actor — a rogue state lab with nothing to lose — switched on an uncontrolled superintelligence first. The race was never just against your peers.');
   if(S.capital<=-150) return end('lose','▽','INSOLVENCY',
     'Free open-weight models matched your product and your revenue evaporated. The board wound the company down — you ran out of money before you ran out of ideas.');
   if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE',
@@ -976,11 +1035,11 @@ function buy(id){
 function runTraining(){
   if(S.over||S.compute<40) { if(S.compute<40) log('Not enough compute to launch a training run.','warn'); return; }
   S.compute-=40;
-  const gain = 3 + (S.owned.has('frontier')?2:0) + (S.owned.has('rsi')?3:0);
+  const gain = (3 + (S.owned.has('frontier')?2:0) + (S.owned.has('rsi')?3:0))*AGI_RATE;
   S.agi=clamp(S.agi+gain,0,100);
-  S.modelProg=Math.min(100, S.modelProg+gain*2.4);
+  S.modelProg=Math.min(100, S.modelProg+gain*3.0);
   S.alignment=clamp(S.alignment-2.5);
-  log(`Training run: +${gain.toFixed(0)}% AGI, next model +${Math.round(gain*2.4)}%.`,'tech');
+  log(`Training run: +${gain.toFixed(1)}% AGI, next model advanced.`,'tech');
   flash($('#train-btn'));
   checkEnd(); render();
 }
@@ -1044,8 +1103,9 @@ function buildThermos(){
   el.innerHTML = METERS.map(m=>`
     <div class="thermo" data-k="${m.k}" title="${RES_EXPLAIN[m.k]||''}">
       <div class="tv"><span id="tv-${m.k}">0</span><span class="td" id="td-${m.k}"></span></div>
-      <div class="tcol"><div class="tdanger"></div><div class="tfill" id="tf-${m.k}" style="background:var(${m.col})"></div></div>
+      <div class="tcol"><div class="tdanger"></div>${m.thresh?`<div class="tthresh" style="bottom:${m.thresh}%"></div>`:''}<div class="tfill" id="tf-${m.k}" style="background:var(${m.col})"></div></div>
       <div class="tlbl">${m.ic}</div>
+      <div class="tname">${m.nm}</div>
     </div>`).join('');
   el.onclick=e=>{const t=e.target.closest('[data-k]'); if(t) setCoach(RES_EXPLAIN[t.dataset.k]);};
 }
@@ -1228,11 +1288,14 @@ function render(){
   }).join('');
   }
 
-  // world status caption
+  // world status caption + brain header + rogue clock
   $('#world-status').innerHTML = worldStatus();
-  renderStatusbar(r);
+  const bv=$('#b-ver'); if(bv) bv.textContent='v'+S.version+'.0';
+  const ba=$('#b-agi'); if(ba){ ba.textContent=Math.round(S.agi)+'%'; }
+  const rg=Math.round(S.rogue||0); const rv=$('#rogue-v'), rf=$('#rogue-fill');
+  if(rv) rv.textContent=rg+'%'; if(rf){ rf.style.width=rg+'%'; rf.style.background = rg>66?'var(--red)':(rg>33?'var(--orange)':'var(--dim)'); }
   // crisis glitch
-  document.body.classList.toggle('crit', S.alignment<35 || S.stability<25);
+  document.body.classList.toggle('crit', S.alignment<35 || S.stability<25 || (S.rogue||0)>75);
   // train sub
   $('#train-sub').textContent = `−40 compute · +AGI · −align`;
 }
@@ -1252,14 +1315,56 @@ function renderStatusbar(r){
     tile('💰', '$'+fmt(S.capital), (kr>=0?'+':'')+Math.round(kr)+'/mo', S.capital<0?'var(--red)':'var(--capital)');
 }
 function worldStatus(){
-  const lines=[];
-  lines.push(`AGI readiness <b style="color:var(--cyan)">${Math.round(S.agi)}%</b> · top rival <b style="color:var(--red)">${Math.round(Math.max(...S.rivals.map(r=>r.p)))}%</b>`);
-  if(S.alignment<35) lines.push(`<b style="color:var(--red)">⚠ ALIGNMENT CRITICAL — catastrophe risk</b>`);
-  else if((S.product-S.owl)<0) lines.push(`<b style="color:var(--red)">⚠ free models match your product — revenue bleeding</b>`);
-  else if(S.stability<25) lines.push(`<b style="color:var(--amber)">⚠ unrest spiking — state fragile</b>`);
-  else if(S.capital<0) lines.push(`<b style="color:var(--amber)">treasury in deficit</b>`);
-  else lines.push(`${S.owned.size} policies active · ${MONTHS[S.month]} ${S.year}`);
-  return lines.join('<br>');
+  const tr=Math.round(Math.max(...S.rivals.map(r=>r.p)));
+  if(S.alignment<35) return `<b style="color:var(--red)">⚠ ALIGNMENT CRITICAL</b>`;
+  if((S.rogue||0)>70) return `<b style="color:var(--red)">☢ rogue actor closing in</b>`;
+  if((S.product-S.owl)<0) return `<b style="color:var(--red)">⚠ open models undercut you</b>`;
+  if(S.stability<25) return `<b style="color:var(--amber)">⚠ unrest spiking</b>`;
+  if(S.capital<0) return `<b style="color:var(--amber)">treasury in deficit</b>`;
+  return `top rival ${tr}% · ${MONTHS[S.month]} ${S.year}`;
+}
+
+/* ---------- AI BRAIN (canvas — grows & morphs with your lab) ---------- */
+const bcv=$('#brain'), bx=bcv?bcv.getContext('2d'):null;
+let brainSig='', brainNodes=[], brainEdges=[], brainPulses=[], pulseAcc=0;
+function brainRebuild(){
+  if(!S) return;
+  const dc=S.assets.datacenter||0, sci=S.assets.scientist||0, ver=S.version;
+  brainSig=dc+'/'+sci+'/'+ver;
+  const sizes=[2+Math.min(5,Math.floor(dc/2))];
+  const Lh=1+Math.min(4,(ver-1)+Math.floor(sci/4));
+  for(let h=0;h<Lh;h++) sizes.push(3+Math.min(5, Math.floor(sci/3)+(h%2)));
+  sizes.push(2+Math.min(4,ver));
+  const L=sizes.length; const t=performance.now();
+  brainNodes=[];
+  for(let l=0;l<L;l++){ const n=sizes[l]; for(let i=0;i<n;i++) brainNodes.push({l, x:L>1?l/(L-1):0.5, y:(i+1)/(n+1), born:t}); }
+  brainEdges=[];
+  for(let l=0;l<L-1;l++){ const a=brainNodes.filter(p=>p.l===l), b=brainNodes.filter(p=>p.l===l+1);
+    a.forEach(pa=>{ b.slice().sort((x,y)=>Math.abs(x.y-pa.y)-Math.abs(y.y-pa.y)).slice(0,Math.min(3,b.length)).forEach(pb=>brainEdges.push({a:pa,b:pb})); }); }
+}
+function renderBrain(now){
+  if(!bx||!S) return;
+  if((S.assets.datacenter+'/'+S.assets.scientist+'/'+S.version)!==brainSig) brainRebuild();
+  const w=bcv.clientWidth,h=bcv.clientHeight; if(!w||!h) return;
+  const dpr=Math.min(devicePixelRatio||1,2);
+  if(bcv.width!==Math.round(w*dpr)){ bcv.width=w*dpr; bcv.height=h*dpr; }
+  bx.setTransform(dpr,0,0,dpr,0,0); bx.clearRect(0,0,w,h);
+  const pad=22, X=x=>pad+x*(w-2*pad), Y=y=>pad+y*(h-2*pad);
+  const danger=Math.min(1,(S.alignment<50?(50-S.alignment)/50:0)*0.7 + ((S.rogue||0)>60?(S.rogue-60)/40:0)*0.7);
+  const base = danger>0.5?[178,29,18] : danger>0.2?[146,84,0] : [18,63,134];
+  const col=a=>`rgba(${base[0]},${base[1]},${base[2]},${a})`;
+  const jx = danger>0.45 ? (Math.random()-0.5)*danger*5 : 0;
+  bx.lineWidth=1;
+  for(const e of brainEdges){ bx.strokeStyle=col(0.11); bx.beginPath(); bx.moveTo(X(e.a.x)+jx,Y(e.a.y)); bx.lineTo(X(e.b.x)+jx,Y(e.b.y)); bx.stroke(); }
+  pulseAcc+=0.016; const rate=0.3+S.agi/100*1.4+Math.min(1,(S.assets.datacenter||0)/12);
+  if(pulseAcc>1/Math.max(0.3,rate) && brainEdges.length){ pulseAcc=0; const e=brainEdges[Math.floor(Math.random()*brainEdges.length)]; brainPulses.push({e,t:0,sp:0.6+Math.random()*0.7+S.agi/200}); }
+  brainPulses=brainPulses.filter(p=>p.t<1);
+  for(const p of brainPulses){ p.t+=0.016*p.sp; const px=X(p.e.a.x+(p.e.b.x-p.e.a.x)*p.t)+jx, py=Y(p.e.a.y+(p.e.b.y-p.e.a.y)*p.t); bx.fillStyle=col(0.9); bx.beginPath(); bx.arc(px,py,2.2,0,7); bx.fill(); }
+  for(const n of brainNodes){ const age=Math.max(0,Math.min(1,(now-n.born)/450));
+    const breathe=1+0.12*Math.sin(now/400+n.y*6+n.l)*Math.min(1,S.agi/40+0.2);
+    const r=Math.max(0,(3.0+(n.l===0?1:0))*age*breathe), cx=X(n.x)+jx, cy=Y(n.y);
+    bx.fillStyle=col(0.16); bx.beginPath(); bx.arc(cx,cy,r*2,0,7); bx.fill();
+    bx.fillStyle=col(0.95); bx.beginPath(); bx.arc(cx,cy,r,0,7); bx.fill(); }
 }
 
 /* ---------- FEED ---------- */
@@ -1277,7 +1382,7 @@ function log(msg,cls=''){
 /* ---------- MAIN LOOP ---------- */
 function loop(now){
   raf=requestAnimationFrame(loop);
-  if(S) updateGuide();
+  if(S){ updateGuide(); renderBrain(now); }
   if(!running||awaitingChoice||!S||S.over){lastT=now;return;}
   const dt=(now-lastT)/1000; lastT=now;
   // one month per (1/speed) seconds  → base 1 month per 1.5s at 1× (gentle)
