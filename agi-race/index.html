@@ -265,6 +265,15 @@
   #brain-cap{position:absolute;left:12px;bottom:8px;font-family:var(--mono);font-size:11px;color:var(--muted);
     background:rgba(244,241,233,.7);padding:2px 6px;border:1px solid var(--line)}
   #brain-cap b{color:var(--ink)}
+  #b-form{letter-spacing:.06em}
+  /* end-of-run transcript */
+  .tcard{border:1px solid var(--line);padding:9px 11px;margin-top:10px}
+  .tcard .tline{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--txt)}
+  .tcard .dim{color:var(--muted)}
+  .timeline{margin-top:5px;display:flex;flex-direction:column;gap:3px;max-height:170px;overflow:auto}
+  .timeline .tl{display:flex;gap:10px;font-family:var(--mono);font-size:11px;line-height:1.4}
+  .timeline .ty{color:var(--dim);width:38px;flex:none}
+  .timeline .tl span:last-child{color:var(--txt)}
   #ctrl{display:flex;gap:10px;align-items:stretch;padding:8px 12px;border-bottom:1px solid var(--line)}
   #modelbox{flex:1;min-width:0}
   #modelbox #model-bar{font-family:var(--mono);font-size:15px;color:var(--cyan);white-space:pre;margin-top:2px}
@@ -337,7 +346,7 @@
     </div>
     <div id="brainwrap">
       <canvas id="brain"></canvas>
-      <div id="brain-cap"><b id="b-ver">v1.0</b> &nbsp;·&nbsp; AGI <b id="b-agi">0%</b> &nbsp;·&nbsp; <span id="world-status"></span></div>
+      <div id="brain-cap"><b id="b-form">SAGE · embryo</b> &nbsp;·&nbsp; <b id="b-ver">v1.0</b> &nbsp;·&nbsp; AGI <b id="b-agi">0%</b> &nbsp;·&nbsp; <span id="world-status"></span></div>
     </div>
     <div id="ctrl">
       <div id="modelbox">
@@ -672,6 +681,7 @@ function resolveChoice(d,i){
   const c=d.choices[i];
   if(c.fx) c.fx(S); else if(c.d) applyDelta(S,c.d);
   log(`Decision — ${c.label}.`,'tech');
+  story(`${d.title}: chose “${c.label}”.`,'choice');
   stopArt(); pending=null;
   awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
@@ -823,7 +833,7 @@ function newGame(fk){
     ...JSON.parse(JSON.stringify(f.start)),
     agi:0, owl:6, product:12, version:1, modelProg:0, rogue:0, month:0, year:2027,
     assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
-    owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[],
+    owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[], story:[], openReleases:0,
     rivals:[
       {nm:'OpenMind', p:7, spd:.48},          // OpenAI
       {nm:'DeepThought', p:5, spd:.42},        // Google DeepMind
@@ -838,6 +848,7 @@ function newGame(fk){
   buildThermos(); buildTabs(); brainRebuild(); render();
   $('#faction-tag').textContent = f.nm.toUpperCase();
   log(`Mandate accepted — ${f.nm}.`,'tech');
+  story(`Founded as a ${f.nm}.`,'start');
   $('#overlay').style.display='none';
   // start PAUSED so the player gets oriented; the pulsing ▶ and the coach guide them
   running=false; speed=0;
@@ -979,20 +990,40 @@ function checkEnd(){
     'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. Historians will call it the gentle singularity.');
 }
 
+function worldSynthesis(){
+  const o=[];
+  o.push(S.alignment>=60?'It answers to us':S.alignment>=40?'It is barely under control':'It slips its leash');
+  o.push((S.openReleases>=2||S.owl>S.product)?'its weights spread free across the world':'its weights stay locked behind your walls');
+  o.push(S.stability>=55?'society holds together':S.stability<30?'society in turmoil':'society strained');
+  o.push(S.trust>=55?'the public adores you':S.trust<30?'the public distrusts you':'the public is wary');
+  o.push(S.standing>=62?'and you tower over your rivals':S.standing<35?'and you stand isolated':'amid a wary balance of powers');
+  return o;
+}
 function end(kind,icon,title,body){
   S.over=true; running=false;
   const win=kind==='win'; S.won=win; S.endTitle=title;
+  story((win?'VICTORY — ':'DEFEAT — ')+title,'end');
+  const arch=ARCH[archKey()];
+  const yrOf=mo=>2027+Math.floor(mo/12);
+  const beats=S.story.filter(s=>s.kind!=='end');
+  // keep the most meaningful beats: start, releases, choices; trim policies if long
+  let picks=beats.filter(b=>b.kind!=='policy');
+  if(picks.length<6) picks=beats;
+  picks=picks.slice(-10);
+  const timeline = picks.map(b=>`<div class="tl"><span class="ty">${yrOf(b.mo)}</span><span>${b.t}</span></div>`).join('')
+    || '<div class="tl"><span class="ty"></span><span>A quiet, uneventful run.</span></div>';
   showCard(`
     <div class="end-icon">${icon}</div>
-    <h1>${title}</h1>
-    <div class="sub" style="color:${win?'var(--green)':'var(--red)'}">
-      ${win?'VICTORY':'DEFEAT'} · YEAR ${S.year} · AGI ${Math.round(S.agi)}%</div>
+    <h1 style="color:${win?'var(--green)':'var(--red)'}">${title}</h1>
+    <div class="sub">${win?'VICTORY':'DEFEAT'} · ${MONTHS[S.month]} ${S.year} · AGI ${Math.round(S.agi)}%</div>
     <p>${body}</p>
-    <div class="help">
-      <b>Final readout</b> — Align ${Math.round(S.alignment)} · Stability ${Math.round(S.stability)} ·
-      Trust ${Math.round(S.trust)} · Standing ${Math.round(S.standing)} · Capital ${fmt(S.capital)}<br>
-      Policies enacted: ${S.owned.size}
-    </div>
+    <div class="tcard"><div class="label">The intelligence you raised</div>
+      <p class="tline"><b>${arch.nm}-class</b> — ${arch.desc}. <span class="dim">(reached ${stageName(S.agi)}, model v${S.version}.0)</span></p></div>
+    <div class="tcard"><div class="label">The world you made</div>
+      <p class="tline">${worldSynthesis().join(' · ')}.</p></div>
+    <div class="tcard"><div class="label">Decisions that defined it</div>
+      <div class="timeline">${timeline}</div></div>
+    <div class="help">Align ${Math.round(S.alignment)} · Stability ${Math.round(S.stability)} · Trust ${Math.round(S.trust)} · Standing ${Math.round(S.standing)} · Capital ${fmt(S.capital)} · Rogue clock ${Math.round(S.rogue||0)}%</div>
     <button class="btn" onclick="startScreen()">⟲ NEW RUN</button>`);
   log(`${win?'VICTORY':'DEFEAT'} — ${title}`, win?'good':'bad');
 }
@@ -1029,6 +1060,7 @@ function buy(id){
     if(k==='compute'||k==='capital') S[k]+=d; else S[k]=clamp(S[k]+d);
   }
   log(`Enacted: ${n.nm}.`, 'tech');
+  story(`Enacted ${n.nm}.`,'policy');
   render();
 }
 
@@ -1074,7 +1106,10 @@ function doRelease(tiers,i){
   const c=tiers[i];
   applyDelta(S,c.d);
   S.version++; S.modelProg=0;
-  log(`Released v${S.version}.0 — ${c.label.replace(/ v.*/,'')}.`,'good');
+  if(i===2) S.openReleases=(S.openReleases||0)+1;   // open-weights launch
+  const tier=c.label.replace(/ v.*/,'');
+  log(`Released v${S.version}.0 — ${tier}.`,'good');
+  story(`Shipped v${S.version}.0 as a ${tier} release.`,'release');
   pending=null; awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
   checkEnd(); render();
@@ -1292,6 +1327,7 @@ function render(){
   $('#world-status').innerHTML = worldStatus();
   const bv=$('#b-ver'); if(bv) bv.textContent='v'+S.version+'.0';
   const ba=$('#b-agi'); if(ba){ ba.textContent=Math.round(S.agi)+'%'; }
+  const bf=$('#b-form'); if(bf) bf.textContent=ARCH[archKey()].nm+' · '+stageName(S.agi);
   const rg=Math.round(S.rogue||0); const rv=$('#rogue-v'), rf=$('#rogue-fill');
   if(rv) rv.textContent=rg+'%'; if(rf){ rf.style.width=rg+'%'; rf.style.background = rg>66?'var(--red)':(rg>33?'var(--orange)':'var(--dim)'); }
   // crisis glitch
@@ -1324,47 +1360,82 @@ function worldStatus(){
   return `top rival ${tr}% · ${MONTHS[S.month]} ${S.year}`;
 }
 
-/* ---------- AI BRAIN (canvas — grows & morphs with your lab) ---------- */
+/* ---------- THE AI CREATURE (canvas — morphs & grows by your path) ---------- */
 const bcv=$('#brain'), bx=bcv?bcv.getContext('2d'):null;
-let brainSig='', brainNodes=[], brainEdges=[], brainPulses=[], pulseAcc=0;
-function brainRebuild(){
-  if(!S) return;
-  const dc=S.assets.datacenter||0, sci=S.assets.scientist||0, ver=S.version;
-  brainSig=dc+'/'+sci+'/'+ver;
-  const sizes=[2+Math.min(5,Math.floor(dc/2))];
-  const Lh=1+Math.min(4,(ver-1)+Math.floor(sci/4));
-  for(let h=0;h<Lh;h++) sizes.push(3+Math.min(5, Math.floor(sci/3)+(h%2)));
-  sizes.push(2+Math.min(4,ver));
-  const L=sizes.length; const t=performance.now();
-  brainNodes=[];
-  for(let l=0;l<L;l++){ const n=sizes[l]; for(let i=0;i<n;i++) brainNodes.push({l, x:L>1?l/(L-1):0.5, y:(i+1)/(n+1), born:t}); }
-  brainEdges=[];
-  for(let l=0;l<L-1;l++){ const a=brainNodes.filter(p=>p.l===l), b=brainNodes.filter(p=>p.l===l+1);
-    a.forEach(pa=>{ b.slice().sort((x,y)=>Math.abs(x.y-pa.y)-Math.abs(y.y-pa.y)).slice(0,Math.min(3,b.length)).forEach(pb=>brainEdges.push({a:pa,b:pb})); }); }
+function brainRebuild(){}   // creature is parametric
+
+function story(t,kind){ if(S&&S.story) S.story.push({mo:(S.year-2027)*12+S.month, t, kind:kind||''}); }
+
+const ARCH={
+  sage:    {nm:'SAGE',     col:[20,110,84],  desc:'a serene, transparent mind that answers to its makers'},
+  rogue:   {nm:'ROGUE',    col:[178,29,18],  desc:'a wilful, opaque intelligence straining against every leash'},
+  swarm:   {nm:'SWARM',    col:[146,84,0],   desc:'a many-bodied open intelligence copied across the whole world'},
+  titan:   {nm:'TITAN',    col:[44,44,52],   desc:'a sleek corporate colossus tuned to the bottom line'},
+  warden:  {nm:'WARDEN',   col:[84,54,140],  desc:'an all-seeing instrument of order and control'},
+  organism:{nm:'ORGANISM', col:[28,111,55],  desc:'a living thing entwined with human biology'},
+};
+function archKey(){
+  if(!S) return 'sage';
+  const A=S.assets, has=id=>S.owned.has(id);
+  const sc={
+    sage:  S.alignment*0.6 + (has('interp')?25:0)+(has('redteam')?18:0)+(has('regulation')?12:0)+(A.safety||0)*6,
+    rogue: (100-S.alignment)*0.85 + (has('rsi')?30:0) + (S.rogue||0)*0.3,
+    swarm: (S.openReleases||0)*22 + (has('opengov')?18:0) + S.owl*0.25,
+    titan: (A.engineer||0)*7 + S.product*0.4 + (has('automation')?20:0)+(has('dereg')?12:0),
+    warden:(has('surveil')?35:0)+(has('treaty')?16:0)+(has('mining')?8:0)+S.standing*0.15,
+    organism:(has('gene')?22:0)+(has('longevity')?22:0)+(has('fertility')?12:0)+(has('biosec')?10:0),
+  };
+  let k='sage',m=-1; for(const x in sc){ if(sc[x]>m){m=sc[x];k=x;} } return k;
 }
-function renderBrain(now){
+function stageName(agi){ return agi>=100?'SINGULARITY':agi>=80?'ascendant':agi>=60?'adolescent':agi>=40?'juvenile':agi>=20?'hatchling':'embryo'; }
+
+function renderBrain(now){   // draws the evolving AI creature
   if(!bx||!S) return;
-  if((S.assets.datacenter+'/'+S.assets.scientist+'/'+S.version)!==brainSig) brainRebuild();
   const w=bcv.clientWidth,h=bcv.clientHeight; if(!w||!h) return;
   const dpr=Math.min(devicePixelRatio||1,2);
   if(bcv.width!==Math.round(w*dpr)){ bcv.width=w*dpr; bcv.height=h*dpr; }
   bx.setTransform(dpr,0,0,dpr,0,0); bx.clearRect(0,0,w,h);
-  const pad=22, X=x=>pad+x*(w-2*pad), Y=y=>pad+y*(h-2*pad);
-  const danger=Math.min(1,(S.alignment<50?(50-S.alignment)/50:0)*0.7 + ((S.rogue||0)>60?(S.rogue-60)/40:0)*0.7);
-  const base = danger>0.5?[178,29,18] : danger>0.2?[146,84,0] : [18,63,134];
+  const t=now/1000, cx=w/2, cy=h/2+4;
+  const arch=archKey();
+  const danger=Math.min(1,(S.alignment<50?(50-S.alignment)/50:0)*0.85 + ((S.rogue||0)>60?(S.rogue-60)/40:0)*0.6);
+  let base=(arch==='rogue')?[178,29,18]:ARCH[arch].col;
+  base=[ Math.round(base[0]+(178-base[0])*danger*0.7), Math.round(base[1]+(29-base[1])*danger*0.7), Math.round(base[2]+(18-base[2])*danger*0.7) ];
   const col=a=>`rgba(${base[0]},${base[1]},${base[2]},${a})`;
-  const jx = danger>0.45 ? (Math.random()-0.5)*danger*5 : 0;
-  bx.lineWidth=1;
-  for(const e of brainEdges){ bx.strokeStyle=col(0.11); bx.beginPath(); bx.moveTo(X(e.a.x)+jx,Y(e.a.y)); bx.lineTo(X(e.b.x)+jx,Y(e.b.y)); bx.stroke(); }
-  pulseAcc+=0.016; const rate=0.3+S.agi/100*1.4+Math.min(1,(S.assets.datacenter||0)/12);
-  if(pulseAcc>1/Math.max(0.3,rate) && brainEdges.length){ pulseAcc=0; const e=brainEdges[Math.floor(Math.random()*brainEdges.length)]; brainPulses.push({e,t:0,sp:0.6+Math.random()*0.7+S.agi/200}); }
-  brainPulses=brainPulses.filter(p=>p.t<1);
-  for(const p of brainPulses){ p.t+=0.016*p.sp; const px=X(p.e.a.x+(p.e.b.x-p.e.a.x)*p.t)+jx, py=Y(p.e.a.y+(p.e.b.y-p.e.a.y)*p.t); bx.fillStyle=col(0.9); bx.beginPath(); bx.arc(px,py,2.2,0,7); bx.fill(); }
-  for(const n of brainNodes){ const age=Math.max(0,Math.min(1,(now-n.born)/450));
-    const breathe=1+0.12*Math.sin(now/400+n.y*6+n.l)*Math.min(1,S.agi/40+0.2);
-    const r=Math.max(0,(3.0+(n.l===0?1:0))*age*breathe), cx=X(n.x)+jx, cy=Y(n.y);
-    bx.fillStyle=col(0.16); bx.beginPath(); bx.arc(cx,cy,r*2,0,7); bx.fill();
-    bx.fillStyle=col(0.95); bx.beginPath(); bx.arc(cx,cy,r,0,7); bx.fill(); }
+  const jit=danger>0.4?(Math.random()-0.5)*danger*5:0;
+  const stage=clamp(S.agi,0,100);
+  const R=Math.max(10, Math.min(w,h)*0.18*(0.55+stage/100*0.9)*(1+0.05*Math.sin(t*2)));
+  const limbs=3+Math.floor(stage/10)+Math.floor((S.assets.datacenter||0)/3);
+  if(S.agi>=100){ bx.fillStyle=col(0.08); bx.beginPath(); bx.arc(cx,cy,R*3.2,0,7); bx.fill(); }
+  bx.save(); bx.translate(cx+jit,cy); bx.lineCap='round';
+  // limbs
+  for(let i=0;i<limbs;i++){
+    const a0=(i/limbs)*Math.PI*2 + t*(arch==='rogue'?0.5:0.15);
+    const len=R*(1.4+0.5*Math.sin(t*1.4+i));
+    bx.strokeStyle=col(0.5); bx.lineWidth=Math.max(1.5,R*0.10);
+    bx.beginPath(); bx.moveTo(Math.cos(a0)*R*0.7,Math.sin(a0)*R*0.7);
+    if(arch==='organism'){ const mx=Math.cos(a0+0.6)*len*0.6,my=Math.sin(a0+0.6)*len*0.6; bx.quadraticCurveTo(mx,my,Math.cos(a0)*len,Math.sin(a0)*len); }
+    else if(arch==='rogue'){ bx.lineTo(Math.cos(a0+0.35)*len*0.6,Math.sin(a0+0.35)*len*0.6); bx.lineTo(Math.cos(a0)*len,Math.sin(a0)*len); }
+    else { bx.lineTo(Math.cos(a0)*len,Math.sin(a0)*len); }
+    bx.stroke();
+    bx.fillStyle=col(0.7); const ts=arch==='titan'?Math.max(2,R*0.14):Math.max(1.5,R*0.08);
+    if(arch==='titan'){ bx.fillRect(Math.cos(a0)*len-ts,Math.sin(a0)*len-ts,ts*2,ts*2); }
+    else { bx.beginPath(); bx.arc(Math.cos(a0)*len,Math.sin(a0)*len,ts,0,7); bx.fill(); }
+  }
+  // swarm satellites
+  if(arch==='swarm'){ const sat=2+Math.floor(stage/18); for(let i=0;i<sat;i++){ const a=t*0.6+i/sat*6.28,rr=R*2.0; bx.fillStyle=col(0.5); bx.beginPath(); bx.arc(Math.cos(a)*rr,Math.sin(a)*rr,R*0.42,0,7); bx.fill(); } }
+  // body
+  bx.fillStyle=col(0.16); bx.beginPath(); bx.arc(0,0,R*1.5,0,7); bx.fill();
+  bx.fillStyle=col(0.92);
+  if(arch==='titan'){ bx.fillRect(-R,-R,R*2,R*2); } else { bx.beginPath(); bx.arc(0,0,R,0,7); bx.fill(); }
+  if(arch==='sage'){ bx.strokeStyle=col(0.45); bx.lineWidth=2; bx.beginPath(); bx.arc(0,0,R*1.95,0,7); bx.stroke(); }
+  // eyes
+  const blink=(Math.sin(t*0.7)>0.96)?0.12:1, ec='#f4f1e9';
+  const eye=(ex,ey,er)=>{ bx.fillStyle=ec; bx.beginPath(); bx.ellipse(ex,ey,er,er*blink,0,0,7); bx.fill();
+    bx.fillStyle=col(1); bx.beginPath(); bx.arc(ex+er*0.25*Math.sin(t*1.3),ey,Math.max(0.5,er*0.45*blink),0,7); bx.fill(); };
+  if(arch==='warden'){ eye(0,-R*0.05,R*0.55); }
+  else if(arch==='rogue'){ const ne=3+Math.floor(stage/30); for(let i=0;i<ne;i++){ const a=i/ne*6.28+0.3; eye(Math.cos(a)*R*0.4,Math.sin(a)*R*0.4-2,R*0.18); } }
+  else { eye(-R*0.4,-R*0.08,R*0.22); eye(R*0.4,-R*0.08,R*0.22); }
+  bx.restore();
 }
 
 /* ---------- FEED ---------- */
