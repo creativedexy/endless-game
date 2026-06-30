@@ -9,10 +9,10 @@ A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **bro
 **Play it live:** https://creativedexy.github.io/endless-game/agi-race/
 
 - **★ BUILD tab** — buy and level tangible assets: 🖥️ Datacenters (Compute + AGI speed), 🧪 Scientists (research), 🛠️ Engineers (Capital + product), ⚡ Power Plants (datacenter capacity), 🛡️ Safety Researchers (Alignment).
-- **Versioned model releases** — `RUN TRAINING` fills a *Next Model* bar; when it's ready you **RELEASE** it as a **Flagship**, **Efficient**, or **Open-weights** launch (each a real trade-off), bumping your version (v1 → v2 → v3…).
+- **Versioned model releases** — train to fill the Next-Model bar, then RELEASE as Flagship / Efficient / Open-weights (v1 → v2 → v3…). A living **AI ‘brain’** in the centre morphs and grows as you add datacenters, scientists and versions.
 - **Open-source economy** — a relentless free *Open-Weights line* rises every month; keep releasing or your product lead — and revenue — collapses.
 - **Policy trees & dilemmas** — Compute / Space / Bio / Econ / Gov give mid-game depth; major events pause the game and force a choice.
-- **Caricatured rivals** — Prometheus, Leviathan, Maverick, DeepHorizon, The Commons race you and act against you.
+- **Rivals map to real labs** — OpenMind (OpenAI), DeepThought (DeepMind), XenoAI (xAI), DeepHorizon (DeepSeek), Llamaworks (open-weights / Meta) — racing you *and* a rogue-actor doom clock.
 - **Guided & forgiving** — always-visible goal, a contextual coach, tap-a-meter explanations, paused start.
 - **Endings** — aligned singularity, techno-hegemony, gentle transition; vs. collapse, lost mandate, misaligned ignition, insolvency, or being outpaced.
 
