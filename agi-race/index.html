@@ -6,51 +6,48 @@
 <title>SINGULARITY // AGI Race</title>
 <style>
   :root{
-    --bg:#04060c; --bg2:#070b16; --panel:rgba(12,18,32,.72); --panel-solid:#0a1120;
-    --line:rgba(90,130,190,.18); --line-bright:rgba(120,170,235,.4);
-    --txt:#cdd9ef; --muted:#6f80a3; --dim:#48577a;
-    --cyan:#39d3ff; --green:#37e0a0; --blue:#5aa6ff; --teal:#2fd6c8;
-    --violet:#a98bff; --orange:#ffb454; --amber:#ffd24a; --red:#ff5a6e; --pink:#ff6ad5;
-    --compute:#39d3ff; --capital:#37e0a0; --trust:#5aa6ff; --stability:#2fd6c8;
-    --alignment:#a98bff; --standing:#ffb454;
+    --bg:#f4f1e9; --bg2:#ece8dd; --panel:#faf8f1; --panel-solid:#faf8f1;
+    --line:rgba(24,21,15,.30); --line-bright:rgba(24,21,15,.72);
+    --txt:#16140d; --muted:#5d574a; --dim:#8f897a;
+    --cyan:#123f86; --green:#1c6f37; --blue:#123f86; --teal:#1c6a5f;
+    --violet:#54329a; --orange:#925400; --amber:#7a5e00; --red:#b21d12; --pink:#94236f;
+    --compute:#123f86; --capital:#1c6f37; --trust:#123f86; --stability:#1c6a5f;
+    --alignment:#54329a; --standing:#925400;
+    --ink:#16140d;
     --mono:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
-    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --sans:"SF Mono",ui-monospace,"Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
     font-family:var(--sans);overflow:hidden;user-select:none}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
-    background:
-      linear-gradient(rgba(8,12,22,0) 50%, rgba(0,0,0,.18) 50%);
-    background-size:100% 3px;opacity:.35;mix-blend-mode:multiply}
+    background:repeating-linear-gradient(0deg, rgba(24,21,15,.05) 0 1px, transparent 1px 27px);
+    opacity:.7}
   #app{position:fixed;inset:0;display:grid;
     grid-template-columns:232px 1fr 320px;
     grid-template-rows:46px 1fr 84px;
     grid-template-areas:"top top top" "left center right" "left bottom right";
     gap:8px;padding:8px}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-    backdrop-filter:blur(8px);position:relative;overflow:hidden}
-  .panel::after{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;
-    box-shadow:inset 0 0 0 1px rgba(120,170,235,.05), inset 0 18px 40px rgba(60,110,200,.05)}
+  .panel{background:var(--panel);border:1px solid var(--line-bright);border-radius:0;
+    position:relative;overflow:hidden}
+  .panel::after{content:none}
   .label{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--dim);
     text-transform:uppercase}
   .mono{font-family:var(--mono)}
 
   /* ---------- TOP BAR ---------- */
   #top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px}
-  #brand{font-family:var(--mono);font-weight:600;letter-spacing:.32em;font-size:13px;
-    color:#eaf2ff;text-shadow:0 0 12px rgba(57,211,255,.55)}
-  #brand b{color:var(--cyan)}
+  #brand{font-family:var(--mono);font-weight:700;letter-spacing:.12em;font-size:12.5px;color:var(--ink)}
+  #brand b{color:var(--red)}
   #faction-tag{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);
     padding:3px 8px;border:1px solid var(--line);border-radius:5px}
   #clock{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--txt)}
   #clock b{color:var(--cyan)}
   .spd{display:flex;gap:4px}
-  .spd button{font-family:var(--mono);font-size:11px;color:var(--muted);background:rgba(20,28,46,.7);
-    border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;transition:.12s}
+  .spd button{font-family:var(--mono);font-size:11px;color:var(--muted);background:transparent;
+    border:1px solid var(--line);border-radius:0;padding:5px 9px;cursor:pointer;transition:.12s}
   .spd button:hover{color:var(--txt);border-color:var(--line-bright)}
-  .spd button.on{color:var(--bg);background:var(--cyan);border-color:var(--cyan);
-    box-shadow:0 0 12px rgba(57,211,255,.5);font-weight:700}
+  .spd button.on{color:#faf8f1;background:var(--ink);border-color:var(--ink);font-weight:700}
 
   /* ---------- LEFT : RESOURCES ---------- */
   #left{grid-area:left;padding:12px 12px 6px;display:flex;flex-direction:column;gap:11px;overflow:auto}
@@ -60,9 +57,15 @@
   .res .nm{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted)}
   .res .vl{font-family:var(--mono);font-size:13px;font-weight:600}
   .res .dl{font-family:var(--mono);font-size:9.5px;margin-left:6px;color:var(--dim)}
-  .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden;position:relative}
-  .bar > i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;transition:width .3s ease}
+  .bar{height:6px;border-radius:0;background:rgba(24,21,15,.10);overflow:hidden;position:relative}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;border-radius:0;transition:width .3s ease}
   .flow .vl{font-size:13px}
+  /* ASCII bars */
+  .asciibar{font-family:var(--mono);font-size:11px;letter-spacing:0;white-space:pre;line-height:1}
+  .res .ab-wrap{margin-top:3px}
+  .race-row2{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:10px;line-height:1.7}
+  .who2{width:104px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pct2{width:34px;text-align:right}
 
   /* ---------- CENTER : GLOBE + RACE ---------- */
   #center{grid-area:center;display:flex;flex-direction:column;padding:0;overflow:hidden}
@@ -75,21 +78,26 @@
   .race-line{flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:3px;position:relative}
   .race-line > i{position:absolute;left:0;top:-2px;height:7px;border-radius:3px;transition:width .4s}
   .race-row .pct{font-family:var(--mono);font-size:9px;width:30px;color:var(--muted)}
-  #globe-wrap{flex:1;position:relative;min-height:0}
-  #globe{position:absolute;inset:0}
-  #globe-cap{position:absolute;left:14px;bottom:10px;max-width:60%}
+  #lab{flex:1;position:relative;min-height:0;padding:12px 14px;overflow:hidden}
+  #model-line{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--ink);letter-spacing:.03em;margin-top:2px}
+  #model-bar{font-family:var(--mono);font-size:15px;margin-top:5px;display:block;color:var(--cyan);white-space:pre}
+  #model-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+  #globe-cap{position:absolute;left:14px;bottom:10px;max-width:58%}
   #globe-cap .label{margin-bottom:3px}
   #globe-cap .big{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5}
-  #scanline{position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse at center, rgba(57,211,255,.05), transparent 62%)}
+  #scanline{display:none}
   #actions{position:absolute;right:14px;bottom:12px;z-index:5;display:flex;gap:8px}
-  .act-btn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#04121a;font-weight:700;
-    cursor:pointer;padding:10px 13px;border-radius:8px;border:none;text-align:left}
+  .act-btn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:#faf8f1;font-weight:700;
+    cursor:pointer;padding:10px 13px;border-radius:0;border:1px solid var(--ink);text-align:left;background:var(--ink)}
   .act-btn:active{transform:translateY(1px)}
   .act-btn small{display:block;font-weight:500;font-size:8px;letter-spacing:.06em;
-    color:#063040;opacity:.82;margin-top:2px}
-  #train-btn{background:linear-gradient(180deg,#7be7ff,#22b9e6);box-shadow:0 0 20px rgba(57,211,255,.4)}
-  #ship-btn{background:linear-gradient(180deg,#7bf0c0,#22cf94);box-shadow:0 0 20px rgba(55,224,160,.4)}
+    color:rgba(250,248,241,.72);margin-top:2px}
+  #train-btn{background:var(--ink)}
+  #release-btn{background:var(--green);border-color:var(--green)}
+  #release-btn[disabled]{background:transparent;color:var(--dim);border-color:var(--line);cursor:default}
+  #release-btn[disabled] small{color:var(--dim)}
+  #release-btn.ready{animation:relpulse .9s steps(2) infinite}
+  @keyframes relpulse{0%,100%{background:var(--green);color:#faf8f1}50%{background:var(--ink);color:#faf8f1}}
   /* market position (left panel) */
   #market .mkt-row{display:flex;justify-content:space-between;align-items:baseline;margin:1px 0}
   #market .nm{font-family:var(--mono);font-size:10px;color:var(--muted)}
@@ -111,11 +119,11 @@
   #tree-title h3{margin:0;font-family:var(--mono);font-size:12px;letter-spacing:.14em}
   #tree-title p{margin:3px 0 0;font-size:10.5px;color:var(--muted);line-height:1.4}
   #nodes{flex:1;overflow:auto;padding:8px 10px 14px;display:flex;flex-direction:column;gap:8px}
-  .node{border:1px solid var(--line);border-radius:8px;padding:9px 10px;cursor:pointer;
-    transition:.14s;background:rgba(10,16,30,.5);position:relative}
-  .node:hover{border-color:var(--line-bright);background:rgba(16,24,44,.7)}
-  .node.locked{opacity:.42;cursor:not-allowed}
-  .node.owned{border-color:rgba(55,224,160,.5);background:rgba(20,40,34,.45)}
+  .node{border:1px solid var(--line);border-radius:0;padding:9px 10px;cursor:pointer;
+    transition:.14s;background:transparent;position:relative}
+  .node:hover{border-color:var(--ink);background:rgba(24,21,15,.05)}
+  .node.locked{opacity:.4;cursor:not-allowed}
+  .node.owned{border-color:var(--green);background:rgba(28,111,55,.08)}
   .node.cant{opacity:.7}
   .node .nh{display:flex;justify-content:space-between;align-items:center;gap:6px}
   .node .nt{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.04em}
@@ -140,13 +148,13 @@
 
   /* ---------- OVERLAYS ---------- */
   .overlay{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse at center,rgba(6,10,20,.86),rgba(2,4,9,.97));backdrop-filter:blur(3px)}
+    background:rgba(244,241,233,.84);backdrop-filter:blur(2px)}
   .card{width:min(560px,92vw);max-height:90vh;overflow:auto;background:var(--panel-solid);
-    border:1px solid var(--line-bright);border-radius:14px;padding:26px 28px;box-shadow:0 0 60px rgba(40,90,180,.25)}
+    border:2px solid var(--ink);border-radius:0;padding:24px 26px;box-shadow:8px 8px 0 rgba(24,21,15,.18)}
   /* decision dilemmas */
   .choices{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}
-  .choice{border:1px solid var(--line);border-radius:9px;padding:12px 13px;cursor:pointer;transition:.12s}
-  .choice:hover,.choice:active{border-color:var(--cyan);background:rgba(16,28,52,.6)}
+  .choice{border:1px solid var(--line);border-radius:0;padding:12px 13px;cursor:pointer;transition:.12s}
+  .choice:hover,.choice:active{border-color:var(--ink);background:rgba(24,21,15,.05)}
   .choice .cl{font-family:var(--mono);font-size:12px;color:var(--cyan);font-weight:600;letter-spacing:.02em}
   .choice .cd{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
   .choice .cfx{display:flex;flex-wrap:wrap;gap:4px 9px;margin-top:6px;font-family:var(--mono);font-size:9.5px}
@@ -155,23 +163,23 @@
   .card .sub{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--muted);margin-bottom:18px}
   .card p{font-size:13px;line-height:1.6;color:var(--txt)}
   .factions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 8px}
-  .fc{border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;transition:.14s}
-  .fc:hover{border-color:var(--cyan);background:rgba(16,28,52,.6)}
-  .fc h4{margin:0 0 4px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--cyan)}
+  .fc{border:1px solid var(--line);border-radius:0;padding:12px;cursor:pointer;transition:.14s}
+  .fc:hover{border-color:var(--ink);background:rgba(24,21,15,.05)}
+  .fc h4{margin:0 0 4px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--ink)}
   .fc p{margin:0;font-size:10.5px;color:var(--muted);line-height:1.45}
   .fc .perk{font-family:var(--mono);font-size:9px;color:var(--green);margin-top:6px;display:block}
   .fc .perk.m{color:var(--red)}
-  .btn{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--bg);font-weight:700;
-    background:var(--cyan);border:none;border-radius:8px;padding:12px 20px;cursor:pointer;margin-top:6px;
-    box-shadow:0 0 20px rgba(57,211,255,.4)}
-  .btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan);box-shadow:none}
+  .btn{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:#faf8f1;font-weight:700;
+    background:var(--ink);border:none;border-radius:0;padding:12px 20px;cursor:pointer;margin-top:6px;
+    box-shadow:4px 4px 0 rgba(24,21,15,.2)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--ink);box-shadow:none}
   .end-icon{font-size:34px;margin-bottom:6px}
   .help{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px}
   .help b{color:var(--txt)}
 
   /* alignment-corruption glitch */
-  #glitch{position:fixed;inset:0;pointer-events:none;z-index:8800;opacity:0;mix-blend-mode:screen;
-    background:repeating-linear-gradient(90deg,rgba(255,90,110,.06) 0 2px,transparent 2px 5px)}
+  #glitch{position:fixed;inset:0;pointer-events:none;z-index:8800;opacity:0;mix-blend-mode:multiply;
+    background:repeating-linear-gradient(90deg,rgba(178,29,18,.10) 0 2px,transparent 2px 6px)}
   body.crit #glitch{opacity:1;animation:gl .18s steps(2) infinite}
   @keyframes gl{0%{transform:translateX(0)}50%{transform:translateX(-2px)}100%{transform:translateX(2px)}}
 
@@ -199,22 +207,32 @@
     .spd button{padding:6px 8px}
   }
   /* intuitiveness: goal + contextual coach */
-  #guide{padding:7px 12px;border-bottom:1px solid var(--line);background:rgba(8,14,26,.55)}
+  #guide{padding:7px 12px;border-bottom:1px solid var(--line);background:rgba(24,21,15,.04)}
   #goal{font-family:var(--mono);font-size:10px;letter-spacing:.03em;color:var(--muted)}
   #goal b{color:var(--cyan)}
   #coach{font-size:11.5px;color:var(--txt);margin-top:3px;line-height:1.35;min-height:15px}
-  #coach b{color:var(--amber)}
+  #coach b{color:var(--red)}
+  #coach::after{content:"\2588";margin-left:2px;animation:blink 1s steps(1) infinite;color:var(--ink)}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
   .res{cursor:help}
   .node.asset .nt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .node.asset .cnt{font-family:var(--mono);font-size:9px;color:var(--txt);background:rgba(57,211,255,.14);
-    border:1px solid rgba(57,211,255,.3);border-radius:5px;padding:1px 5px}
-  .node.asset .tier{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--amber);
-    background:rgba(255,210,74,.12);border:1px solid rgba(255,210,74,.3);border-radius:5px;padding:1px 5px}
+  .node.asset .cnt{font-family:var(--mono);font-size:9px;color:var(--ink);background:rgba(18,63,134,.10);
+    border:1px solid var(--line);border-radius:0;padding:1px 5px}
+  .node.asset .tier{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--orange);
+    background:rgba(146,84,0,.10);border:1px solid var(--line);border-radius:0;padding:1px 5px}
   .node.asset .cost{font-size:11px}
-  .spd button.hint{animation:pulse 1.05s ease-in-out infinite}
-  @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(57,211,255,0)}50%{box-shadow:0 0 14px rgba(57,211,255,.9)}}
+  .spd button.hint{animation:blinkbtn 1s steps(2) infinite}
+  @keyframes blinkbtn{0%,100%{background:transparent;color:var(--muted)}50%{background:var(--ink);color:#faf8f1}}
+  /* motion: scrolling ticker */
+  #ticker{border-top:1px solid var(--line);overflow:hidden;white-space:nowrap;font-family:var(--mono);
+    font-size:10px;color:var(--muted);padding:3px 0;flex:none}
+  #ticker span{display:inline-block;padding-left:100%;animation:tick 26s linear infinite}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+  /* feed typewriter reveal */
+  .ev{animation:fade .4s, type .5s steps(30)}
+  @keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
   ::-webkit-scrollbar{width:7px;height:7px}
-  ::-webkit-scrollbar-thumb{background:rgba(90,130,190,.25);border-radius:4px}
+  ::-webkit-scrollbar-thumb{background:rgba(24,21,15,.25);border-radius:0}
 </style>
 </head>
 <body>
@@ -222,7 +240,7 @@
 <div id="app">
   <!-- TOP -->
   <div id="top" class="panel">
-    <div id="brand"><b>◆</b> SINGULARITY</div>
+    <div id="brand"><b>◼</b> THE SINGULARITY TIMES</div>
     <div id="faction-tag" class="mono">—</div>
     <div class="spd" style="margin-left:auto">
       <button data-spd="0" id="b-pause">❚❚</button>
@@ -240,9 +258,9 @@
     <div class="label" style="margin-top:2px">Market Position</div>
     <div id="market">
       <div class="mkt-row"><span class="nm">Product Tier</span><span class="vl" id="m-product-v" style="color:var(--cyan)">0</span></div>
-      <div class="bar"><i id="m-product" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></i></div>
+      <div class="ab-wrap"><span class="asciibar" id="m-product" style="color:var(--cyan)">░░░░░░░░░░░░░░</span></div>
       <div class="mkt-row"><span class="nm">Open-Weights · free</span><span class="vl" id="m-owl-v" style="color:var(--red)">0</span></div>
-      <div class="bar"><i id="m-owl" style="background:var(--red);box-shadow:0 0 8px var(--red)"></i></div>
+      <div class="ab-wrap"><span class="asciibar" id="m-owl" style="color:var(--red)">░░░░░░░░░░░░░░</span></div>
       <div class="mkt-foot"><span>Lead margin <b id="m-margin">+0</b></span><span id="m-rev">+0/mo</span></div>
     </div>
   </div>
@@ -257,16 +275,19 @@
       <div class="label"><span>The Race · AGI Readiness</span><span id="lead-tag">—</span></div>
       <div class="race-track" id="race-track"></div>
     </div>
-    <div id="globe-wrap">
-      <canvas id="globe"></canvas>
-      <div id="scanline"></div>
+    <div id="lab">
+      <div class="label">Current Model</div>
+      <div id="model-line">v1.0 · base</div>
+      <div class="label" style="margin-top:9px">Next Model — training</div>
+      <div id="model-bar">··············</div>
+      <div id="model-sub">train to fill · release when ready</div>
       <div id="globe-cap">
         <div class="label">Global Status</div>
         <div class="big" id="world-status">Booting world model…</div>
       </div>
       <div id="actions">
-        <button id="ship-btn" class="act-btn">⬆ SHIP MODEL<small>−30 cmp · raise product tier</small></button>
-        <button id="train-btn" class="act-btn">▶ RUN TRAINING<small id="train-sub">−40 cmp · +AGI · −align</small></button>
+        <button id="release-btn" class="act-btn" disabled>◆ RELEASE<small id="release-sub">training…</small></button>
+        <button id="train-btn" class="act-btn">▶ RUN TRAINING<small id="train-sub">−40 cmp · +AGI</small></button>
       </div>
     </div>
   </div>
@@ -282,6 +303,7 @@
   <div id="bottom" class="panel">
     <div class="label">Global Intelligence Feed</div>
     <div id="feed"></div>
+    <div id="ticker"><span id="ticker-s">▌ AGI RACE — the singularity will be reported live ▌</span></div>
   </div>
 </div>
 
@@ -290,8 +312,6 @@
   <div class="card" id="card"></div>
 </div>
 
-<!-- three.js -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script>
 /* ============================================================
    SINGULARITY // AGI RACE  —  control-room prototype
@@ -301,6 +321,8 @@
 const $ = s => document.querySelector(s);
 const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
 const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
+function abar(pct,w=14){ const n=Math.max(0,Math.min(w,Math.round(clamp(pct,0,100)/100*w))); return '█'.repeat(n)+'░'.repeat(w-n); }
+let tickerMsgs=[];
 
 /* ---------- RESOURCE MODEL ---------- */
 const RES = [
@@ -582,7 +604,7 @@ function newGame(fk){
   S = {
     fk, faction:f,
     ...JSON.parse(JSON.stringify(f.start)),
-    agi:0, owl:6, product:12, month:0, year:2027,
+    agi:0, owl:6, product:12, version:1, modelProg:0, month:0, year:2027,
     assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
     owned:new Set(), flags:new Set(),
     rivals:[
@@ -655,7 +677,9 @@ function tick(){
   S.standing = clamp(S.standing + r.standing);
   // AGI progress scales with your datacenter count — more datacenters amplify your scientists
   const infra = 1 + 0.12*(S.assets.datacenter||0);
-  S.agi = clamp(S.agi + r.agiRate*infra, 0, 100);
+  const research = r.agiRate*infra;
+  S.agi = clamp(S.agi + research, 0, 100);
+  S.modelProg = Math.min(100, S.modelProg + research*1.7 + 0.5);  // next-model training fills faster than AGI
   S.computeRateEvt = 0;
 
   // rivals advance (treaty slows them)
@@ -676,9 +700,10 @@ function tick(){
 
   // advance calendar
   S.month++; if(S.month>11){S.month=0;S.year++;}
-  // world reacts: dilemmas (pause + choose), rival moves, and minor events on a cadence
+  // world reacts: model releases take priority, then dilemmas, rival moves, minor events
   const tm=(S.year-2027)*12+S.month;
-  if(tm>0 && tm%6===0) fireDilemma();
+  if(S.modelProg>=100 && !awaitingChoice) fireRelease();
+  else if(tm>0 && tm%6===0) fireDilemma();
   else if(tm%6===3) rivalMove();
   else if(tm%4===2) fireEvent();
 
@@ -768,27 +793,46 @@ function runTraining(){
   S.compute-=40;
   const gain = 3 + (S.owned.has('frontier')?2:0) + (S.owned.has('rsi')?3:0);
   S.agi=clamp(S.agi+gain,0,100);
+  S.modelProg=Math.min(100, S.modelProg+gain*2.4);
   S.alignment=clamp(S.alignment-2.5);
-  log(`Training run complete: +${gain.toFixed(0)}% AGI, alignment strained.`,'tech');
+  log(`Training run: +${gain.toFixed(0)}% AGI, next model +${Math.round(gain*2.4)}%.`,'tech');
   flash($('#train-btn'));
   checkEnd(); render();
 }
 function flash(el){const o=el.style.boxShadow;el.style.boxShadow='0 0 34px rgba(255,255,255,.85)';setTimeout(()=>el.style.boxShadow=o,180);}
 
-// SHIP: convert frontier capability into product tier (revenue), to stay ahead of the free tier
-function shipCeiling(){
-  return clamp(S.agi*0.7 + (S.has('frontier')?20:0) + (S.has('rsi')?20:0) + Math.min(20,(S.assets.datacenter||0)*2.5), 0, 100);
+/* ---------- MODEL RELEASES (versioned, tiered — like real launches) ---------- */
+function releaseTiers(){
+  const g=S.version, P=S.product;
+  return [
+    {label:`Flagship v${g+1}.0 (Max)`, desc:'Biggest capability & revenue — but heavy scrutiny dents alignment.',
+      d:{product:Math.max(0,(20+g*12)-P), capital:25+g*8, alignment:-5, standing:6, trust:2, owl:2}},
+    {label:`Efficient v${g+1}.0 (Mini)`, desc:'A lean, cheap release — better margins and public trust.',
+      d:{product:Math.max(0,(15+g*10)-P), capital:12, trust:8, alignment:2}},
+    {label:`Open weights v${g+1}.0`, desc:'Huge goodwill and adoption — but the free tier leaps up.',
+      d:{product:Math.max(0,(12+g*8)-P), trust:12, standing:8, owl:14, capital:5}},
+  ];
 }
-function shipModel(){
-  if(S.over) return;
-  if(S.compute<30){ log('Not enough compute to ship a product update.','warn'); return; }
-  const ceil=shipCeiling();
-  if(S.product>=ceil-0.5){ log('Product is already at your frontier — RUN TRAINING or buy compute nodes to raise the ceiling.','warn'); return; }
-  S.compute-=30; S.capital-=5;
-  const gain=Math.min(8, ceil-S.product);
-  S.product=clamp(S.product+gain);
-  log(`Shipped: product tier +${gain.toFixed(0)} → ${Math.round(S.product)} (free tier at ${Math.round(S.owl)}).`,'tech');
-  flash($('#ship-btn')); checkEnd(); render();
+function fireRelease(){
+  awaitingChoice=true; running=false;
+  const tiers=releaseTiers();
+  showCard(`
+    <div class="sub" style="color:var(--green)">◆ MODEL RELEASE · ${MONTHS[S.month]} ${S.year}</div>
+    <h1 style="font-size:18px;letter-spacing:.05em">v${S.version+1}.0 IS READY TO SHIP</h1>
+    <p>Your next-generation model finished training. Choose how you launch it — each path is a real-world trade-off.</p>
+    <div class="choices">${tiers.map((c,i)=>`
+      <div class="choice" data-i="${i}"><div class="cl">${c.label}</div><div class="cd">${c.desc}</div>
+      <div class="cfx">${cfxStr(c.d)}</div></div>`).join('')}</div>`);
+  $('#card').querySelectorAll('.choice').forEach(el=>el.onclick=()=>doRelease(tiers,+el.dataset.i));
+}
+function doRelease(tiers,i){
+  const c=tiers[i];
+  applyDelta(S,c.d);
+  S.version++; S.modelProg=0;
+  log(`Released v${S.version}.0 — ${c.label.replace(/ v.*/,'')}.`,'good');
+  awaitingChoice=false; $('#overlay').style.display='none';
+  running = speed>0 && S && !S.over;
+  checkEnd(); render();
 }
 
 /* ---------- RENDER ---------- */
@@ -806,7 +850,7 @@ function buildResList(){
       <div class="row"><span class="nm">${r.nm}</span>
         <span><span class="vl" style="color:var(${r.col})" id="v-${r.k}">0</span>
         <span class="dl" id="d-${r.k}"></span></span></div>
-      ${r.bank?'':`<div class="bar"><i id="b-${r.k}" style="background:var(${r.col});box-shadow:0 0 8px var(${r.col})"></i></div>`}
+      ${r.bank?'':`<div class="ab-wrap"><span class="asciibar" id="ab-${r.k}" style="color:var(${r.col})">░░░░░░░░░░░░░░</span></div>`}
     </div>`).join('');
   $('#res-list').onclick=e=>{const row=e.target.closest('[data-r]'); if(row) setCoach(RES_EXPLAIN[row.dataset.r]);};
 }
@@ -826,7 +870,7 @@ function coach(){
   if(S.alignment<40) return 'Alignment is dangerously low — hire <b>Safety Researchers</b> (BUILD) before it causes a catastrophe.';
   if((A.scientist||0)===0) return 'Hire your first <b>Scientist</b> (★ BUILD) to start advancing AGI.';
   if((A.datacenter||0)>=dcCap()) return 'Out of datacenter capacity — build a <b>Power Plant</b> (BUILD).';
-  if((S.product-S.owl)<3) return 'Free models are catching up — hire <b>Engineers</b> (BUILD) or press <b>SHIP MODEL</b>.';
+  if((S.product-S.owl)<3) return 'Free models are catching up — hire <b>Engineers</b> (BUILD) and <b>RELEASE</b> a new model when it is trained.';
   if(S.capital<0) return 'You are losing money — hire <b>Engineers</b> (BUILD) for revenue.';
   if((A.datacenter||0)<4) return 'Add more <b>Datacenters</b> (BUILD) — more Compute means faster AGI.';
   if(!S.has('frontier')) return 'Ready for depth: buy <b>Frontier Models</b> (Compute tab) to boost AGI.';
@@ -917,8 +961,7 @@ function render(){
   for(const r of RES){
     const v=S[r.k];
     $('#v-'+r.k).textContent = r.bank?fmt(v):Math.round(v);
-    if(!r.bank){ $('#b-'+r.k).style.width=clamp(v)+'%';
-      $('#b-'+r.k).style.opacity = v<30?0.6+0.4*Math.sin(performance.now()/200):1; }
+    if(!r.bank){ const el=$('#ab-'+r.k); if(el) el.textContent=abar(v,14); }
   }
   // flow deltas
   const r=rates();
@@ -938,18 +981,17 @@ function render(){
   const lead=all[0];
   $('#lead-tag').textContent = lead.me?'YOU LEAD':'BEHIND';
   $('#lead-tag').style.color = lead.me?'var(--green)':'var(--red)';
-  const h=15; $('#race-track').style.height=(all.length*h)+'px';
-  $('#race-track').innerHTML = all.map((x,i)=>`
-    <div class="race-row" style="top:${i*h}px">
-      <span class="who" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${x.nm}</span>
-      <div class="race-line"><i style="width:${x.p}%;background:${x.me?'var(--cyan)':'var(--dim)'};
-        box-shadow:${x.me?'0 0 10px var(--cyan)':'none'}"></i></div>
-      <span class="pct" style="color:${x.me?'var(--cyan)':'var(--muted)'}">${Math.round(x.p)}%</span>
+  $('#race-track').style.height='auto';
+  $('#race-track').innerHTML = all.map(x=>`
+    <div class="race-row2" style="color:${x.me?'var(--cyan)':'var(--muted)'}">
+      <span class="who2">${x.me?'▶ ':'  '}${x.nm.slice(0,12)}</span>
+      <span class="asciibar">${abar(x.p,12)}</span>
+      <span class="pct2">${Math.round(x.p)}%</span>
     </div>`).join('');
 
   // market position
-  $('#m-product').style.width=clamp(S.product)+'%';
-  $('#m-owl').style.width=clamp(S.owl)+'%';
+  $('#m-product').textContent=abar(S.product,14);
+  $('#m-owl').textContent=abar(S.owl,14);
   $('#m-product-v').textContent=Math.round(S.product);
   $('#m-owl-v').textContent=Math.round(S.owl);
   const mg=S.product-S.owl;
@@ -958,6 +1000,14 @@ function render(){
   const rev=r.prodRev||0; const rEl=$('#m-rev');
   rEl.textContent=(rev>=0?'+':'')+rev.toFixed(1)+'/mo';
   rEl.style.color = rev>=0?'var(--green)':'var(--red)';
+
+  // model / version
+  $('#model-line').textContent = `v${S.version}.0`;
+  $('#model-bar').textContent = abar(S.modelProg,14)+' '+Math.round(S.modelProg)+'%';
+  const ready=S.modelProg>=100, rb=$('#release-btn');
+  if(rb){ rb.disabled=!ready; rb.classList.toggle('ready',ready);
+    $('#release-sub').textContent = ready?`ship v${S.version+1}.0 — choose tier`:`${Math.round(S.modelProg)}% trained`; }
+  $('#model-sub').textContent = ready?'ready — RELEASE to choose Flagship / Efficient / Open':'train & research to fill';
 
   // tree panel
   $('#tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.tab===S.tab));
@@ -1014,59 +1064,13 @@ function log(msg,cls=''){
   d.innerHTML=`<span class="t">${MONTHS[S?S.month:0]} ${S?S.year:2027}</span><span class="m">${msg}</span>`;
   f.prepend(d);
   while(f.children.length>40) f.lastChild.remove();
-}
-
-/* ---------- GLOBE (three.js) ---------- */
-let scene,cam,renderer,globe,grid,pts;
-function initGlobe(){
-  const cv=$('#globe'); const wrap=$('#globe-wrap');
-  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  scene=new THREE.Scene();
-  cam=new THREE.PerspectiveCamera(42,1,0.1,100); cam.position.set(0,0,5.2);
-  const g=new THREE.SphereGeometry(1.7,40,40);
-  globe=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x0a1a30,transparent:true,opacity:.55}));
-  scene.add(globe);
-  grid=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.SphereGeometry(1.71,22,16)),
-    new THREE.LineBasicMaterial({color:0x2f6fae,transparent:true,opacity:.32}));
-  scene.add(grid);
-  // glowing nodes
-  const pg=new THREE.BufferGeometry(); const arr=[];
-  for(let i=0;i<140;i++){const u=Math.random(),v=Math.random();
-    const th=2*Math.PI*u, ph=Math.acos(2*v-1);
-    arr.push(1.74*Math.sin(ph)*Math.cos(th),1.74*Math.cos(ph),1.74*Math.sin(ph)*Math.sin(th));}
-  pg.setAttribute('position',new THREE.Float32BufferAttribute(arr,3));
-  pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x39d3ff,size:0.045,
-    transparent:true,opacity:.85,blending:THREE.AdditiveBlending}));
-  scene.add(pts);
-  const halo=new THREE.Mesh(new THREE.SphereGeometry(1.95,32,32),
-    new THREE.MeshBasicMaterial({color:0x1a4a7a,transparent:true,opacity:.10,side:THREE.BackSide}));
-  scene.add(halo);
-  sizeGlobe();
-  new ResizeObserver(sizeGlobe).observe(wrap);
-}
-function sizeGlobe(){
-  const w=$('#globe-wrap').clientWidth,h=$('#globe-wrap').clientHeight;
-  if(!w||!h)return; renderer.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix();
-}
-function renderGlobe(t){
-  if(!renderer)return;
-  globe.rotation.y=grid.rotation.y=pts.rotation.y=t*0.00008;
-  grid.rotation.x=0.35;
-  // tint by alignment/stability
-  if(S){
-    const danger = (100-S.alignment)+(100-S.stability);
-    const c = danger>110 ? 0xff5a6e : danger>70 ? 0xffb454 : 0x39d3ff;
-    pts.material.color.setHex(c); grid.material.color.setHex(c===0x39d3ff?0x2f6fae:c);
-    pts.material.opacity=0.5+0.4*Math.abs(Math.sin(t/600));
-  }
-  renderer.render(scene,cam);
+  tickerMsgs.unshift(msg.replace(/<[^>]+>/g,'')); tickerMsgs=tickerMsgs.slice(0,8);
+  const ts=$('#ticker-s'); if(ts) ts.textContent='▌ '+tickerMsgs.join('   ▌   ')+' ▌';
 }
 
 /* ---------- MAIN LOOP ---------- */
 function loop(now){
   raf=requestAnimationFrame(loop);
-  renderGlobe(now);
   if(S) updateGuide();
   if(!running||awaitingChoice||!S||S.over){lastT=now;return;}
   const dt=(now-lastT)/1000; lastT=now;
@@ -1091,19 +1095,19 @@ $('#nodes').onclick=e=>{
   const n=e.target.closest('[data-buy]'); if(n) buy(n.dataset.buy);
 };
 $('#train-btn').onclick=runTraining;
-$('#ship-btn').onclick=shipModel;
+$('#release-btn').onclick=()=>{ if(S&&!S.over&&S.modelProg>=100&&!awaitingChoice) fireRelease(); };
 
 /* ---------- OVERLAYS ---------- */
 function showCard(html){$('#card').innerHTML=html;$('#overlay').style.display='flex';}
 function startScreen(){
   running=false;
   showCard(`
-    <h1><b>◆</b> SINGULARITY</h1>
-    <div class="sub">THE AGI RACE · CONTROL ROOM</div>
-    <p>You run an AI lab racing to <b>AGI</b>. The world plays out month by month — your job is to
-    <b style="color:var(--compute)">spend Compute</b> on policies, <b style="color:var(--green)">SHIP MODEL</b> to keep the money flowing,
-    and <b style="color:var(--cyan)">RUN TRAINING</b> to push toward AGI. Reach it first <b>with Alignment ≥ 60</b> and you win.</p>
-    <p style="color:var(--muted);font-size:11.5px">Keep an eye on four meters — Trust, Stability, Alignment, Standing (tap any meter in-game to see what it does).
+    <h1><b>◼</b> THE SINGULARITY TIMES</h1>
+    <div class="sub">THE AGI RACE · A LIVE DISPATCH</div>
+    <p>You run an AI lab racing to <b>AGI</b>. Month by month: <b style="color:var(--compute)">build</b> datacenters & scientists,
+    <b style="color:var(--cyan)">RUN TRAINING</b> to fill your next model, then <b style="color:var(--green)">RELEASE</b> it as a
+    Flagship, Efficient, or Open-weights launch. Reach AGI first <b>with Alignment ≥ 60</b> and you win.</p>
+    <p style="color:var(--muted);font-size:11.5px">Keep an eye on four meters — Trust, Stability, Alignment, Standing (tap any meter to see what it does).
     If one hits zero, you run out of money, or a rival reaches AGI first, you lose. The game starts <b>paused</b> — make your first move, then press play.</p>
     <div class="label" style="margin-top:14px">CHOOSE YOUR POWER</div>
     <div class="factions">${Object.keys(FACTIONS).map(k=>{const f=FACTIONS[k];return`
@@ -1113,15 +1117,13 @@ function startScreen(){
         <span class="perk">＋ ${f.perk}</span>
         <span class="perk m">－ ${f.minus}</span>
       </div>`;}).join('')}</div>
-    <div class="help"><b>Controls:</b> click policies to enact · <b>RUN TRAINING</b> to raise capability (costs alignment) ·
-    <b>SHIP MODEL</b> to turn capability into product revenue. Mind the <b style="color:var(--red)">Open-Weights line</b> in Market Position:
-    free models climb every month — if they catch your product tier, revenue collapses and you go bankrupt. Keep shipping to stay ahead.
-    pause/1×/2×/4× top-right.</div>`);
+    <div class="help"><b>Controls:</b> open <b>★ BUILD</b> and buy datacenters/scientists · <b>RUN TRAINING</b> to fill the next model ·
+    <b>RELEASE</b> it (Flagship / Efficient / Open) to bump your product. Mind the <b style="color:var(--red)">Open-Weights line</b>:
+    free models climb every month — if they catch your product, revenue collapses. Release often to stay ahead. pause/1×/2×/4× top-right.</div>`);
   $('#card').querySelectorAll('.fc').forEach(c=>c.onclick=()=>newGame(c.dataset.f));
 }
 
 /* ---------- BOOT ---------- */
-initGlobe();
 startScreen();
 </script>
 </body>
