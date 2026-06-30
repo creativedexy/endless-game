@@ -63,6 +63,19 @@
   /* ASCII bars */
   .asciibar{font-family:var(--mono);font-size:11px;letter-spacing:0;white-space:pre;line-height:1}
   .res .ab-wrap{margin-top:3px}
+  /* state-of-the-nation thermometers */
+  #state{padding:8px 14px 4px;border-bottom:1px solid var(--line)}
+  #thermos{display:flex;gap:16px;align-items:flex-end;justify-content:center;padding:6px 0 2px}
+  .thermo{display:flex;flex-direction:column;align-items:center;gap:4px;width:50px;cursor:help}
+  .thermo .tv{font-family:var(--mono);font-size:13px;font-weight:700;display:flex;gap:2px;align-items:baseline}
+  .thermo .td{font-size:9px}
+  .tcol{position:relative;width:20px;height:64px;border:1px solid var(--ink);background:rgba(24,21,15,.04);overflow:hidden}
+  .tdanger{position:absolute;left:0;right:0;bottom:0;height:25%;background:repeating-linear-gradient(45deg,rgba(178,29,18,.22) 0 3px,transparent 3px 6px);border-top:1px dashed rgba(178,29,18,.5)}
+  .tfill{position:absolute;left:0;right:0;bottom:0;height:0;transition:height .35s ease}
+  .thermo .tlbl{font-size:16px;line-height:1}
+  /* scenario animated art */
+  #scn-art{font-family:var(--mono);font-size:12px;line-height:1.25;white-space:pre;color:var(--ink);
+    background:rgba(24,21,15,.05);border:1px solid var(--line);padding:10px;margin:8px 0 12px;text-align:center;min-height:64px}
   .race-row2{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:10px;line-height:1.7}
   .who2{width:104px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pct2{width:34px;text-align:right}
@@ -201,12 +214,13 @@
     .node{padding:12px 12px}
     .factions{grid-template-columns:1fr}
     #statusbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:70;
-      background:var(--panel);border-top:2px solid var(--ink);overflow-x:auto;
-      padding:5px 4px;padding-bottom:max(5px,env(safe-area-inset-bottom));
-      font-family:var(--mono);white-space:nowrap}
-    #statusbar .sb{display:flex;flex-direction:column;padding:1px 10px;border-right:1px solid var(--line);min-width:max-content}
-    #statusbar .sb .k{color:var(--dim);font-size:8px;letter-spacing:.1em}
-    #statusbar .sb .v{font-weight:700;font-size:13px;line-height:1.1}
+      background:var(--panel);border-top:2px solid var(--ink);
+      padding-bottom:max(0px,env(safe-area-inset-bottom));font-family:var(--mono)}
+    #statusbar .sbig{flex:1;display:flex;align-items:baseline;gap:8px;padding:9px 14px}
+    #statusbar .sbig+.sbig{border-left:2px solid var(--ink)}
+    #statusbar .sbig .si{font-size:18px}
+    #statusbar .sbig .sn{font-weight:800;font-size:24px;letter-spacing:.01em}
+    #statusbar .sbig .sr{font-size:11px;color:var(--muted);margin-left:auto}
   }
   @media(max-width:430px){
     #actions{flex-direction:column;align-items:stretch;left:auto;right:10px;bottom:10px;gap:6px}
@@ -262,7 +276,7 @@
 
   <!-- LEFT -->
   <div id="left" class="panel">
-    <div class="label">National Indicators</div>
+    <div class="label">Economy</div>
     <div id="res-list"></div>
     <div class="label" style="margin-top:2px">Market Position</div>
     <div id="market">
@@ -283,6 +297,10 @@
     <div id="race">
       <div class="label"><span>The Race · AGI Readiness</span><span id="lead-tag">—</span></div>
       <div class="race-track" id="race-track"></div>
+    </div>
+    <div id="state">
+      <div class="label">State of the Nation</div>
+      <div id="thermos"></div>
     </div>
     <div id="lab">
       <div class="label">Current Model</div>
@@ -338,12 +356,18 @@ let tickerMsgs=[];
 
 /* ---------- RESOURCE MODEL ---------- */
 const RES = [
-  {k:'compute',  nm:'Compute',     col:'--compute',   bank:true,  hint:'research currency'},
-  {k:'capital',  nm:'Capital',     col:'--capital',   bank:true,  hint:'funds programs'},
-  {k:'trust',    nm:'Public Trust',col:'--trust',     bank:false, hint:'governing mandate'},
-  {k:'stability',nm:'Stability',   col:'--stability', bank:false, hint:'inverse of unrest'},
-  {k:'alignment',nm:'Alignment',   col:'--alignment', bank:false, hint:'AI controllability'},
-  {k:'standing', nm:'Geo Standing', col:'--standing', bank:false, hint:'vs rival powers'},
+  {k:'compute',  nm:'Compute',     ic:'💻', col:'--compute',   bank:true,  hint:'research currency'},
+  {k:'capital',  nm:'Capital',     ic:'💰', col:'--capital',   bank:true,  hint:'funds programs'},
+  {k:'trust',    nm:'Public Trust',ic:'🙏', col:'--trust',     bank:false, hint:'governing mandate'},
+  {k:'stability',nm:'Stability',   ic:'⚖️', col:'--stability', bank:false, hint:'inverse of unrest'},
+  {k:'alignment',nm:'Alignment',   ic:'🧠', col:'--alignment', bank:false, hint:'AI controllability'},
+  {k:'standing', nm:'Geo Standing',ic:'🌐', col:'--standing', bank:false, hint:'vs rival powers'},
+];
+const METERS=[
+  {k:'trust',     ic:'🙏', col:'--trust'},
+  {k:'stability', ic:'⚖️', col:'--stability'},
+  {k:'alignment', ic:'🧠', col:'--alignment'},
+  {k:'standing',  ic:'🌐', col:'--standing'},
 ];
 
 /* ---------- FACTIONS (asymmetric starts) ---------- */
@@ -588,6 +612,7 @@ function resolveChoice(d,i){
   const c=d.choices[i];
   if(c.fx) c.fx(S); else if(c.d) applyDelta(S,c.d);
   log(`Decision — ${c.label}.`,'tech');
+  stopArt();
   awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
   checkEnd(); render();
@@ -674,6 +699,41 @@ const SCENARIOS = [
       {label:'Deny and deflect', desc:'Protect output; pay later.', d:{stability:-10,trust:-8,standing:-4}},
     ]},
 ];
+/* animated ASCII vignettes per scenario */
+const SCN_ART={
+  skynet:['  ┌─[ AUTO ]─┐\n  │   ◉ ◉   │\n  └────┬┬───┘\n  ░░ STANDBY ░░',
+          '  ┌─[ AUTO ]─┐\n  │   ◎ ◎   │\n  └────┬┬───┘\n  ▓▓ ARMED ▓▓',
+          '  ┌─[ AUTO ]─┐\n  │   ✖ ✖   │\n  └────┬┬───┘\n  ██ FIRING ██'],
+  pandemic:[' o   ·   o \n   · ( ) · \n  o   ·   o',
+            '  o · o ·  \n  ·( )·( ) \n · o · o · ',
+            ' o·o·o·o·o\n ·( )( )· \n o·o·o·o·o'],
+  breakthrough:['     .·.\n    ( ? )\n     `·`',
+                '     .·.\n    ( ! )\n     /|\\',
+                '    ╲.·.╱\n   ─( ! )─\n     ╱|╲'],
+  alien:['      o      \n    ( o )    \n      o      ',
+         '    ( o )    \n   (  o  )   \n    ( o )    ',
+         '  ((   o  ))\n (((  o   )))\n  ((   o  ))'],
+  telepathy:[' [H] · · [AI]\n   .      . ',
+             ' [H] ~ ~ [AI]\n   :      : ',
+             ' [H] ≈≈≈ [AI]\n   LINKED!  '],
+  fusion:['    .-~-.\n   (  *  )\n    `-_-`',
+          '    .-~-.\n   ( *** )\n    `-_-`',
+          '    .-~-.\n   (*****)\n   IGNITION'],
+  autonomy:['  ┌─────┐\n  │  ◉  │  "let me\n  └─────┘   think…"',
+            '  ┌─────┐\n  │  ◎  │  "trust\n  └─────┘    me."',
+            '  ┌─────┐\n  │  ●  │  "release\n  └─────┘    me."'],
+  climate:['  ~ ~ ~ ~ ~\n  ░░░░░░░░░\n  ▒▒▒▒▒▒▒▒▒',
+           '  ≈ ≈ ≈ ≈ ≈\n  ▒▒▒▒▒▒▒▒▒\n  ▓▓▓▓▓▓▓▓▓',
+           '  ≋ ≋ ≋ ≋ ≋\n  ▓▓▓▓▓▓▓▓▓\n  █████████'],
+};
+let artTimer=null;
+function startArt(frames){
+  stopArt(); if(!frames||!frames.length) return;
+  const el=$('#scn-art'); if(!el) return; let i=0; el.textContent=frames[0];
+  artTimer=setInterval(()=>{ i=(i+1)%frames.length; const e=$('#scn-art'); if(e) e.textContent=frames[i]; else stopArt(); }, 450);
+}
+function stopArt(){ if(artTimer){ clearInterval(artTimer); artTimer=null; } }
+
 function fireScenario(){
   const pool=SCENARIOS.filter(d=>(!d.cond||d.cond(S)) && !S.firedScenarios.has(d.id));
   if(!pool.length){ fireDilemma(); return; }   // fall back so the beat isn't wasted
@@ -683,10 +743,12 @@ function fireScenario(){
   showCard(`
     <div class="sub" style="color:var(--red)">⚑ WORLD EVENT · ${MONTHS[S.month]} ${S.year}</div>
     <h1 style="font-size:18px;letter-spacing:.05em">${d.title}</h1>
+    <pre id="scn-art"></pre>
     <p>${d.body}</p>
     <div class="choices">${d.choices.map((c,i)=>`
       <div class="choice" data-i="${i}"><div class="cl">${c.label}</div><div class="cd">${c.desc}</div>
       <div class="cfx">${cfxStr(c.d)}</div></div>`).join('')}</div>`);
+  startArt(SCN_ART[d.id]);
   $('#card').querySelectorAll('.choice').forEach(el=>el.onclick=()=>resolveChoice(d,+el.dataset.i));
 }
 
@@ -713,7 +775,7 @@ function newGame(fk){
     has(id){return this.owned.has(id)},
   };
   S.rivals.forEach(r=>{ r.spd*=f.rivalMul; r.spd*=0.85; }); // ease early pressure
-  buildResList(); buildTabs(); render();
+  buildResList(); buildThermos(); buildTabs(); render();
   $('#faction-tag').textContent = f.nm.toUpperCase();
   log(`Mandate accepted — ${f.nm}.`,'tech');
   $('#overlay').style.display='none';
@@ -779,7 +841,15 @@ function tick(){
 
   // rivals advance (treaty slows them)
   const slow = Math.max(0, 1 - r.rivalSlow);
-  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + v.spd*slow*(0.8+Math.random()*0.5)); });
+  // ESCALATING RIVALS: they scale with your own progress, so the race tightens as you climb
+  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + v.spd*slow*(0.8+Math.random()*0.5) + S.agi*0.0035); });
+  const lead=Math.max(...S.rivals.map(v=>v.p));
+  if(lead - S.agi > 22){ S.computeRateEvt -= 1.5; }  // falling behind the front-runner: talent drifts away
+
+  // COMPOUNDING ALIGNMENT RISK: neglected alignment snowballs into unrest and lost trust
+  if(S.alignment<45){ const sev=45-S.alignment;
+    S.stability=clamp(S.stability - sev*0.03);
+    if(S.alignment<30) S.trust=clamp(S.trust - (30-S.alignment)*0.02); }
 
   // open-source market: free capability creeps up relentlessly; your product slowly ages
   S.owl = clamp(S.owl + 0.32);
@@ -863,10 +933,16 @@ function canAfford(n){
   const c=cost(n);
   return (!c.compute||S.compute>=c.compute) && (!c.capital||S.capital>=c.capital);
 }
+function treeOf(id){ for(const t in TREES){ if(TREES[t].nodes.some(x=>x.id===id)) return t; } return null; }
+function ownedTrees(){ const s=new Set(); for(const id of S.owned){ const t=treeOf(id); if(t) s.add(t); } return s; }
 function cost(n){
   const m=S.faction.costMul;
-  return {compute: n.cost.compute?Math.round(n.cost.compute*m):0,
-          capital: n.cost.capital?Math.round(n.cost.capital*m):0};
+  // SPECIALIZATION: committing to a domain is cheap; spreading across many use-cases gets pricier
+  const nt=treeOf(n.id);
+  const others=[...ownedTrees()].filter(t=>t!==nt).length;
+  const spec = 1 + 0.2*others;
+  return {compute: n.cost.compute?Math.round(n.cost.compute*m*spec):0,
+          capital: n.cost.capital?Math.round(n.cost.capital*m*spec):0};
 }
 function reqMet(n){ return !n.req || n.req.every(id=>S.owned.has(id)); }
 
@@ -944,14 +1020,31 @@ const RES_EXPLAIN={
   standing:'Geo Standing — your position vs rival powers; drives sanctions, treaties and export controls.',
 };
 function buildResList(){
-  $('#res-list').innerHTML = RES.map(r=>`
-    <div class="res ${r.bank?'flow':''}" data-r="${r.k}" title="${RES_EXPLAIN[r.k]||''}">
-      <div class="row"><span class="nm">${r.nm}</span>
+  $('#res-list').innerHTML = RES.filter(r=>r.bank).map(r=>`
+    <div class="res flow" data-r="${r.k}" title="${RES_EXPLAIN[r.k]||''}">
+      <div class="row"><span class="nm">${r.ic} ${r.nm}</span>
         <span><span class="vl" style="color:var(${r.col})" id="v-${r.k}">0</span>
         <span class="dl" id="d-${r.k}"></span></span></div>
-      ${r.bank?'':`<div class="ab-wrap"><span class="asciibar" id="ab-${r.k}" style="color:var(${r.col})">░░░░░░░░░░░░░░</span></div>`}
     </div>`).join('');
   $('#res-list').onclick=e=>{const row=e.target.closest('[data-r]'); if(row) setCoach(RES_EXPLAIN[row.dataset.r]);};
+}
+function buildThermos(){
+  const el=$('#thermos'); if(!el) return;
+  el.innerHTML = METERS.map(m=>`
+    <div class="thermo" data-k="${m.k}" title="${RES_EXPLAIN[m.k]||''}">
+      <div class="tv"><span id="tv-${m.k}">0</span><span class="td" id="td-${m.k}"></span></div>
+      <div class="tcol"><div class="tdanger"></div><div class="tfill" id="tf-${m.k}" style="background:var(${m.col})"></div></div>
+      <div class="tlbl">${m.ic}</div>
+    </div>`).join('');
+  el.onclick=e=>{const t=e.target.closest('[data-k]'); if(t) setCoach(RES_EXPLAIN[t.dataset.k]);};
+}
+function renderThermos(r){
+  for(const m of METERS){
+    const v=S[m.k], tf=$('#tf-'+m.k), tv=$('#tv-'+m.k), td=$('#td-'+m.k);
+    if(tf) tf.style.height=clamp(v)+'%';
+    if(tv){ tv.textContent=Math.round(v); tv.style.color = v<25?'var(--red)':'var(--ink)'; }
+    if(td && r){ const d=r[m.k]||0; td.textContent = d? (d>0?'▲':'▼'):''; td.style.color = d>0?'var(--green)':'var(--red)'; }
+  }
 }
 
 /* ---------- contextual coach (the intuitiveness layer) ---------- */
@@ -1056,21 +1149,15 @@ function fxStr(n){
 
 function render(){
   if(!S) return;
-  // resources
-  for(const r of RES){
-    const v=S[r.k];
-    $('#v-'+r.k).textContent = r.bank?fmt(v):Math.round(v);
-    if(!r.bank){ const el=$('#ab-'+r.k); if(el) el.textContent=abar(v,14); }
+  // banked resources (left panel)
+  for(const res of RES){ if(!res.bank) continue;
+    const el=$('#v-'+res.k); if(el) el.textContent=fmt(S[res.k]);
   }
-  // flow deltas
   const r=rates();
   setDelta('compute', r.computeRate);
   setDelta('capital', r.capitalRate);
-  for(const k of ['trust','stability','alignment','standing']){
-    const d=r[k]; const el=$('#d-'+k);
-    el.textContent = d? (d>0?'▲':'▼') : '·';
-    el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
-  }
+  // societal meters as thermometers
+  renderThermos(r);
   // clock
   $('#yr').textContent=S.year; $('#mo').textContent=MONTHS[S.month];
 
@@ -1132,7 +1219,7 @@ function render(){
 
   // world status caption
   $('#world-status').innerHTML = worldStatus();
-  renderStatusbar();
+  renderStatusbar(r);
   // crisis glitch
   document.body.classList.toggle('crit', S.alignment<35 || S.stability<25);
   // train sub
@@ -1145,20 +1232,13 @@ function setDelta(k,d){
   el.style.color = d>0?'var(--green)':(d<0?'var(--red)':'var(--dim)');
 }
 
-function renderStatusbar(){
+function renderStatusbar(r){
   const sb=$('#statusbar'); if(!sb||!S) return;
-  const cell=(k,v,col)=>`<div class="sb"><span class="k">${k}</span><span class="v" style="color:${col}">${v}</span></div>`;
-  const mg=Math.round(S.product-S.owl);
+  const tile=(ic,val,rate,col)=>`<div class="sbig"><span class="si">${ic}</span><span class="sn" style="color:${col}">${val}</span><span class="sr">${rate}</span></div>`;
+  const cr=r?r.computeRate:0, kr=r?r.capitalRate:0;
   sb.innerHTML =
-    cell('AGI', Math.round(S.agi)+'%','var(--cyan)')+
-    cell('MODEL','v'+S.version,'var(--ink)')+
-    cell('ALIGN', Math.round(S.alignment), S.alignment<45?'var(--red)':'var(--alignment)')+
-    cell('⬡ CMP', fmt(S.compute),'var(--compute)')+
-    cell('$ CAP', fmt(S.capital), S.capital<0?'var(--red)':'var(--capital)')+
-    cell('TRUST', Math.round(S.trust), S.trust<25?'var(--red)':'var(--trust)')+
-    cell('STAB', Math.round(S.stability), S.stability<25?'var(--red)':'var(--stability)')+
-    cell('STAND', Math.round(S.standing),'var(--standing)')+
-    cell('MARGIN',(mg>=0?'+':'')+mg, mg>0?'var(--green)':'var(--red)');
+    tile('💻', fmt(S.compute), (cr>=0?'+':'')+Math.round(cr)+'/mo', 'var(--compute)')+
+    tile('💰', '$'+fmt(S.capital), (kr>=0?'+':'')+Math.round(kr)+'/mo', S.capital<0?'var(--red)':'var(--capital)');
 }
 function worldStatus(){
   const lines=[];
@@ -1213,7 +1293,7 @@ $('#train-btn').onclick=runTraining;
 $('#release-btn').onclick=()=>{ if(S&&!S.over&&S.modelProg>=100&&!awaitingChoice) fireRelease(); };
 
 /* ---------- OVERLAYS ---------- */
-function showCard(html){$('#card').innerHTML=html;$('#overlay').style.display='flex';}
+function showCard(html){stopArt();$('#card').innerHTML=html;$('#overlay').style.display='flex';}
 function startScreen(){
   running=false;
   showCard(`
