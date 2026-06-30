@@ -2,19 +2,21 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
-## AGI Race (control-room strategy)
+## AGI Race — "The Singularity Times"
 
-A single-file, Plague Inc.–style **world-domination game built around the AGI race**. You steer a global power toward *aligned* AGI before society tears itself apart — or a rival crosses the threshold first. Control-room art: a glowing low-poly globe, neon dashboards, and a UI that glitches as alignment collapses.
+A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **broadsheet** look: white newsprint, black monospace type, ASCII bars, a scrolling ticker and a blinking caret. You run an AI lab racing to *aligned* AGI before a rival gets there first. No dependencies, no build step, mobile-friendly.
 
 **Play it live:** https://creativedexy.github.io/endless-game/agi-race/
 
-- **Six indicators** — Compute, Capital, Public Trust, Stability, Alignment, Geo Standing.
-- **Five policy trees** (Compute, Space, Bio, Econ, Gov) with cascading trade-offs: asteroid mining deflates raw materials and sparks unrest; longevity is beloved then collapses the economy; recursive self-improvement rockets you ahead as alignment bleeds out.
-- **Open-source economy** — a relentless *Open-Weights line* rises every month. `SHIP MODEL` to keep your product tier ahead of free models, or your revenue collapses into bankruptcy. `RUN TRAINING` for an AGI burst at alignment's expense.
-- **Caricatured rivals** — Prometheus Labs, Leviathan, Maverick, DeepHorizon, and The Commons race you on the readiness bar.
-- **Multiple endings** — aligned singularity, techno-hegemony, or a gentle transition; vs. collapse, lost mandate, misaligned ignition, insolvency, or being outpaced.
+- **★ BUILD tab** — buy and level tangible assets: 🖥️ Datacenters (Compute + AGI speed), 🧪 Scientists (research), 🛠️ Engineers (Capital + product), ⚡ Power Plants (datacenter capacity), 🛡️ Safety Researchers (Alignment).
+- **Versioned model releases** — `RUN TRAINING` fills a *Next Model* bar; when it's ready you **RELEASE** it as a **Flagship**, **Efficient**, or **Open-weights** launch (each a real trade-off), bumping your version (v1 → v2 → v3…).
+- **Open-source economy** — a relentless free *Open-Weights line* rises every month; keep releasing or your product lead — and revenue — collapses.
+- **Policy trees & dilemmas** — Compute / Space / Bio / Econ / Gov give mid-game depth; major events pause the game and force a choice.
+- **Caricatured rivals** — Prometheus, Leviathan, Maverick, DeepHorizon, The Commons race you and act against you.
+- **Guided & forgiving** — always-visible goal, a contextual coach, tap-a-meter explanations, paused start.
+- **Endings** — aligned singularity, techno-hegemony, gentle transition; vs. collapse, lost mandate, misaligned ignition, insolvency, or being outpaced.
 
-Source: `agi-race/index.html` (Three.js via CDN, no build step).
+Source: `agi-race/index.html` (pure HTML/CSS/JS canvas-free, no dependencies).
 
 ## Mars Colony: War Front
 
