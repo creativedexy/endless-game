@@ -353,6 +353,10 @@ const clamp = (v,a=0,b=100)=>Math.max(a,Math.min(b,v));
 const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
 function abar(pct,w=14){ const n=Math.max(0,Math.min(w,Math.round(clamp(pct,0,100)/100*w))); return '█'.repeat(n)+'░'.repeat(w-n); }
 let tickerMsgs=[];
+/* ---- difficulty tuning ---- */
+let RIVAL_SCALE=0.014;   // how hard rivals scale with your AGI
+let RIVAL_LEAD=0.28;     // the front-runner's extra surge per month
+let MONTH_STEP=2.2;      // seconds per in-game month at 1× (pace)
 
 /* ---------- RESOURCE MODEL ---------- */
 const RES = [
@@ -379,11 +383,11 @@ const FACTIONS = {
   city:{nm:'Agile City-State', col:'--cyan',
     desc:'Nimble and low-inertia — policies are cheaper to enact — but socially fragile.',
     perk:'−25% policy cost', minus:'Stability decays faster',
-    start:{compute:40,capital:90,trust:60,stability:55,alignment:80,standing:50}, rivalMul:1, costMul:.75, stabDrain:.15},
+    start:{compute:40,capital:90,trust:60,stability:55,alignment:80,standing:50}, rivalMul:1.12, costMul:.75, stabDrain:.15},
   corp:{nm:'Frontier Lab (Corp)', col:'--violet',
     desc:'No electorate to please — Trust matters less — but no army and weak standing; ripe for nationalization.',
     perk:'Trust loss halved', minus:'Low standing, fragile',
-    start:{compute:55,capital:80,trust:50,stability:60,alignment:78,standing:35}, rivalMul:1.05, costMul:.95, trustShield:.5},
+    start:{compute:55,capital:80,trust:50,stability:60,alignment:78,standing:35}, rivalMul:1.18, costMul:.95, trustShield:.5},
   accel:{nm:'Rogue Accelerationist', col:'--red',
     desc:'Pure speed. Training rips ahead — but alignment bleeds every month and catastrophe looms.',
     perk:'+AGI rate, cheap compute', minus:'Alignment decays −0.4/mo',
@@ -471,7 +475,7 @@ const TREES = {
         mod:{trust:0.5, standing:0.3, rivalSlow:-0.06}, imm:{trust:10, standing:6}},
       {id:'treaty', nm:'Intl. AI Treaty', cost:{capital:50,compute:20}, req:['opengov'],
         desc:'Coordinate the powers. Slows every rival — and steadies the world.',
-        mod:{rivalSlow:0.14, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
+        mod:{rivalSlow:0.32, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
       {id:'regulation', nm:'Safety Regulation', cost:{capital:35},
         desc:'Mandate eval gates. Public trust and alignment up; your own progress slows.',
         mod:{alignment:0.45, trust:0.3, agiRate:-0.25}, imm:{trust:8, alignment:5}},
@@ -480,28 +484,32 @@ const TREES = {
 
 /* ---------- RANDOM EVENTS ---------- */
 const EVENTS = [
-  {w:1, cond:s=>s.alignment<45, txt:'⚠ Model exfiltration scare — an internal system probed its own sandbox.',
-    cls:'bad', fx:s=>{s.alignment=clamp(s.alignment-4); s.trust=clamp(s.trust-3)}},
-  {w:1, cond:s=>s.stability<45, txt:'⚠ Mass protests over AI job losses sweep major cities.',
+  {w:1, cond:s=>s.alignment<48, txt:'⚠ Your chatbot gave dangerous advice and it’s all over the news.',
+    cls:'bad', fx:s=>{s.alignment=clamp(s.alignment-3); s.trust=clamp(s.trust-4)}},
+  {w:1, cond:s=>s.stability<48, txt:'⚠ Laid-off workers march on the capital over AI automation.',
     cls:'bad', fx:s=>{s.stability=clamp(s.stability-5)}},
-  {w:1, cond:s=>s.has('mining'), txt:'⛏ Commodity index crashes again — manufacturers cheer, miners march.',
-    cls:'warn', fx:s=>{s.capital+=15; s.stability=clamp(s.stability-3)}},
-  {w:1, cond:s=>true, txt:'⚡ Breakthrough paper drops — open weights leak overnight, free tier jumps.',
-    cls:'warn', fx:s=>{s.rivals.forEach(r=>r.p=Math.min(100,r.p+3)); s.owl=clamp(s.owl+5)}},
-  {w:1, cond:s=>true, txt:'🏴 The Commons ships a frontier-class open model — the free tier leaps.',
-    cls:'warn', fx:s=>{s.owl=clamp(s.owl+8); const c=s.rivals.find(r=>r.commons); if(c)c.p=Math.min(100,c.p+5);}},
-  {w:1, cond:s=>(s.product-s.owl)>18, txt:'★ Your premium models dominate — enterprise contracts pour in.',
-    cls:'good', fx:s=>{s.capital+=25; s.trust=clamp(s.trust+3)}},
-  {w:1, cond:s=>!s.has('biosec'), txt:'☣ Novel pathogen emerges abroad — your biosecurity gaps show.',
-    cls:'bad', fx:s=>{s.stability=clamp(s.stability-6); s.trust=clamp(s.trust-3)}},
-  {w:1, cond:s=>s.trust>65, txt:'★ Public rallies behind your AI agenda — landslide approval.',
-    cls:'good', fx:s=>{s.trust=clamp(s.trust+4); s.capital+=10}},
-  {w:1, cond:s=>s.has('interp'), txt:'✓ Interpretability team flags a deceptive circuit before deploy — crisis averted.',
+  {w:1, cond:s=>true, txt:'⚙ A datacenter outage takes your API down for a day — customers fume.',
+    cls:'warn', fx:s=>{s.trust=clamp(s.trust-2); s.capital-=8}},
+  {w:1, cond:s=>true, txt:'⚖ Authors file a copyright suit over your training data.',
+    cls:'bad', fx:s=>{s.capital-=12; s.standing=clamp(s.standing-2)}},
+  {w:1, cond:s=>true, txt:'🏴 A rival open-sources a frontier model — the free tier just leapt.',
+    cls:'warn', fx:s=>{s.owl=clamp(s.owl+7); const c=s.rivals.find(r=>r.commons); if(c)c.p=Math.min(100,c.p+4);}},
+  {w:1, cond:s=>(s.product-s.owl)>16, txt:'★ Enterprise contracts pour in — your models are the ones to beat.',
+    cls:'good', fx:s=>{s.capital+=22; s.trust=clamp(s.trust+3)}},
+  {w:1, cond:s=>!s.has('biosec') && s.stability<60, txt:'☣ A health scare spreads online; you have no biosecurity story to tell.',
+    cls:'bad', fx:s=>{s.stability=clamp(s.stability-5); s.trust=clamp(s.trust-3)}},
+  {w:1, cond:s=>s.trust>62, txt:'★ A viral demo wins the public over — approval surges.',
+    cls:'good', fx:s=>{s.trust=clamp(s.trust+4); s.capital+=8}},
+  {w:1, cond:s=>s.has('interp'), txt:'✓ Your safety team catches a bad failure mode before launch — crisis averted.',
     cls:'good', fx:s=>{s.alignment=clamp(s.alignment+5)}},
-  {w:1, cond:s=>s.alignment>=45 && s.stability>=45, txt:'◷ Quiet month. Researchers grind; markets drift sideways.',
+  {w:1, cond:s=>true, txt:'📉 An AI-stock selloff spooks your investors.',
+    cls:'warn', fx:s=>{s.capital-=14}},
+  {w:1, cond:s=>s.alignment>=48 && s.stability>=48, txt:'◷ A quiet month — the team ships steadily and the markets drift.',
     cls:'', fx:s=>{}},
-  {w:1, cond:s=>s.standing<35, txt:'⚑ Allied bloc imposes export controls on your chips.',
+  {w:1, cond:s=>s.standing<38, txt:'⚑ Allies tighten chip export controls against you.',
     cls:'bad', fx:s=>{s.computeRateEvt=-2; s.standing=clamp(s.standing-3)}},
+  {w:1, cond:s=>s.agi>30, txt:'🏆 Your model tops a hard benchmark — researchers take notice.',
+    cls:'good', fx:s=>{s.standing=clamp(s.standing+3); s.trust=clamp(s.trust+2)}},
 ];
 
 /* ---------- INTERACTIVE DILEMMAS (pause + choose) ---------- */
@@ -596,6 +604,7 @@ function fireDilemma(){
   showDilemma(d);
 }
 function showDilemma(d){
+  pending={d};
   showCard(`
     <div class="sub" style="color:var(--amber)">⚠ DECISION · ${MONTHS[S.month]} ${S.year} · paused</div>
     <h1 style="font-size:18px;letter-spacing:.08em">${d.title}</h1>
@@ -612,7 +621,7 @@ function resolveChoice(d,i){
   const c=d.choices[i];
   if(c.fx) c.fx(S); else if(c.d) applyDelta(S,c.d);
   log(`Decision — ${c.label}.`,'tech');
-  stopArt();
+  stopArt(); pending=null;
   awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
   checkEnd(); render();
@@ -739,7 +748,7 @@ function fireScenario(){
   if(!pool.length){ fireDilemma(); return; }   // fall back so the beat isn't wasted
   const d=pool[Math.floor(Math.random()*pool.length)];
   S.firedScenarios.add(d.id);
-  awaitingChoice=true; running=false;
+  awaitingChoice=true; running=false; pending={d};
   showCard(`
     <div class="sub" style="color:var(--red)">⚑ WORLD EVENT · ${MONTHS[S.month]} ${S.year}</div>
     <h1 style="font-size:18px;letter-spacing:.05em">${d.title}</h1>
@@ -753,7 +762,7 @@ function fireScenario(){
 }
 
 /* ---------- GAME STATE ---------- */
-let S, raf, tickAcc=0, speed=1, lastT=0, running=false, awaitingChoice=false;
+let S, raf, tickAcc=0, speed=1, lastT=0, running=false, awaitingChoice=false, pending=null;
 const MONTHS=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 function newGame(fk){
@@ -774,7 +783,7 @@ function newGame(fk){
     tab:'build', over:false, computeRateEvt:0,
     has(id){return this.owned.has(id)},
   };
-  S.rivals.forEach(r=>{ r.spd*=f.rivalMul; r.spd*=0.85; }); // ease early pressure
+  S.rivals.forEach(r=>{ r.spd*=f.rivalMul; }); // rivals at full pace
   buildResList(); buildThermos(); buildTabs(); render();
   $('#faction-tag').textContent = f.nm.toUpperCase();
   log(`Mandate accepted — ${f.nm}.`,'tech');
@@ -839,12 +848,13 @@ function tick(){
   S.modelProg = Math.min(100, S.modelProg + research*1.7 + 0.5);  // next-model training fills faster than AGI
   S.computeRateEvt = 0;
 
-  // rivals advance (treaty slows them)
-  const slow = Math.max(0, 1 - r.rivalSlow);
-  // ESCALATING RIVALS: they scale with your own progress, so the race tightens as you climb
-  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + v.spd*slow*(0.8+Math.random()*0.5) + S.agi*0.0035); });
-  const lead=Math.max(...S.rivals.map(v=>v.p));
-  if(lead - S.agi > 22){ S.computeRateEvt -= 1.5; }  // falling behind the front-runner: talent drifts away
+  // RIVALS: scale with your AGI, the front-runner surges, and treaties (rivalSlow) slow them all
+  const slow = Math.max(0.35, 1 - r.rivalSlow);
+  S.rivals.forEach(v=>{ v.p = Math.min(100, v.p + (v.spd*(0.8+Math.random()*0.5) + S.agi*RIVAL_SCALE)*slow ); });
+  const leadV=S.rivals.reduce((a,b)=>b.p>a.p?b:a, S.rivals[0]);
+  leadV.p=Math.min(100, leadV.p + RIVAL_LEAD*slow);
+  const lead=leadV.p;
+  if(lead - S.agi > 25){ S.computeRateEvt -= 1.2; }  // falling behind the front-runner: talent drifts away
 
   // COMPOUNDING ALIGNMENT RISK: neglected alignment snowballs into unrest and lost trust
   if(S.alignment<45){ const sev=45-S.alignment;
@@ -912,7 +922,7 @@ function checkEnd(){
 
 function end(kind,icon,title,body){
   S.over=true; running=false;
-  const win=kind==='win';
+  const win=kind==='win'; S.won=win; S.endTitle=title;
   showCard(`
     <div class="end-icon">${icon}</div>
     <h1>${title}</h1>
@@ -991,6 +1001,7 @@ function releaseTiers(){
 function fireRelease(){
   awaitingChoice=true; running=false;
   const tiers=releaseTiers();
+  pending={tiers, release:true};
   showCard(`
     <div class="sub" style="color:var(--green)">◆ MODEL RELEASE · ${MONTHS[S.month]} ${S.year}</div>
     <h1 style="font-size:18px;letter-spacing:.05em">v${S.version+1}.0 IS READY TO SHIP</h1>
@@ -1005,7 +1016,7 @@ function doRelease(tiers,i){
   applyDelta(S,c.d);
   S.version++; S.modelProg=0;
   log(`Released v${S.version}.0 — ${c.label.replace(/ v.*/,'')}.`,'good');
-  awaitingChoice=false; $('#overlay').style.display='none';
+  pending=null; awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
   checkEnd(); render();
 }
@@ -1271,7 +1282,7 @@ function loop(now){
   const dt=(now-lastT)/1000; lastT=now;
   // one month per (1/speed) seconds  → base 1 month per 1.5s at 1× (gentle)
   tickAcc+=dt*speed;
-  const step=1.5;
+  const step=MONTH_STEP;
   while(tickAcc>=step){ tickAcc-=step; tick(); if(S.over||awaitingChoice||!running)break; }
 }
 
