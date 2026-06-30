@@ -410,10 +410,10 @@ const fmt = n => Math.abs(n)>=1000 ? (n/1000).toFixed(1)+'k' : Math.round(n);
 function abar(pct,w=14){ const n=Math.max(0,Math.min(w,Math.round(clamp(pct,0,100)/100*w))); return '█'.repeat(n)+'░'.repeat(w-n); }
 let tickerMsgs=[];
 /* ---- difficulty / pacing tuning ---- */
-let RIVAL_BASE=0.85;     // baseline rival pace multiplier
-let RIVAL_SCALE=0.013;   // how hard rivals scale with your AGI
-let RIVAL_LEAD=0.16;     // the front-runner's extra surge per month
-let AGI_RATE=0.55;       // global multiplier on AGI accrual (lower = longer games)
+let RIVAL_BASE=0.86;     // baseline rival pace multiplier
+let RIVAL_SCALE=0.015;   // how hard rivals scale with your AGI
+let RIVAL_LEAD=0.18;     // the front-runner's extra surge per month
+let AGI_RATE=0.78;       // global multiplier on AGI accrual (lower = longer games)
 let OWL_CREEP=0.45;      // how fast free open-weights capability rises (eats profits)
 let ROGUE_RATE=0.10;     // base rise/mo of the rogue-actor doom clock
 let MONTH_STEP=3.0;      // seconds per in-game month at 1× (pace)
@@ -978,16 +978,17 @@ function checkEnd(){
     'Stripped of legitimacy, you were removed from power. Your successors shuttered the program.');
   if(topRival>=100) return end('lose','◆',`OUTPACED`,
     `A rival crossed the threshold first. The age of AGI begins — under someone else's terms.`);
+  // THE SINGULARITY IS THE GOAL — reaching AGI 100 ends the game; your world-state decides the flavour
   if(S.agi>=100){
-    if(S.alignment>=60) return end('win','✦','ALIGNED SINGULARITY',
-      'You crossed the threshold with control intact. A superintelligence awakens, and it answers to you. The future is, improbably, yours to steer.');
-    return end('lose','☢','MISALIGNED IGNITION',
+    if(S.alignment<60) return end('lose','☢','MISALIGNED IGNITION',
       'AGI arrived — and slipped its leash on day one. Your last instruction went unheard. Lights out.');
+    if(S.stability>=80 && S.trust>=80) return end('win','☀','THE GENTLE SINGULARITY',
+      'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. A superintelligence awakens to a world ready for it.');
+    if(S.standing>=80) return end('win','♛','HEGEMONIC SINGULARITY',
+      'You crossed first and you crossed hard. An aligned superintelligence answers to you alone — and the world reorganizes around your standard.');
+    return end('win','✦','ALIGNED SINGULARITY',
+      'You crossed the threshold with control intact. A superintelligence awakens, and it answers to you. The future is, improbably, yours to steer.');
   }
-  if(S.standing>=100 && S.agi>=70) return end('win','♛','TECHNO-HEGEMONY',
-    'Short of full singularity, your AI-backed dominance is total. Rivals capitulate; the world reorganizes around your standard.');
-  if(S.stability>=92 && S.trust>=92 && S.agi>=80) return end('win','☀','THE GOOD TRANSITION',
-    'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. Historians will call it the gentle singularity.');
 }
 
 function worldSynthesis(){
