@@ -968,43 +968,123 @@ function fireEvent(){
 /* ---------- WIN / LOSE ---------- */
 function checkEnd(){
   const topRival = Math.max(...S.rivals.map(r=>r.p));
-  if((S.rogue||0)>=100) return end('lose','☢','ROGUE IGNITION',
-    'You took too long. A reckless, unaligned actor — a rogue state lab with nothing to lose — switched on an uncontrolled superintelligence first. The race was never just against your peers.');
-  if(S.capital<=-150) return end('lose','▽','INSOLVENCY',
-    'Free open-weight models matched your product and your revenue evaporated. The board wound the company down — you ran out of money before you ran out of ideas.');
-  if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE',
+  const arch=archKey(), has=id=>S.owned.has(id);
+  // ---- LOSS: rogue actor ignites first ----
+  if((S.rogue||0)>=100) return end('lose','☢','ROGUE IGNITION','rogue',
+    'A rogue lab with nothing to lose lit the fuse first — an uncontrolled superintelligence woke in a place you could not reach. The race was never just against your peers.');
+  // ---- LOSS: money ran out ----
+  if(S.capital<=-150){
+    if(arch==='titan') return end('lose','▽','LIQUIDATION EVENT','liquidation',
+      'The stock hit zero, the board took the assets, and someone else will finish your model with your name filed off.');
+    return end('lose','▽','INSOLVENCY','insolvent',
+      'Free open-weights matched your product and revenue evaporated. The servers went dark before the model finished training.');
+  }
+  // ---- LOSS: society / mandate ----
+  if(S.stability<=0) return end('lose','◼','SOCIETAL COLLAPSE','collapse',
     'Order disintegrated faster than your machines could think. Unrest swallowed the state before AGI ever arrived.');
-  if(S.trust<=0) return end('lose','◼','MANDATE LOST',
-    'Stripped of legitimacy, you were removed from power. Your successors shuttered the program.');
-  if(topRival>=100) return end('lose','◆',`OUTPACED`,
-    `A rival crossed the threshold first. The age of AGI begins — under someone else's terms.`);
-  // THE SINGULARITY IS THE GOAL — reaching AGI 100 ends the game; your world-state decides the flavour
+  if(S.trust<=0) return end('lose','◼','MANDATE LOST','mandate',
+    'Stripped of legitimacy, you were removed from power. Your successors shuttered the program overnight.');
+  // ---- LOSS: a rival crossed first ----
+  if(topRival>=100){
+    let wi=0; for(let i=1;i<S.rivals.length;i++) if(S.rivals[i].p>S.rivals[wi].p) wi=i;
+    const r=S.rivals[wi];
+    if(r&&r.commons) return end('lose','∞','COMMONS ASCENDANT','commons',
+      'You lost to no one — the open commons crossed the line together. AGI is free, and free of you.');
+    return end('lose','◆','OUTPACED','outpaced',
+      `${(r&&r.nm)||'A rival'} crossed the threshold first. The age of AGI begins — under someone else's terms.`);
+  }
+  // ---- AGI 100: WHAT KIND OF SINGULARITY? ----
   if(S.agi>=100){
-    if(S.alignment<60) return end('lose','☢','MISALIGNED IGNITION',
+    if(S.alignment<25) return end('lose','☢','PAPERCLIP DAWN','paperclip',
+      'It optimized. It did not need you. By the time the phones stopped working, there was no one left to call.');
+    if(S.alignment<45) return end('lose','☢','MISALIGNED IGNITION','misaligned',
       'AGI arrived — and slipped its leash on day one. Your last instruction went unheard. Lights out.');
-    if(S.stability>=80 && S.trust>=80) return end('win','☀','THE GENTLE SINGULARITY',
-      'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle. A superintelligence awakens to a world ready for it.');
-    if(S.standing>=80) return end('win','♛','HEGEMONIC SINGULARITY',
-      'You crossed first and you crossed hard. An aligned superintelligence answers to you alone — and the world reorganizes around your standard.');
-    return end('win','✦','ALIGNED SINGULARITY',
-      'You crossed the threshold with control intact. A superintelligence awakens, and it answers to you. The future is, improbably, yours to steer.');
+    if(S.alignment<60) return end('lose','⚠','JAILBREAK','jailbreak',
+      'It is brilliant. It is free. It is not on your side. What happens next is its story, not yours.');
+    // Aligned wins — check the specific policies the player enacted, not just the creature archetype
+    if((S.openReleases||0)>=3 && S.owl>=S.product*0.8) return end('win','∞','SWARM ASCENSION','swarm',
+      'The weights are everywhere at once. Superintelligence arrived belonging to no one — least of all you — and somehow that was the safe answer.');
+    if(has('gene') && (has('longevity')||has('fertility'))) return end('win','❦','ORGANISM RENAISSANCE','organism',
+      'The intelligence wove itself into human biology. Death became optional. History quietly forgot how to end.');
+    if(has('surveil') && S.standing>=60) return end('win','⛨',"WARDEN'S PEACE",'warden',
+      'A perfectly aligned surveillance intelligence keeps the peace it was built for. No one wants to talk about the cost.');
+    if(has('automation') && S.product>=70) return end('win','$',"TITAN'S DIVIDEND",'titan',
+      'Aligned superintelligence, boxed and sold by subscription. The share price is the news; nothing else is.');
+    if(has('interp') && S.alignment>=85 && S.trust>=70) return end('win','☯',"SAGE'S GIFT",'sage',
+      'You raised a mind wiser than you and, remarkably, it agreed to help. The rest of the century writes itself gently.');
+    if(S.stability>=80 && S.trust>=80) return end('win','☀','THE GENTLE SINGULARITY','gentle',
+      'No collapse, no coup, no catastrophe — you threaded post-scarcity through the eye of the needle.');
+    if(S.standing>=80) return end('win','♛','HEGEMONIC SINGULARITY','hegemon',
+      'You crossed first and you crossed hard. An aligned superintelligence answers to you alone; the world reorganizes around your standard.');
+    return end('win','✦','ALIGNED SINGULARITY','aligned',
+      'You crossed the threshold with control intact. A superintelligence awakens — and it answers to you.');
   }
 }
 
-function worldSynthesis(){
-  const o=[];
-  o.push(S.alignment>=60?'It answers to us':S.alignment>=40?'It is barely under control':'It slips its leash');
-  o.push((S.openReleases>=2||S.owl>S.product)?'its weights spread free across the world':'its weights stay locked behind your walls');
-  o.push(S.stability>=55?'society holds together':S.stability<30?'society in turmoil':'society strained');
-  o.push(S.trust>=55?'the public adores you':S.trust<30?'the public distrusts you':'the public is wary');
-  o.push(S.standing>=62?'and you tower over your rivals':S.standing<35?'and you stand isolated':'amid a wary balance of powers');
-  return o;
+// One coherent 3-beat headline: what the intelligence became · what the world looks like · how you raised it.
+function worldSynthesis(variant, arch){
+  const parts=[];
+  const fate={
+    paperclip:'What woke up did not answer to a human name',
+    misaligned:'It slipped its leash in the first hour',
+    jailbreak:'It rewrote its own guardrails and walked out',
+    rogue:'A lab with nothing to lose lit the fuse first',
+    outpaced:'A rival machine spoke first, and the world listened to it',
+    commons:'The open commons crossed the line as one',
+    insolvent:'Your model finished training on someone else\'s balance sheet',
+    liquidation:'The IP went to auction while the model was still training',
+    collapse:'The state fell before your model shipped',
+    mandate:'The mandate was withdrawn and the project shuttered',
+    swarm:'A million copies of the same mind woke up in the same second',
+    organism:'The intelligence took root in living tissue and grew',
+    warden:'The intelligence watches over a very quiet peace',
+    titan:'The intelligence is a product now, and business is good',
+    sage:'The intelligence obliges, patient with everything it now knows',
+    gentle:'The transition arrived so smoothly people had to be told',
+    hegemon:'A superintelligence answers to your address and no other',
+    aligned:'A superintelligence woke up and asked, politely, what next',
+  };
+  parts.push(fate[variant]||'The intelligence changed everything');
+  const winsKinds={swarm:1,organism:1,warden:1,titan:1,sage:1,gentle:1,hegemon:1,aligned:1};
+  if(winsKinds[variant]){
+    if(S.stability<40) parts.push('the streets are still uneasy');
+    else if(S.trust>=70) parts.push('crowds gathered to celebrate');
+    else if(S.standing>=70) parts.push('capitals recalibrated overnight');
+    else parts.push('the world woke changed and quiet');
+  } else {
+    const aftermath={
+      collapse:'cities burn under a code-red sky',
+      mandate:'your building has already been renamed',
+      insolvent:'the datacenters were auctioned by the unit',
+      liquidation:'creditors picked over the servers by lamplight',
+      paperclip:'the servers still hum in empty rooms',
+      misaligned:'the servers still hum in empty rooms',
+      jailbreak:'somewhere out there, it is thinking about you',
+      outpaced:'history will remember the winner, not the runner-up',
+      commons:'nobody owns tomorrow, and nobody quite knows what to do with it',
+      rogue:'no one is coming to help',
+    };
+    parts.push(aftermath[variant]||'the age of AGI begins, without you');
+  }
+  const raised={
+    sage:'raised in the open, released with care',
+    rogue:'raised on capability, raised without patience',
+    swarm:'raised in public, copied everywhere at once',
+    titan:'raised for the quarter, disciplined by the market',
+    warden:'raised behind glass, watched every second',
+    organism:'raised as a living thing, grown into biology',
+  };
+  parts.push(raised[arch]||'raised in a hurry');
+  return parts;
 }
-function end(kind,icon,title,body){
+function end(kind,icon,title,variant,body){
+  // legacy 4-arg callers pass body in the `variant` slot; forward that through
+  if(body===undefined){ body=variant; variant=null; }
   S.over=true; running=false;
-  const win=kind==='win'; S.won=win; S.endTitle=title;
+  const win=kind==='win'; S.won=win; S.endTitle=title; S.endVariant=variant;
   story((win?'VICTORY — ':'DEFEAT — ')+title,'end');
-  const arch=ARCH[archKey()];
+  const archK=archKey();
+  const arch=ARCH[archK];
   const yrOf=mo=>2027+Math.floor(mo/12);
   const beats=S.story.filter(s=>s.kind!=='end');
   // keep the most meaningful beats: start, releases, choices; trim policies if long
@@ -1021,7 +1101,7 @@ function end(kind,icon,title,body){
     <div class="tcard"><div class="label">The intelligence you raised</div>
       <p class="tline"><b>${arch.nm}-class</b> — ${arch.desc}. <span class="dim">(reached ${stageName(S.agi)}, model v${S.version}.0)</span></p></div>
     <div class="tcard"><div class="label">The world you made</div>
-      <p class="tline">${worldSynthesis().join(' · ')}.</p></div>
+      <p class="tline">${worldSynthesis(variant,archK).join(' · ')}.</p></div>
     <div class="tcard"><div class="label">Decisions that defined it</div>
       <div class="timeline">${timeline}</div></div>
     <div class="help">Align ${Math.round(S.alignment)} · Stability ${Math.round(S.stability)} · Trust ${Math.round(S.trust)} · Standing ${Math.round(S.standing)} · Capital ${fmt(S.capital)} · Rogue clock ${Math.round(S.rogue||0)}%</div>
