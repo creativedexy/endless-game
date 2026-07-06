@@ -492,9 +492,23 @@ const TREES = {
         desc:'Cheap mass to orbit stabilizes the new space economy and your standing.',
         mod:{capitalRate:2, stability:0.2, standing:0.2}, imm:{stability:5}},
     ]},
-  bio:{ nm:'BIO', title:'Biological & Health',
-    blurb:'Master biology. Beloved by the public — but longer lives reshape your economy in dangerous ways.',
+  statecraft:{ nm:'STATE', title:'Statecraft — Society, Bio & Economy',
+    blurb:'How you wield power, treat labour, and lean on biology. One dense list — every node changes the world in a different direction.',
     nodes:[
+      // (was GOV) — how you rule
+      {id:'surveil', nm:'Surveillance State', cost:{capital:40,compute:20},
+        desc:'Total monitoring. Order at gunpoint — trust and reputation crater.',
+        mod:{stability:0.6, trust:-0.4, standing:-0.2}, imm:{stability:12, trust:-10, standing:-8}},
+      {id:'opengov', nm:'Open Governance', cost:{capital:30},
+        desc:'Transparency and democratic buy-in. Trust and allies — but your research leaks.',
+        mod:{trust:0.5, standing:0.3, rivalSlow:-0.06}, imm:{trust:10, standing:6}},
+      {id:'treaty', nm:'Intl. AI Treaty', cost:{capital:50,compute:20}, req:['opengov'],
+        desc:'Coordinate the powers. Slows every rival — and steadies the world.',
+        mod:{rivalSlow:0.32, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
+      {id:'regulation', nm:'Safety Regulation', cost:{capital:35},
+        desc:'Mandate eval gates. Public trust and alignment up; your own progress slows.',
+        mod:{alignment:0.45, trust:0.3, agiRate:-0.25}, imm:{trust:8, alignment:5}},
+      // (was BIO) — you and life sciences
       {id:'gene', nm:'Gene Therapy', cost:{capital:40,compute:15},
         desc:'Cure inherited disease. Huge public goodwill.',
         mod:{trust:0.4}, imm:{trust:10, stability:4}},
@@ -507,10 +521,7 @@ const TREES = {
       {id:'biosec', nm:'Biosecurity Shield', cost:{capital:35,compute:25}, req:['gene'],
         desc:'Pathogen surveillance. Buffers against engineered-outbreak black-swans.',
         mod:{stability:0.25, trust:0.15}, imm:{stability:5}, flag:'biosec'},
-    ]},
-  econ:{ nm:'ECON', title:'Economy & Labor',
-    blurb:'Decide who wins and loses as AI eats the labor market. Growth vs. cohesion.',
-    nodes:[
+      // (was ECON) — labour and growth
       {id:'dereg', nm:'Deregulation', cost:{capital:20},
         desc:'Unleash capital. Fast boom — and volatile busts that gnaw at stability.',
         mod:{capitalRate:4, stability:-0.3}, imm:{capital:30, standing:3}},
@@ -524,21 +535,37 @@ const TREES = {
         desc:'Move workers up the value chain. Gentler, cheaper cohesion.',
         mod:{stability:0.3, capitalRate:-1}, imm:{stability:6, trust:4}},
     ]},
-  gov:{ nm:'GOV', title:'Governance & Control',
-    blurb:'How you wield power shapes the race. Control vs. legitimacy vs. the rivals at your border.',
+  capital:{ nm:'CAPITAL', title:'Corporate Investments',
+    blurb:'Own a slice of the AI supply chain. Stakes cost cash now, pay you back forever — and shape the wider industry in your favour.',
     nodes:[
-      {id:'surveil', nm:'Surveillance State', cost:{capital:40,compute:20},
-        desc:'Total monitoring. Order at gunpoint — trust and reputation crater.',
-        mod:{stability:0.6, trust:-0.4, standing:-0.2}, imm:{stability:12, trust:-10, standing:-8}},
-      {id:'opengov', nm:'Open Governance', cost:{capital:30},
-        desc:'Transparency and democratic buy-in. Trust and allies — but your research leaks.',
-        mod:{trust:0.5, standing:0.3, rivalSlow:-0.06}, imm:{trust:10, standing:6}},
-      {id:'treaty', nm:'Intl. AI Treaty', cost:{capital:50,compute:20}, req:['opengov'],
-        desc:'Coordinate the powers. Slows every rival — and steadies the world.',
-        mod:{rivalSlow:0.32, stability:0.2, standing:0.3}, imm:{standing:10, stability:6}},
-      {id:'regulation', nm:'Safety Regulation', cost:{capital:35},
-        desc:'Mandate eval gates. Public trust and alignment up; your own progress slows.',
-        mod:{alignment:0.45, trust:0.3, agiRate:-0.25}, imm:{trust:8, alignment:5}},
+      {id:'cap_chipco', nm:'ChipCo · 20% stake', cost:{capital:110},
+        desc:'A minority stake in a hyperscaler chip fab. Steady compute yield, forever.',
+        mod:{computeRate:2}, imm:{standing:3}},
+      {id:'cap_hyper', nm:'HyperCloud · long-term partnership', cost:{capital:75},
+        desc:'A multi-year cloud contract that permanently cuts your datacenter opex.',
+        mod:{capitalRate:1}, imm:{capital:-10, trust:2}, flag:'cap_hyper'},
+      {id:'cap_rare', nm:'RareEarth Consortium', cost:{capital:60},
+        desc:'A seat on the raw-materials board. Chip pipeline steadies — mild capital drag.',
+        mod:{computeRate:1, capitalRate:0.6}, imm:{standing:2}},
+      {id:'cap_openlabs', nm:'Fund an Open-Weights Foundation', cost:{capital:95},
+        desc:'Nurse the commons on your terms. The free tier climbs slower forever; goodwill spikes.',
+        mod:{trust:0.2, standing:0.15}, imm:{trust:10, standing:5}, flag:'cap_openlabs'},
+    ]},
+  rd:{ nm:'R&D', title:'R&D Programs — cognitive specialties',
+    blurb:'Where you pour engineer-months decides what your models are good at. Each program buys a permanent tilt in one cognitive direction — and shapes which ending you can reach.',
+    nodes:[
+      {id:'rd_reason', nm:'Reasoning Lab', cost:{compute:55,capital:30},
+        desc:'Long-horizon deliberation. Sharpens revenue-quality releases and steadies alignment against decay.',
+        mod:{alignment:0.25, capitalRate:1.2}, imm:{trust:4, alignment:3}, flag:'rd_reason'},
+      {id:'rd_agentic', nm:'Agentic Systems', cost:{compute:65,capital:35},
+        desc:'Autonomous tool-use. Fastest capability tilt in the game — but rogue programs learn from you.',
+        mod:{agiRate:0.45, alignment:-0.15}, imm:{}, flag:'rd_agentic'},
+      {id:'rd_memory', nm:'Long-Memory Systems', cost:{compute:50,capital:30},
+        desc:'Persistent context. Trust holds and alignment gains stick — capability climbs slower.',
+        mod:{trust:0.25, alignment:0.15, agiRate:-0.06}, imm:{trust:5}, flag:'rd_memory'},
+      {id:'rd_multi', nm:'Multimodal & Embodied', cost:{compute:60,capital:40},
+        desc:'Sight, sound and motion. Bigger cultural footprint — and bigger backlash.',
+        mod:{standing:0.3, stability:-0.1, capitalRate:0.8}, imm:{standing:6, stability:-3}, flag:'rd_multi'},
     ]},
 };
 
@@ -578,6 +605,7 @@ function applyDelta(s,d){
     const v=d[k];
     if(k==='compute'||k==='capital') s[k]+=v;
     else if(k==='rivalsP') s.rivals.forEach(r=>r.p=Math.max(0,Math.min(100,r.p+v)));
+    else if(k==='flag'){ (Array.isArray(v)?v:[v]).forEach(x=>s.owned.add(x)); }
     else if(k in s) s[k]=clamp(s[k]+v);
   }
 }
@@ -653,6 +681,52 @@ const DILEMMAS = [
       {label:'Sign and lead it', desc:'Slow the whole field, you most of all, but own the moral high ground.', d:{standing:12,alignment:5,agi:-2,rivalsP:-3}},
       {label:'Sign, then quietly cheat', desc:'Reap the optics; keep your foot down. Risky if exposed.', d:{standing:6,alignment:-3,trust:-2}},
       {label:'Refuse outright', desc:'Keep a free hand and full speed.', d:{agi:4,standing:-6}},
+    ]},
+  // --- Talent & acquisitions (v2) --- these introduce named people and inorganic growth
+  {id:'poach_align', cond:s=>!s.has('talent_align') && s.capital>30,
+    title:"OPENMIND'S HEAD OF ALIGNMENT IS ON THE MARKET",
+    body:"Dr. Amaya Chen — arguably the world's best alignment researcher — will move for the right offer. OpenMind knows she's shopping.",
+    choices:[
+      {label:'Hire her — nine-figure package', desc:'A permanent alignment tailwind, a slower rogue clock, and a scar on OpenMind\'s roadmap.',
+        d:{capital:-45, alignment:10, rivalsP:-3, flag:'talent_align'}},
+      {label:"Match OpenMind's counter", desc:'She stays there; you\'ve signalled you cannot be outbid.', d:{capital:-20, standing:3}},
+      {label:'Let her walk to OpenMind', desc:"Cheapest option — and OpenMind's alignment story just got real.", d:{standing:-3, rivalsP:2}},
+    ]},
+  {id:'acq_neurospark', cond:s=>s.capital>80 && !s.has('acq_neurospark'),
+    title:'NEUROSPARK LABS IS UP FOR SALE',
+    body:'A small foundation-model shop with proprietary cognitive-architecture research is on the block. Two rivals are already circling.',
+    choices:[
+      {label:'Acquire outright ($120)', desc:'Instant compute + reasoning kit. The founders leave visibly unhappy — culture clash.',
+        d:{capital:-120, compute:40, agi:3, alignment:-5, flag:['acq_neurospark','rd_reason']}},
+      {label:'Buy the IP only ($55)', desc:'Cheaper. Patents and papers, none of the people.', d:{capital:-55, compute:18, flag:'acq_neurospark'}},
+      {label:'Pass — let a rival have them', desc:'The field just concentrated a little.', d:{rivalsP:3, flag:'acq_neurospark'}},
+    ]},
+  {id:'talent_infra', cond:s=>!s.has('talent_infra') && s.assets && s.assets.datacenter>=2,
+    title:'A DEEPTHOUGHT INFRA LEAD WANTS OUT',
+    body:'DeepThought\'s most senior infrastructure engineer is sick of politics and quietly interviewing. She\'d bring tricks that halve your datacenter opex.',
+    choices:[
+      {label:'Hire her — she brings the whole team', desc:'Permanent datacenter opex cut; DeepThought loses ground.',
+        d:{capital:-30, rivalsP:-3, flag:['talent_infra','cap_hyper']}},
+      {label:'Refer her to a friend at XenoAI', desc:'She thanks you; XenoAI does not.', d:{standing:4, rivalsP:1}},
+      {label:'Stay out of it', desc:'You have enough drama.', d:{}},
+    ]},
+  {id:'chip_deal', cond:s=>!s.has('cap_chipco') && s.capital>40,
+    title:'CHIPCO OFFERS A PREFERRED ALLOCATION',
+    body:"The world's biggest chip fab quietly offers to prioritize your orders — if you take a strategic stake now, before their IPO.",
+    choices:[
+      {label:'Take a 20% stake ($90)', desc:'Cheaper than the CAPITAL tree lists — because you got in early.',
+        d:{capital:-90, compute:20, standing:3, flag:'cap_chipco'}},
+      {label:'Sign a supply contract instead', desc:'Compute now, no equity, no long-run tailwind.', d:{capital:-25, compute:30}},
+      {label:'Pass', desc:'Rivals will queue up in your place.', d:{rivalsP:2}},
+    ]},
+  {id:'safety_consortium', cond:s=>!s.has('safety_consortium') && s.alignment>=50,
+    title:'FORM AN INDUSTRY-WIDE SAFETY CONSORTIUM?',
+    body:'Two rivals and a foundation want you to co-chair a serious alignment consortium. Real shared work — and real shared eyeballs on your labs.',
+    choices:[
+      {label:'Co-chair — pour resources in', desc:'Trust and standing surge. Every rival slows a touch.',
+        d:{capital:-25, alignment:6, trust:8, standing:6, rivalsP:-2, flag:'safety_consortium'}},
+      {label:'Join quietly, contribute little', desc:'You wear the badge; you don\'t carry the weight.', d:{trust:2, standing:1}},
+      {label:'Decline — a distraction', desc:'The consortium forms without you. It\'s well-received.', d:{standing:-4, trust:-3}},
     ]},
 ];
 
@@ -833,7 +907,7 @@ function newGame(fk){
     ...JSON.parse(JSON.stringify(f.start)),
     agi:0, owl:6, product:12, version:1, modelProg:0, rogue:0, month:0, year:2027,
     assets:{datacenter:2, scientist:0, engineer:0, power:1, safety:0},
-    owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[], story:[], openReleases:0,
+    owned:new Set(), flags:new Set(), firedScenarios:new Set(), recentEv:[], story:[], openReleases:0, focusHist:[], opexNow:0,
     rivals:[
       {nm:'OpenMind', p:7, spd:.48},          // OpenAI
       {nm:'DeepThought', p:5, spd:.42},        // Google DeepMind
@@ -897,8 +971,12 @@ function findNode(id){
 function tick(){
   if(S.over) return;
   const r=rates();
+  // DATACENTER OPEX — expansion beyond your starter 2 bleeds cash monthly. HyperCloud partnership drops the rate.
+  const opexPer = S.owned.has('cap_hyper') ? 1.6 : 2.6;
+  const opex = Math.max(0, (S.assets.datacenter||0) - 2) * opexPer;
+  S.opexNow = opex; // for the sticky bar
   S.compute = Math.max(0, S.compute + r.computeRate);
-  S.capital = S.capital + r.capitalRate;
+  S.capital = S.capital + r.capitalRate - opex;
   S.trust = clamp(S.trust + r.trust);
   S.stability = clamp(S.stability + r.stability);
   S.alignment = clamp(S.alignment + r.alignment);
@@ -910,9 +988,13 @@ function tick(){
   S.modelProg = Math.min(100, S.modelProg + research*1.1 + 0.8);  // releases still come regularly
   S.computeRateEvt = 0;
 
-  // ROGUE-ACTOR DOOM CLOCK — race to a *safe* singularity before a reckless actor forces one
+  // ROGUE-ACTOR DOOM CLOCK — race to a *safe* singularity before a reckless actor forces one.
+  // Agentic focus and R&D speed the brink; safety talent slows it.
   const topR = Math.max(...S.rivals.map(v=>v.p));
-  S.rogue = Math.min(100, (S.rogue||0) + ROGUE_RATE
+  const agenticShipped = (S.focusHist||[]).filter(f=>f==='agentic').length;
+  const rogueBoost = agenticShipped*0.02 + (S.owned.has('rd_agentic')?0.04:0);
+  const rogueSlow  = S.owned.has('talent_align')?0.05:0;
+  S.rogue = Math.min(100, (S.rogue||0) + Math.max(0, ROGUE_RATE + rogueBoost - rogueSlow)
     + (S.alignment<50 ? (50-S.alignment)*0.012 : 0)   // a careless field breeds rogue programs
     + (topR>70 ? (topR-70)*0.02 : 0));                 // as rivals near AGI, the brink nears
 
@@ -930,7 +1012,8 @@ function tick(){
     if(S.alignment<30) S.trust=clamp(S.trust - (30-S.alignment)*0.02); }
 
   // open-source market: free capability creeps up relentlessly and eats everyone's margins
-  S.owl = clamp(S.owl + OWL_CREEP);
+  const owlRate = OWL_CREEP * (S.owned.has('cap_openlabs')?0.55:1);
+  S.owl = clamp(S.owl + owlRate);
   const commons = S.rivals.find(v=>v.commons);
   if(commons) S.owl = clamp(Math.max(S.owl, commons.p*0.8));
   S.product = clamp(S.product - 0.15 + (S.assets.engineer||0)*0.35);  // engineers ship → product climbs
@@ -1001,7 +1084,22 @@ function checkEnd(){
       'AGI arrived — and slipped its leash on day one. Your last instruction went unheard. Lights out.');
     if(S.alignment<60) return end('lose','⚠','JAILBREAK','jailbreak',
       'It is brilliant. It is free. It is not on your side. What happens next is its story, not yours.');
-    // Aligned wins — check the specific policies the player enacted, not just the creature archetype
+    // Aligned wins — first check the model's cognitive focus (dominant across all releases), then policies
+    const fh=S.focusHist||[]; const fc={reasoning:0,agentic:0,memory:0,multimodal:0};
+    fh.forEach(f=>{ if(f in fc) fc[f]++; });
+    const domFocus = fh.length>=2 ? Object.keys(fc).sort((a,b)=>fc[b]-fc[a])[0] : null;
+    const domCount = domFocus?fc[domFocus]:0;
+    // Focus-dominant endings — need at least 3 releases in one specialty
+    if(domCount>=3){
+      if(domFocus==='reasoning' && S.alignment>=70) return end('win','◉','THE ORACLE','oracle',
+        'A patient, articulate intelligence sits at the centre of every hard problem the species has. It answers when asked, and not otherwise.');
+      if(domFocus==='agentic' && S.alignment>=70) return end('win','▶','THE ASCENDED AGENT','agent',
+        'It plans over decades and acts across continents. You wrote its early goals; it thanks you, and gets to work.');
+      if(domFocus==='memory' && S.alignment>=70) return end('win','∞','THE PERSISTENT SUCCESSOR','memory',
+        'It remembers everything you ever told it, and everything anyone else did. History acquired a curator.');
+      if(domFocus==='multimodal' && S.alignment>=70) return end('win','◐','THE EMBODIED FUTURE','embodied',
+        'It sees the world, moves through it, and the world reorders around the new participant. Nothing looks quite the same on Monday.');
+    }
     if((S.openReleases||0)>=3 && S.owl>=S.product*0.8) return end('win','∞','SWARM ASCENSION','swarm',
       'The weights are everywhere at once. Superintelligence arrived belonging to no one — least of all you — and somehow that was the safe answer.');
     if(has('gene') && (has('longevity')||has('fertility'))) return end('win','❦','ORGANISM RENAISSANCE','organism',
@@ -1043,9 +1141,13 @@ function worldSynthesis(variant, arch){
     gentle:'The transition arrived so smoothly people had to be told',
     hegemon:'A superintelligence answers to your address and no other',
     aligned:'A superintelligence woke up and asked, politely, what next',
+    oracle:'A superintelligence that answers only when asked, but always the truest answer',
+    agent:'A superintelligence that acts across continents on decade-long plans',
+    memory:'A superintelligence that never forgets, and remembers you fondly',
+    embodied:'A superintelligence that sees, walks, builds — and is watching Monday morning',
   };
   parts.push(fate[variant]||'The intelligence changed everything');
-  const winsKinds={swarm:1,organism:1,warden:1,titan:1,sage:1,gentle:1,hegemon:1,aligned:1};
+  const winsKinds={swarm:1,organism:1,warden:1,titan:1,sage:1,gentle:1,hegemon:1,aligned:1,oracle:1,agent:1,memory:1,embodied:1};
   if(winsKinds[variant]){
     if(S.stability<40) parts.push('the streets are still uneasy');
     else if(S.trust>=70) parts.push('crowds gathered to celebrate');
@@ -1161,13 +1263,16 @@ function flash(el){const o=el.style.boxShadow;el.style.boxShadow='0 0 34px rgba(
 /* ---------- MODEL RELEASES (versioned, tiered — like real launches) ---------- */
 function releaseTiers(){
   const g=S.version, P=S.product;
+  // Focus tiers — each release picks ONE cognitive specialty. Dominant focus shapes the ending.
   return [
-    {label:`Flagship v${g+1}.0 (Max)`, desc:'Biggest capability & revenue — but heavy scrutiny dents alignment.',
-      d:{product:Math.max(0,(20+g*12)-P), capital:25+g*8, alignment:-5, standing:6, trust:2, owl:2}},
-    {label:`Efficient v${g+1}.0 (Mini)`, desc:'A lean, cheap release — better margins and public trust.',
-      d:{product:Math.max(0,(15+g*10)-P), capital:12, trust:8, alignment:2}},
-    {label:`Open weights v${g+1}.0`, desc:'Huge goodwill and adoption — but the free tier leaps up.',
-      d:{product:Math.max(0,(12+g*8)-P), trust:12, standing:8, owl:14, capital:5}},
+    {focus:'reasoning', label:`v${g+1}.0 · Reasoning`, desc:'Deliberate, article-writing quality. Best margins; alignment holds.',
+      d:{product:Math.max(0,(18+g*11)-P), capital:22+g*7, alignment:3, trust:4}},
+    {focus:'memory', label:`v${g+1}.0 · Long-Memory`, desc:'Persistent context, quieter release. Trust climbs; capability climbs slow.',
+      d:{product:Math.max(0,(14+g*9)-P), capital:14, trust:9, alignment:2, agi:-1}},
+    {focus:'agentic', label:`v${g+1}.0 · Agentic`, desc:'Autonomous tool-use. Fastest AGI push — and rogue actors imitate you.',
+      d:{product:Math.max(0,(20+g*12)-P), capital:26+g*8, agi:4, alignment:-6, standing:6, owl:2}},
+    {focus:'multimodal', label:`v${g+1}.0 · Multimodal / Open`, desc:'Sight, sound, motion — released with weights. Huge cultural footprint; the commons swells.',
+      d:{product:Math.max(0,(15+g*10)-P), capital:8, standing:9, trust:6, owl:14, stability:-3}},
   ];
 }
 function fireRelease(){
@@ -1187,10 +1292,12 @@ function doRelease(tiers,i){
   const c=tiers[i];
   applyDelta(S,c.d);
   S.version++; S.modelProg=0;
-  if(i===2) S.openReleases=(S.openReleases||0)+1;   // open-weights launch
-  const tier=c.label.replace(/ v.*/,'');
-  log(`Released v${S.version}.0 — ${tier}.`,'good');
-  story(`Shipped v${S.version}.0 as a ${tier} release.`,'release');
+  if(c.focus==='multimodal') S.openReleases=(S.openReleases||0)+1;   // multimodal ships weights
+  S.focusHist=(S.focusHist||[]);
+  if(c.focus) S.focusHist.push(c.focus);
+  const focusName = c.focus ? c.focus.charAt(0).toUpperCase()+c.focus.slice(1) : c.label;
+  log(`Released v${S.version}.0 — ${focusName}.`,'good');
+  story(`Shipped v${S.version}.0 as a ${focusName} model.`,'release');
   pending=null; awaitingChoice=false; $('#overlay').style.display='none';
   running = speed>0 && S && !S.over;
   checkEnd(); render();
@@ -1342,7 +1449,7 @@ function render(){
   }
   const r=rates();
   setDelta('compute', r.computeRate);
-  setDelta('capital', r.capitalRate);
+  setDelta('capital', r.capitalRate - (S.opexNow||0));
   // societal meters as thermometers
   renderThermos(r);
   // clock
