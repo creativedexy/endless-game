@@ -3,14 +3,16 @@ name: Deploy to GitHub Pages
 # This repo's GitHub Pages is served from the `gh-pages` branch. Each game
 # lives in its own subfolder so it is published alongside the existing site
 # without disturbing the root homepage:
-#   - Mars Colony  -> /mars-colony/   (root index.html)
-#   - AGI Race     -> /agi-race/      (agi-race/index.html)
+#   - Mars Colony        -> /mars-colony/       (root index.html)
+#   - AGI Race           -> /agi-race/          (agi-race/index.html)
+#   - Wormline Defense   -> /wormline-defense/  (wormline-defense/index.html)
 on:
   push:
     branches: [main]
     paths:
       - index.html
       - agi-race/index.html
+      - wormline-defense/index.html
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
@@ -35,11 +37,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git worktree add ghp origin/gh-pages
-          mkdir -p ghp/mars-colony ghp/agi-race
+          mkdir -p ghp/mars-colony ghp/agi-race ghp/wormline-defense
           cp index.html ghp/mars-colony/index.html
           cp agi-race/index.html ghp/agi-race/index.html
+          cp wormline-defense/index.html ghp/wormline-defense/index.html
           cd ghp
-          git add mars-colony/index.html agi-race/index.html
+          git add mars-colony/index.html agi-race/index.html wormline-defense/index.html
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
