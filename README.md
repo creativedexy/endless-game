@@ -2,6 +2,22 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
+## Wormline Defense
+
+A single-file, portrait **tower-defense roguelite** where the enemy is one giant segmented worm — simultaneously the threat, the run timer, the loot container and the targeting puzzle. Pure HTML/CSS/JS canvas, no dependencies, one-handed mobile play.
+
+**Play it live:** https://creativedexy.github.io/endless-game/wormline-defense/
+
+- **A worm, not a wave** — a huge segmented worm zig-zags down a smooth spline route toward your core. Every segment is independently targetable: heads, armoured plates, support/regen/speed organs, weak points and tails.
+- **Tap to focus** — your organism fires automatically; tap any segment to concentrate all weapons on it, tap empty space to go back to auto-targeting, press & hold to inspect a segment's health, armour and organ effects.
+- **Hidden mutation capsules** — every worm carries sealed capsules (min 2, never adjacent). Crack one to 50% to reveal its reward category; destroy it to draft one of three upgrades from that pool. Later worms hide *trap* capsules among the real ones.
+- **Head or body?** — the core decision: burn down the tanky head to collapse the whole worm fast (but forfeit most energy and every unopened capsule), or carve through the body for power. Anything that reaches the core deals damage per surviving segment, so even partial kills matter.
+- **Six weapons, evolutions, drafts** — Pulse Needle, Cleanse Orb, Antibody Drones, Ion Arc, Enzyme Cloud and Compression Wave, each with its own upgrade cards; max a weapon and crack an evolution capsule to transform it (Needle Constellation, Storm Lattice, Seismic Collapse…).
+- **Worm roster & bosses** — runners, armoured worms, regenerators, brood worms, phase worms and split worms, plus multi-phase segmented bosses (The Crowned Devourer's head detaches at 25% health and makes a run for your core).
+- **Roguelite structure** — 3-card upgrade drafts with one free reroll per stage, escalating stages with formula-driven scaling, a Cryo Stasis active ability, and permanent biomass upgrades (damage, fire rate, crit, core HP, capsule luck) between runs.
+
+Source: `wormline-defense/index.html` (single file, no build step, saves to localStorage).
+
 ## AGI Race — "The Singularity Times"
 
 A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **broadsheet** look: white newsprint, black monospace type, ASCII bars, a scrolling ticker and a blinking caret. You run an AI lab racing to *aligned* AGI before a rival gets there first. No dependencies, no build step, mobile-friendly.
