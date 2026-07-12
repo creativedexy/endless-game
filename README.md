@@ -4,17 +4,17 @@ Top down sci-fi builder non stop game 🤟🏻
 
 ## Wormline Defense
 
-A single-file, portrait **tower-defense roguelite** where the enemy is one giant segmented worm — simultaneously the threat, the run timer, the loot container and the targeting puzzle. Pure HTML/CSS/JS canvas, no dependencies, one-handed mobile play.
+A single-file, portrait **tower-defense roguelite** with a bioluminescent-abyss art direction, where the enemy is one giant segmented worm — simultaneously the threat, the run timer, the loot container and the positioning puzzle. Pure HTML/CSS/JS canvas, no dependencies, one-handed mobile play.
 
 **Play it live:** https://creativedexy.github.io/endless-game/wormline-defense/
 
-- **A worm, not a wave** — a huge segmented worm zig-zags down a smooth spline route toward your core. Every segment is independently targetable: heads, armoured plates, support/regen/speed organs, weak points and tails.
-- **Tap to focus** — your organism fires automatically; tap any segment to concentrate all weapons on it, tap empty space to go back to auto-targeting, press & hold to inspect a segment's health, armour and organ effects.
+- **A worm, not a wave** — a huge segmented worm winds down a route toward the breach. Every stage draws its route from a different pattern generator (zig-zag, serpentine, tightening spiral, wide funnel, staircase, double swing) so the shape of the fight keeps changing.
+- **Drag to aim, shoot straight** — there's no auto-targeting. Your organism fires on its own timer, but every shot travels straight up from wherever your turret currently sits; you drag left/right (or press ←/→) to slide underneath whatever you want to hit. A readout above the turret shows what's locked in your lane. Only segments actually visible on screen can be damaged — nothing can be sniped while it's still off-screen above the route.
 - **Hidden mutation capsules** — every worm carries sealed capsules (min 2, never adjacent). Crack one to 50% to reveal its reward category; destroy it to draft one of three upgrades from that pool. Later worms hide *trap* capsules among the real ones.
-- **Head or body?** — the core decision: burn down the tanky head to collapse the whole worm fast (but forfeit most energy and every unopened capsule), or carve through the body for power. Anything that reaches the core deals damage per surviving segment, so even partial kills matter.
-- **Six weapons, evolutions, drafts** — Pulse Needle, Cleanse Orb, Antibody Drones, Ion Arc, Enzyme Cloud and Compression Wave, each with its own upgrade cards; max a weapon and crack an evolution capsule to transform it (Needle Constellation, Storm Lattice, Seismic Collapse…).
-- **Worm roster & bosses** — runners, armoured worms, regenerators, brood worms, phase worms and split worms, plus multi-phase segmented bosses (The Crowned Devourer's head detaches at 25% health and makes a run for your core).
-- **Roguelite structure** — 3-card upgrade drafts with one free reroll per stage, escalating stages with formula-driven scaling, a Cryo Stasis active ability, and permanent biomass upgrades (damage, fire rate, crit, core HP, capsule luck) between runs.
+- **Head or body?** — the core decision: burn down the tanky head to collapse the whole worm fast (but forfeit most energy and every unopened capsule), or carve through the body for power. Anything that reaches the breach deals damage per surviving segment, so even partial kills matter.
+- **Six weapons, evolutions, drafts** — Pulse Needle, Cleanse Orb, Antibody Drones, Ion Arc, Enzyme Cloud and Compression Wave, each with its own upgrade cards; max a weapon and crack an evolution capsule to transform it (Needle Constellation, Storm Lattice, Seismic Collapse…). Mutations drafted mid-run persist for the rest of that run and are lost only when the run itself ends.
+- **Worm roster & bosses** — runners, armoured worms, regenerators, brood worms, phase worms and split worms, plus multi-phase segmented bosses (The Crowned Devourer's head detaches at 25% health and makes a run for the breach).
+- **Roguelite structure, sharply harder** — 3-card upgrade drafts with one free reroll per stage, steep stage-over-stage HP/speed/density scaling, a Cryo Stasis active ability, and permanent biomass upgrades (damage, fire rate, crit, core HP, capsule luck) between runs.
 
 Source: `wormline-defense/index.html` (single file, no build step, saves to localStorage).
 
