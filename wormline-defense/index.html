@@ -162,10 +162,10 @@
     <div class="otitle" style="font-size:20px;">HOW TO PLAY</div>
     <div class="osub" style="text-align:left;">
       A colossal worm descends a shifting route toward the breach. Your organism fires on its own — <b>drag left and right</b> (or press ← →) to slide your turret and line up with what you want to hit.<br/><br/>
-      • Needles, orbs and bolts fire <b style="color:#3dffb0;">straight up</b> from wherever you're standing — there's no auto-aim, you have to get under your target.<br/>
+      • Weapons fire <b style="color:#3dffb0;">straight up (or down, for airborne ones)</b> from wherever they are — there's no auto-aim, you have to get under your target.<br/>
       • The readout above your turret shows whatever's locked in your lane right now.<br/>
-      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide upgrades — crack one to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
-      Kill the <b>head</b> to collapse the whole worm fast, or farm its body for power. Anything that reaches the breach hurts — every surviving segment adds damage. Mutations you draft last for the whole run and are lost only when the run ends.
+      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide rewards from two separate threads: <b>Abilities</b> (graft new weapons like the Spore Wing, Husk Roller or Cinder Gland, then level and evolve them) and <b>Boosts</b> (short, practical stat upgrades — extra shots, more damage, faster fire, tougher core). Crack a capsule to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
+      Kill the <b>head</b> to collapse the whole worm fast, or farm its body for power. Anything that reaches the breach hurts — every surviving segment adds damage. Everything you draft lasts for the whole run and is lost only when the run ends.
     </div>
     <button class="obtn chamfer" id="helpBack">BACK</button>
   </div>
@@ -429,7 +429,7 @@ const WORM_TYPES = {
   split:   { name:'Split Worm',      speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, splits:true },
 };
 
-const HP_EXP = 1.24; // exponential HP growth per stage — steeper than before, on purpose
+const HP_EXP = 1.30; // exponential HP growth per stage — steeper than before, on purpose
 
 function buildWormSegments(typeKey, stage, count, opts={}){
   const wt = WORM_TYPES[typeKey]||WORM_TYPES.basic;
@@ -472,7 +472,7 @@ function mkSeg(type, baseHp){
   const hp = baseHp*st.hpMult;
   return { type, hp, maxHp:hp, alive:true, armourHp:type==='armoured'?baseHp*(st.armourMult||1):0,
            maxArmour:type==='armoured'?baseHp*(st.armourMult||1):0,
-           pool:null, revealed:false, hitFlash:0, slowT:0, regenGlow:0 };
+           pool:null, revealed:false, hitFlash:0, slowT:0, regenGlow:0, burnT:0, burnDPS:0, _burnSpread:false, _visD:undefined };
 }
 function pickCapsulePool(){
   // evolution pool only offered if some weapon can evolve; checked at reveal-time too
@@ -495,10 +495,17 @@ const WEAPON_DEFS = {
             desc:'Persistent dissolving area', evoName:'Necrotic Bloom' },
   wave:   { name:'Compression Wave', icon:'🜇', glyph:'≈', color:'#ff6fa8', interval:3.4,  dmg:1.2,
             desc:'Pushes the worm back up its route', evoName:'Seismic Collapse' },
+  flyer:  { name:'Spore Wing',       icon:'🜈', glyph:'✈', color:'#ffe45f', interval:1.1,  dmg:0.8,
+            desc:'An airborne drone patrols overhead and strikes down', evoName:'Wing Squadron' },
+  roller: { name:'Husk Roller',      icon:'🜉', glyph:'◍', color:'#ff8d5f', interval:2.6,  dmg:1.3,
+            desc:'A heavy husk rolls upward, crushing a wide path', evoName:'Avalanche' },
+  ember:  { name:'Cinder Gland',     icon:'🜊', glyph:'🔥', color:'#ff6a2f', interval:2.2,  dmg:0.6,
+            desc:'Lobbed fire that burns and spreads along the body', evoName:'Wildfire' },
 };
+const MAX_WEAPONS = 5;
 function addWeapon(key){
   if(run.weapons.some(w=>w.key===key)) return;
-  run.weapons.push({ key, level:1, evolved:false, cd:rand(0.1,0.4), shots:0, drones:[], dmgDealt:0 });
+  run.weapons.push({ key, level:1, evolved:false, cd:rand(0.1,0.4), shots:0, drones:[], flyers:[], dmgDealt:0 });
   renderWeaponIcons();
 }
 function weaponDamage(w){
@@ -527,64 +534,31 @@ const RARITIES = [
   { key:'apex',     w:1,  color:'#ffe45f', name:'Apex' },
 ];
 
+/* Boosts are deliberately short and universal now — practical, weapon-agnostic
+   stat tweaks. Weapon flavour and depth live in the separate Abilities thread
+   below (installing, levelling and evolving weapons via Graft/EVOLVE cards). */
 const CARDS = [
   /* --- damage (red) --- */
   { id:'dmg1', name:'Cytotoxin', cat:'damage', pools:['power'], rarity:'common', max:6,
     desc:l=>'All damage +15%.', apply:()=>{ run.stats.dmgMult*=1.15; } },
-  { id:'fragile', name:'Fragile Anatomy', cat:'damage', pools:['power'], rarity:'enhanced', max:3,
-    desc:l=>'Capsules take +30% damage.', apply:()=>{ run.stats.capsuleDmg+=0.30; } },
   { id:'apen', name:'Dissolving Agent', cat:'damage', pools:['power','chain'], rarity:'enhanced', max:3,
     desc:l=>'Attacks damage armour +60% faster.', apply:()=>{ run.stats.armourPen+=0.60; } },
-  { id:'execute', name:'Necrosis', cat:'damage', pools:['power'], rarity:'rare', max:2,
-    desc:l=>'Segments below '+(10+(cardLv('execute'))*10)+'% health die instantly.', apply:()=>{ run.stats.execute+=0.10; } },
-  { id:'chainrx', name:'Chain Reaction', cat:'damage', pools:['chain','power'], rarity:'rare', max:3,
-    desc:l=>'Destroyed segments deal 15% of their max health to neighbours.', apply:()=>{ run.stats.chainReaction+=0.15; } },
-  { id:'focusramp', name:'Predatory Focus', cat:'damage', pools:['power'], rarity:'enhanced', max:2,
-    desc:l=>'+30% damage while you hold your position still (ramps over ~1s).', apply:()=>{ run.stats.focusRamp+=0.30; } },
-  { id:'adaptive', name:'Adaptive Immunity', cat:'damage', pools:['power','quantity'], rarity:'enhanced', max:2,
-    desc:l=>'Every equipped weapon grants +5% global damage.', apply:()=>{ run.stats.adaptive+=1; } },
-  { id:'headhunt', name:'Cephalotoxin', cat:'damage', pools:['power'], rarity:'enhanced', max:3,
-    desc:l=>'Heads take +25% damage.', apply:()=>{ run.stats.headDmg+=0.25; } },
 
   /* --- firing (amber) --- */
   { id:'aspd', name:'Accelerated Response', cat:'firing', pools:['speed'], rarity:'common', max:6,
     desc:l=>'All weapons attack 10% faster.', apply:()=>{ run.stats.atkSpeedMult*=1.10; } },
-  { id:'needlespd', name:'Rapid Culture', cat:'firing', pools:['speed'], rarity:'common', max:4, needs:'needle',
-    desc:l=>'Pulse Needle attack speed +25%.', apply:()=>{ mulW('weaponSpd','needle',1.25); } },
-  { id:'needle2', name:'Double Inoculation', cat:'firing', pools:['quantity'], rarity:'enhanced', max:3, needs:'needle',
-    desc:l=>'Fire +1 needle, side by side. Needle damage −15%.', apply:()=>{ run.stats.needleCount+=1; mulW('weaponDmg','needle',0.85); } },
-  { id:'orbrad', name:'Volatile Culture', cat:'firing', pools:['speed','quantity'], rarity:'common', max:4, needs:'orb',
-    desc:l=>'Cleanse Orb blast radius +25%.', apply:()=>{ run.stats.orbRadius*=1.25; } },
-  { id:'drone1', name:'Mitosis', cat:'firing', pools:['quantity'], rarity:'enhanced', max:3, needs:'drones',
-    desc:l=>'+1 Antibody Drone.', apply:()=>{ run.stats.droneCount+=1; } },
-  { id:'wavecd', name:'Peristaltic Timing', cat:'firing', pools:['speed'], rarity:'common', max:3, needs:'wave',
-    desc:l=>'Compression Wave cooldown −20%.', apply:()=>{ mulW('weaponSpd','wave',1.25); } },
-  { id:'clouddur', name:'Lingering Ferment', cat:'firing', pools:['speed'], rarity:'common', max:3, needs:'cloud',
-    desc:l=>'Enzyme Cloud duration +40%.', apply:()=>{ run.stats.cloudDur*=1.4; } },
+  { id:'needle2', name:'Twin Barrel', cat:'firing', pools:['quantity'], rarity:'enhanced', max:4, needs:'needle',
+    desc:l=>'Fire +1 needle, side by side.', apply:()=>{ run.stats.needleCount+=1; } },
+  { id:'pierce', name:'Deep Injection', cat:'firing', pools:['chain','quantity'], rarity:'enhanced', max:3, needs:'needle',
+    desc:l=>'Needles pierce +1 segment.', apply:()=>{ run.stats.pierce+=1; } },
 
   /* --- critical (purple) --- */
   { id:'crit1', name:'Sharpened Enzymes', cat:'critical', pools:['critical'], rarity:'common', max:6,
     desc:l=>'Critical chance +4%.', apply:()=>{ run.stats.critChance+=0.04; } },
   { id:'critd', name:'Deep Rupture', cat:'critical', pools:['critical'], rarity:'common', max:5,
     desc:l=>'Critical damage +25%.', apply:()=>{ run.stats.critMult+=0.25; } },
-  { id:'critneedle', name:'Critical Dosage', cat:'critical', pools:['critical'], rarity:'enhanced', max:3, needs:'needle',
-    desc:l=>'Critical needle hits deal +60% damage.', apply:()=>{ run.stats.needleCritBonus+=0.60; } },
   { id:'critslow', name:'Paralytic Strike', cat:'critical', pools:['control','critical'], rarity:'enhanced', max:2,
     desc:l=>'Critical hits slow the worm 25% for 1.5s.', apply:()=>{ run.stats.critSlow=Math.max(run.stats.critSlow,0.25); run.stats.critSlowDur=1.5; } },
-  { id:'arcstun', name:'Synaptic Shock', cat:'critical', pools:['control','chain'], rarity:'rare', max:2, needs:'arc',
-    desc:l=>'Ion Arc critical hits stun the worm 0.6s.', apply:()=>{ run.stats.arcStun+=0.6; } },
-
-  /* --- technology (cyan) --- */
-  { id:'pierce', name:'Deep Injection', cat:'technology', pools:['chain','quantity'], rarity:'enhanced', max:3, needs:'needle',
-    desc:l=>'Needles pierce +1 segment.', apply:()=>{ run.stats.pierce+=1; } },
-  { id:'arcchain', name:'Conductive Tissue', cat:'technology', pools:['chain'], rarity:'enhanced', max:3, needs:'arc',
-    desc:l=>'Ion Arc jumps to +2 more segments.', apply:()=>{ run.stats.arcChains+=2; } },
-  { id:'needlestorm', name:'Needle Storm', cat:'technology', pools:['quantity','chain'], rarity:'rare', max:1, needs:'needle',
-    desc:l=>'Every 8th volley, smart munitions rise straight up under every visible capsule.', apply:()=>{ run.stats.needleStorm=true; } },
-  { id:'cloudcorr', name:'Caustic Blend', cat:'technology', pools:['chain'], rarity:'enhanced', max:3, needs:'cloud',
-    desc:l=>'Enzyme Clouds are 30% larger and strip armour.', apply:()=>{ run.stats.cloudRadius*=1.3; run.stats.cloudArmour+=1; } },
-  { id:'scanner', name:'Deep Scan', cat:'technology', pools:['control'], rarity:'enhanced', max:1,
-    desc:l=>'Capsule contents are revealed immediately.', apply:()=>{ run.stats.scanner=true; run.worms.forEach(w=>w.segs.forEach(s=>{ if(s.type==='capsule') revealCapsule(s,false); })); } },
 
   /* --- survival (green) --- */
   { id:'heal', name:'Cytoplasm Draught', cat:'survival', pools:['recovery'], rarity:'common', max:9,
@@ -600,10 +574,10 @@ const CARDS = [
   { id:'abilcd', name:'Reflex Loop', cat:'survival', pools:['control','speed'], rarity:'common', max:3,
     desc:l=>'Stasis ability cooldown −20%.', apply:()=>{ run.stats.abilityCd*=0.8; } },
 ];
-/* install-weapon cards generated dynamically */
+/* ---- Abilities thread: install, level and evolve weapons — separate from Boosts above ---- */
 function newWeaponCards(){
   const owned = run.weapons.map(w=>w.key);
-  if(owned.length>=4) return [];
+  if(owned.length>=MAX_WEAPONS) return [];
   return Object.keys(WEAPON_DEFS).filter(k=>!owned.includes(k)).map(k=>({
     id:'install_'+k, name:'Graft: '+WEAPON_DEFS[k].name, cat:'technology', pools:['quantity','chain','power','speed'],
     rarity:'rare', max:1, install:k,
@@ -625,6 +599,9 @@ function evoDesc(k){
     arc:'Chains double and every jump briefly stuns.',
     cloud:'Clouds bloom outward when segments die inside.',
     wave:'Waves span the arena and hurl the worm back.',
+    flyer:'Two drones patrol in formation and their shots pierce.',
+    roller:'Rollers are wider and never stop rolling.',
+    ember:'Burning spreads instantly across the whole worm.',
   }[k];
 }
 function cardLv(id){ return run.cardLevels[id]||0; }
@@ -675,9 +652,9 @@ function startStage(n){
   // spawn schedule: worm type mix by stage — denser and faster than a casual crawl
   const sched=[];
   const kinds = Object.keys(WORM_TYPES).filter(k=>WORM_TYPES[k].minStage<=n);
-  const baseCount = 9 + Math.floor(n*1.6);
-  const wormN = 7 + Math.min(6, Math.floor(n/1.5));
-  let t=1.4;
+  const baseCount = 10 + Math.floor(n*1.8);
+  const wormN = 8 + Math.min(8, Math.floor(n/1.3));
+  let t=1.2;
   for(let i=0;i<wormN;i++){
     let k='basic';
     if(i>0){
@@ -685,9 +662,9 @@ function startStage(n){
       const opts = kinds.filter(x=>x!=='basic');
       if(opts.length && Math.random()<0.25+late*0.5) k=opts[rint(0,opts.length-1)];
     }
-    const elite = Math.random() < Math.min(0.45, 0.08+n*0.02);
+    const elite = Math.random() < Math.min(0.55, 0.10+n*0.025);
     sched.push({ t, kind:k, count:Math.round(baseCount*WORM_TYPES[k].segMult), elite });
-    t += rand(12,19) * Math.pow(0.965, n);
+    t += rand(9,15) * Math.pow(0.955, n);
   }
   run.schedule=sched;
   // total scheduled hp (weighted, incl. boss)
@@ -713,7 +690,7 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
   const n = run.stage;
   const wt = WORM_TYPES[kind]||WORM_TYPES.basic;
   const spacing = clamp(W*0.075, 24, 44);
-  const speedF = 0.037 * Math.min(1.9, 1+0.033*n) * wt.speed * (elite?1.1:1);
+  const speedF = 0.043 * Math.min(2.3, 1+0.042*n) * wt.speed * (elite?1.12:1);
   const w = {
     kind, elite, isBoss, bossKind,
     segs: buildWormSegments(kind, n, count, {hpMult: elite?1.6:1}),
@@ -1213,6 +1190,26 @@ function updateWorm(w, dt){
     });
   });
   alive.forEach(s=>{ if(s.hitFlash>0)s.hitFlash-=dt; if(s.regenGlow>0)s.regenGlow-=dt; });
+  // burning (Cinder Gland): damage over time that can spread to a neighbour
+  alive.forEach(s=>{
+    if(!(s.burnT>0)) return;
+    s.burnT-=dt;
+    const tick = s.burnDPS*dt;
+    s.hp -= tick;
+    run.rs.dmg += tick;
+    if(s.hp<=0){ destroySegment(w,s); return; }
+    if(s._burnSpread && Math.random()<dt*0.6){
+      const nb = neighbours(w,s).find(x=>x.alive && !(x.burnT>0));
+      if(nb){ nb.burnT=s.burnT; nb.burnDPS=nb.maxHp*0.045; nb._burnSpread=true; }
+    }
+  });
+  // smoothed visual position: when a mid-body segment dies, the segments behind
+  // it glide to close the gap instead of teleporting — keeps the worm reading
+  // as one continuous body. Hit detection always uses the true instant distance.
+  alive.forEach((s,k)=>{
+    const trueD = w.headDist - w.spacing*k;
+    s._visD = (s._visD===undefined) ? trueD : lerp(s._visD, trueD, clamp(dt*9,0,1));
+  });
   // core impact
   if(w.headDist >= run.path.len){
     coreImpact(w);
@@ -1221,7 +1218,7 @@ function updateWorm(w, dt){
 function coreImpact(w){
   const alive=aliveSegs(w);
   const isMite = w.kind==='mite';
-  let dmg = isMite ? 4 : 24 + 2.6*(alive.length-1) + (w.elite?12:0) + (w.isBoss?46:0);
+  let dmg = isMite ? 5 : 28 + 3.0*(alive.length-1) + (w.elite?14:0) + (w.isBoss?52:0);
   if(run.stats.barrier>0){ run.stats.barrier--; dmg=0; toast('BARRIER ABSORBED THE IMPACT','#3dffb0'); }
   run.coreHp -= dmg;
   run.shake = 1;
@@ -1246,6 +1243,24 @@ function updateWeapon(w, dt){
         d.cd = weaponInterval(w);
         const [dx,dy]=dronePos(d);
         fireStraight(w, dx, dy, { pierce:w.evolved?1:0, small:true });
+      }
+    });
+    return;
+  }
+  if(w.key==='flyer'){
+    const n = w.evolved?2:1;
+    if(!w.flyers) w.flyers=[];
+    while(w.flyers.length<n) w.flyers.push({ x: rand(turretMin(),turretMax()), dir: Math.random()<0.5?1:-1, cd: rand(0,0.6) });
+    w.flyers.length=n;
+    const flySpeed = W*0.22;
+    w.flyers.forEach(f=>{
+      f.x += f.dir*flySpeed*dt;
+      if(f.x<turretMin()){ f.x=turretMin(); f.dir=1; }
+      if(f.x>turretMax()){ f.x=turretMax(); f.dir=-1; }
+      f.cd -= dt;
+      if(f.cd<=0){
+        f.cd = weaponInterval(w);
+        fireStraight(w, f.x, H*0.16, { pierce:w.evolved?1:0, small:true, down:true });
       }
     });
     return;
@@ -1294,6 +1309,17 @@ function updateWeapon(w, dt){
       beep(120,0.25,'sawtooth',0.15,60);
       break;
     }
+    case 'roller': {
+      run.projectiles.push({ kind:'roller', x:tx, y:ty, baseX:tx, vy:-H*0.30, w, alive:true, t:0,
+        amp: W*0.30*(w.evolved?1.6:1), freq: 2.6, radius: (w.evolved?46:30), hitList:[] });
+      beep(90,0.3,'sawtooth',0.2,-40);
+      break;
+    }
+    case 'ember': {
+      run.projectiles.push({ kind:'ember', x:tx, y:ty, vy:-H*0.58, w, alive:true, apexY: ty-H*0.5 });
+      SFX.shot();
+      break;
+    }
   }
 }
 function dronePos(d){
@@ -1305,7 +1331,7 @@ function fireStraight(w, x, y, opts={}){
     kind:'needle', x, y, w, alive:true,
     pierce: opts.pierce||0, hitList:[],
     critBonus: opts.critBonus||0, critMultBonus: opts.critMultBonus||0,
-    vy: -H*(opts.small?1.0:1.25), small:!!opts.small,
+    vy: (opts.down?1:-1)*H*(opts.small?1.0:1.25), small:!!opts.small,
   });
 }
 function fireArc(w, tx, ty, chains){
@@ -1372,7 +1398,33 @@ function updateProjectiles(dt){
       if(p.y<=p.apexY){ deployCloud(p); list.splice(i,1); continue; }
       continue;
     }
-    // needle-type: straight vertical shot, fixed x
+    if(p.kind==='ember'){
+      p.y += p.vy*dt;
+      if(collideAt(p.x,p.y,12) || p.y<=p.apexY){ explodeEmber(p); list.splice(i,1); continue; }
+      if(p.y<-40){ list.splice(i,1); }
+      continue;
+    }
+    if(p.kind==='roller'){
+      p.t += dt;
+      p.y += p.vy*dt;
+      p.x = clamp(p.baseX + Math.sin(p.t*p.freq)*p.amp, turretMin(), turretMax());
+      for(const ww of run.worms){
+        if(ww.dead||ww.phased) continue;
+        for(const s of aliveSegs(ww)){
+          if(p.hitList.includes(s)) continue;
+          const q=segVisiblePos(ww,s); if(!q) continue;
+          if(dist2(p.x,p.y,q[0],q[1]) < (ww.radius+p.radius)*(ww.radius+p.radius)){
+            p.hitList.push(s);
+            const dmg = weaponDamage(p.w);
+            hitSegment(ww,s,dmg,{});
+            run.rs.weapons.roller=(run.rs.weapons.roller||0)+dmg;
+          }
+        }
+      }
+      if(p.y<-60){ list.splice(i,1); }
+      continue;
+    }
+    // needle-type: straight vertical shot, fixed x (up from the turret, or down from a flyer)
     p.y += p.vy*dt;
     let consumed=false;
     for(const ww of run.worms){
@@ -1392,8 +1444,26 @@ function updateProjectiles(dt){
       }
       if(consumed) break;
     }
-    if(consumed || p.y<-40){ list.splice(i,1); }
+    if(consumed || p.y<-40 || p.y>H+40){ list.splice(i,1); }
   }
+}
+function explodeEmber(p){
+  burst([p.x,p.y], WEAPON_DEFS.ember.color, 16);
+  beep(140,0.25,'sawtooth',0.2,-80);
+  const r2 = (W*0.11)*(W*0.11);
+  const dmg = weaponDamage(p.w);
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q)return;
+    if(dist2(p.x,p.y,q[0],q[1])<r2){
+      hitSegment(ww,s,dmg,{});
+      run.rs.weapons.ember=(run.rs.weapons.ember||0)+dmg;
+      if(s.alive){
+        s.burnT = Math.max(s.burnT||0, p.w.evolved?5:3);
+        s.burnDPS = s.maxHp*(p.w.evolved?0.07:0.045);
+        s._burnSpread = !!p.w.evolved;
+      }
+    }
+  });});
 }
 function explodeOrb(p){
   burst([p.x,p.y], WEAPON_DEFS.orb.color, 20);
@@ -1593,6 +1663,20 @@ function drawDrones(){
     });
   });
 }
+function drawFlyers(){
+  run.weapons.filter(w=>w.key==='flyer').forEach(w=>{
+    (w.flyers||[]).forEach(f=>{
+      const y=H*0.16;
+      ctx.save();
+      ctx.translate(f.x,y);
+      ctx.scale(f.dir,1);
+      ctx.fillStyle=WEAPON_DEFS.flyer.color;
+      ctx.beginPath();
+      ctx.moveTo(-10,0); ctx.lineTo(6,-6); ctx.lineTo(6,6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+  });
+}
 function drawTurret(){
   const [x,y]=turretPos();
   const t=performance.now()/1000;
@@ -1652,8 +1736,9 @@ function drawWorm(w){
   const t=performance.now()/1000;
   ctx.save();
   if(w.phased) ctx.globalAlpha=0.32;
-  // membrane connecting segments
-  const pos = alive.map(s=>pathPoint(segDist(w,s)));
+  // membrane connecting segments — uses the smoothed visual distance so a
+  // segment dying mid-body doesn't teleport the segments behind it forward
+  const pos = alive.map(s=>pathPoint(s._visD===undefined?segDist(w,s):s._visD));
   ctx.strokeStyle = w.isBoss?'rgba(255,110,150,0.32)':'rgba(180,90,140,0.26)';
   ctx.lineWidth = w.radius*1.35;
   ctx.lineCap='round'; ctx.lineJoin='round';
@@ -1765,6 +1850,17 @@ function drawWorm(w){
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('♛', x-ex*r*0.4, y-ey*r*0.4);
       }
+    } else if(s.type==='mite'){
+      // broodlings are single-segment worms — give them simple eyes so every
+      // worm entity, however small, still reads as having a head
+      ctx.fillStyle='#ffe9ec';
+      ctx.beginPath(); ctx.arc(x-r*0.32,y-r*0.15,r*0.16,0,6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(x+r*0.32,y-r*0.15,r*0.16,0,6.28); ctx.fill();
+    }
+    // burning
+    if(s.burnT>0){
+      ctx.fillStyle='rgba(255,106,47,'+(0.22+0.15*Math.sin(t*10+k))+')';
+      ctx.beginPath(); ctx.arc(x,y,r*1.08,0,6.28); ctx.fill();
     }
     // regen glow
     if(s.regenGlow>0){
@@ -1813,13 +1909,27 @@ function drawProjectiles(){
     } else if(p.kind==='cloudlob'){
       ctx.fillStyle=WEAPON_DEFS.cloud.color;
       ctx.beginPath(); ctx.arc(p.x,p.y,6,0,6.28); ctx.fill();
+    } else if(p.kind==='ember'){
+      ctx.fillStyle=WEAPON_DEFS.ember.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,6,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(255,178,61,0.5)';
+      ctx.beginPath(); ctx.arc(p.x,p.y,10,0,6.28); ctx.stroke();
+    } else if(p.kind==='roller'){
+      ctx.save();
+      ctx.translate(p.x,p.y); ctx.rotate(p.t*6);
+      ctx.fillStyle=WEAPON_DEFS.roller.color;
+      ctx.beginPath(); ctx.arc(0,0,10,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-9,0); ctx.lineTo(9,0); ctx.moveTo(0,-9); ctx.lineTo(0,9); ctx.stroke();
+      ctx.restore();
     } else {
       ctx.strokeStyle=p.small?'#ffb23d':'#6ee7ff';
       ctx.lineWidth=p.small?2:3;
       const L=p.small?8:13;
+      const dir = p.vy>0 ? 1 : -1; // draw the shot's length pointing in its direction of travel
       ctx.beginPath();
       ctx.moveTo(p.x,p.y);
-      ctx.lineTo(p.x, p.y-L);
+      ctx.lineTo(p.x, p.y+dir*L);
       ctx.stroke();
     }
   });
@@ -1878,6 +1988,7 @@ function render(){
     run.worms.forEach(w=>{ if(!w.dead) drawWorm(w); });
     drawProjectiles();
     drawDrones();
+    drawFlyers();
     drawCore();
     drawTurret();
     drawFx();
