@@ -3,105 +3,111 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#060a14" />
+<meta name="theme-color" content="#050308" />
 <title>Wormline Defense</title>
 <style>
+  :root{
+    --void:#050308; --void2:#0c0616;
+    --core:#3dffb0; --core-dim:#0f7a5c;
+    --threat:#ff2f5e; --threat-dim:#5c1330;
+    --violet:#c9a6ff; --violet-dim:#4a2d78;
+    --amber:#ffb23d; --bone:#d8d2c8; --ink:#f0e9fb;
+    --panel:#12081c; --panel2:#1c1029; --edge:rgba(201,166,255,.28);
+    --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-mono: 'Courier New', ui-monospace, SFMono-Regular, monospace;
+  }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { width:100%; height:100%; overflow:hidden; background:#060a14; font-family:'Segoe UI', system-ui, sans-serif; color:#dfe8ff; touch-action:none; }
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--void); font-family:'Trebuchet MS','Segoe UI',sans-serif; color:var(--ink); touch-action:none; }
   #game { position:fixed; inset:0; }
-  canvas { display:block; position:absolute; inset:0; }
+  canvas { display:block; position:absolute; inset:0; cursor:ew-resize; }
 
   .bar { position:absolute; left:0; right:0; pointer-events:none; user-select:none; }
+  .chamfer{ clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
 
   /* ---- top HUD ---- */
   #topbar { top:0; padding:10px 12px 6px; display:flex; align-items:center; gap:8px; z-index:5; }
-  #stageName { font-size:13px; font-weight:800; letter-spacing:.6px; color:#9fd4ff; text-shadow:0 0 8px rgba(80,160,255,.5); white-space:nowrap; }
-  #progWrap { flex:1; height:8px; border-radius:4px; background:rgba(255,255,255,.08); border:1px solid rgba(140,190,255,.25); overflow:hidden; }
-  #progBar { height:100%; width:0%; background:linear-gradient(90deg,#3fd0ff,#7effc0); transition:width .3s linear; }
-  #progPct { font-size:11px; font-weight:700; color:#8fb8e8; min-width:34px; text-align:right; font-variant-numeric:tabular-nums; }
-  .hbtn { pointer-events:auto; background:rgba(20,30,55,.75); border:1px solid rgba(140,190,255,.35); color:#cfe4ff; border-radius:8px;
-          font-size:13px; font-weight:800; padding:5px 10px; cursor:pointer; }
-  .hbtn:active { background:rgba(60,90,150,.8); }
+  #stageName { font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:1.4px; color:var(--violet); text-shadow:0 0 10px rgba(201,166,255,.55); white-space:nowrap; }
+  #progWrap { flex:1; height:8px; border-radius:2px; background:rgba(255,255,255,.06); border:1px solid var(--edge); overflow:hidden; }
+  #progBar { height:100%; width:0%; background:linear-gradient(90deg,#1fb37a,#3dffb0); transition:width .3s linear; }
+  #progPct { font-family:var(--font-mono); font-size:11px; font-weight:700; color:#b9a8d8; min-width:34px; text-align:right; font-variant-numeric:tabular-nums; }
+  .hbtn { pointer-events:auto; background:rgba(28,16,41,.8); border:1px solid var(--edge); color:var(--ink); border-radius:3px;
+          font-family:var(--font-mono); font-size:13px; font-weight:700; padding:5px 10px; cursor:pointer; }
+  .hbtn:active { background:rgba(74,45,120,.85); }
 
   #bossbar { top:44px; padding:0 24px; z-index:5; display:none; }
-  #bossName { text-align:center; font-size:11px; font-weight:800; letter-spacing:1.5px; color:#ff9db0; margin-bottom:3px; text-transform:uppercase; }
-  #bossHpWrap { height:10px; border-radius:5px; background:rgba(0,0,0,.55); border:1px solid rgba(255,120,150,.45); overflow:hidden; }
-  #bossHpBar { height:100%; width:100%; background:linear-gradient(90deg,#ff4a6a,#ff9a5a); transition:width .2s linear; }
+  #bossName { text-align:center; font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:2px; color:var(--threat); margin-bottom:3px; text-transform:uppercase; text-shadow:0 0 8px rgba(255,47,94,.6); }
+  #bossHpWrap { height:10px; border-radius:2px; background:rgba(0,0,0,.6); border:1px solid rgba(255,110,150,.4); overflow:hidden; }
+  #bossHpBar { height:100%; width:100%; background:linear-gradient(90deg,#ff2f5e,#ffb23d); transition:width .2s linear; }
 
   /* ---- bottom HUD ---- */
   #bottombar { bottom:0; padding:6px 12px calc(10px + env(safe-area-inset-bottom)); z-index:5; display:flex; flex-direction:column; gap:6px; }
   #coreRow { display:flex; align-items:center; gap:8px; }
-  #coreLabel { font-size:11px; font-weight:800; color:#9fffce; letter-spacing:.5px; }
-  #coreHpWrap { flex:1; height:12px; border-radius:6px; background:rgba(0,0,0,.55); border:1px solid rgba(120,255,190,.35); overflow:hidden; }
-  #coreHpBar { height:100%; width:100%; background:linear-gradient(90deg,#25e08a,#a8ff6a); transition:width .15s linear; }
-  #coreHpTxt { font-size:11px; font-weight:800; color:#cfe; font-variant-numeric:tabular-nums; min-width:56px; text-align:right; }
+  #coreLabel { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--core); letter-spacing:1px; }
+  #coreHpWrap { flex:1; height:12px; border-radius:3px; background:rgba(0,0,0,.6); border:1px solid rgba(61,255,176,.35); overflow:hidden; }
+  #coreHpBar { height:100%; width:100%; background:linear-gradient(90deg,#0f7a5c,#3dffb0); transition:width .15s linear; }
+  #coreHpTxt { font-family:var(--font-mono); font-size:11px; font-weight:700; color:#cdf; font-variant-numeric:tabular-nums; min-width:56px; text-align:right; }
   #weaponRow { display:flex; align-items:center; gap:6px; }
-  .wicon { width:38px; height:38px; border-radius:9px; background:rgba(18,28,52,.85); border:1px solid rgba(140,190,255,.35);
+  .wicon { width:38px; height:38px; background:rgba(18,8,28,.88); border:1px solid var(--edge);
            display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:15px; position:relative; }
-  .wicon .lv { position:absolute; bottom:1px; right:4px; font-size:8px; font-weight:900; color:#9fd4ff; }
-  .wicon.evolved { border-color:#e9a7ff; box-shadow:0 0 10px rgba(210,120,255,.5); }
-  #abilityBtn { pointer-events:auto; margin-left:auto; width:62px; height:62px; border-radius:50%; border:2px solid rgba(120,220,255,.6);
-                background:radial-gradient(circle at 35% 30%, rgba(90,200,255,.45), rgba(15,40,80,.9)); color:#dff4ff;
-                font-size:11px; font-weight:900; letter-spacing:.4px; cursor:pointer; position:relative; overflow:hidden; }
-  #abilityBtn .cdmask { position:absolute; inset:0; background:rgba(0,0,0,.65); transform-origin:bottom; }
+  .wicon .lv { position:absolute; bottom:1px; right:4px; font-family:var(--font-mono); font-size:8px; font-weight:900; color:var(--violet); }
+  .wicon.evolved { border-color:var(--amber); box-shadow:0 0 10px rgba(255,178,61,.5); }
+  #abilityBtn { pointer-events:auto; margin-left:auto; width:62px; height:62px; border-radius:50%; border:2px solid rgba(110,231,255,.6);
+                background:radial-gradient(circle at 35% 30%, rgba(110,231,255,.4), rgba(10,20,40,.92)); color:#dff4ff;
+                font-family:var(--font-mono); font-size:10px; font-weight:900; letter-spacing:.4px; cursor:pointer; position:relative; overflow:hidden; }
+  #abilityBtn .cdmask { position:absolute; inset:0; background:rgba(0,0,0,.68); transform-origin:bottom; }
   #abilityBtn span { position:relative; z-index:2; }
   #abilityBtn:disabled { opacity:.85; }
   #abilityBtn.ready { animation:abGlow 1.2s ease-in-out infinite alternate; }
-  @keyframes abGlow { from { box-shadow:0 0 4px rgba(120,220,255,.3);} to { box-shadow:0 0 18px rgba(120,220,255,.85);} }
+  @keyframes abGlow { from { box-shadow:0 0 4px rgba(110,231,255,.3);} to { box-shadow:0 0 18px rgba(110,231,255,.9);} }
 
   /* ---- overlays ---- */
   .overlay { position:absolute; inset:0; z-index:20; display:none; align-items:center; justify-content:center; flex-direction:column;
-             background:rgba(4,8,18,.82); backdrop-filter:blur(4px); padding:20px; text-align:center; }
+             background:rgba(5,3,8,.86); backdrop-filter:blur(4px); padding:20px; text-align:center; }
   .overlay.show { display:flex; }
-  .otitle { font-size:26px; font-weight:900; letter-spacing:1px; margin-bottom:8px; }
-  .osub { font-size:13px; color:#9ab4dd; margin-bottom:18px; max-width:340px; line-height:1.5; }
-  .obtn { pointer-events:auto; background:linear-gradient(180deg,#2a6df0,#1b47a8); border:1px solid #6ea6ff; color:#fff; font-size:15px;
-          font-weight:900; letter-spacing:.8px; border-radius:12px; padding:13px 34px; cursor:pointer; margin:5px; min-width:200px; }
-  .obtn.dim { background:rgba(30,45,80,.8); border-color:rgba(140,190,255,.35); }
+  .otitle { font-family:var(--font-display); font-size:27px; font-weight:700; letter-spacing:1px; margin-bottom:8px; color:var(--ink); }
+  .osub { font-size:13px; color:#b8a8d0; margin-bottom:18px; max-width:340px; line-height:1.55; }
+  .obtn { pointer-events:auto; background:linear-gradient(180deg,#3dffb0,#0f7a5c); border:1px solid #6effc8; color:#04140e; font-family:var(--font-mono); font-size:15px;
+          font-weight:900; letter-spacing:.8px; padding:13px 34px; cursor:pointer; margin:5px; min-width:200px; }
+  .obtn.dim { background:rgba(28,16,41,.85); border-color:var(--edge); color:var(--ink); }
   .obtn:active { transform:scale(.97); }
 
   /* draft cards */
   #draftCards { display:flex; gap:10px; justify-content:center; width:100%; max-width:430px; }
-  .card { flex:1; min-width:0; background:linear-gradient(180deg, rgba(26,36,64,.97), rgba(14,20,38,.97)); border-radius:14px; padding:12px 8px;
-          border:2px solid #556; cursor:pointer; pointer-events:auto; display:flex; flex-direction:column; align-items:center; gap:6px;
+  .card { flex:1; min-width:0; background:linear-gradient(180deg, rgba(28,16,41,.97), rgba(14,7,20,.97)); padding:12px 8px;
+          border:2px solid #443; cursor:pointer; pointer-events:auto; display:flex; flex-direction:column; align-items:center; gap:6px;
           min-height:190px; transition:transform .1s; }
   .card:active { transform:scale(.96); }
   .card .cicon { font-size:30px; line-height:1; margin-top:4px; filter:drop-shadow(0 0 6px currentColor); }
-  .card .cname { font-size:13px; font-weight:900; line-height:1.2; }
-  .card .cdesc { font-size:11px; color:#aabbdd; line-height:1.35; flex:1; }
-  .card .crar { font-size:9px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:2px 8px; border-radius:6px; background:rgba(255,255,255,.08); }
-  .card .clvl { font-size:9px; color:#7f95bb; font-weight:700; }
+  .card .cname { font-family:var(--font-display); font-size:13px; font-weight:700; line-height:1.25; }
+  .card .cdesc { font-size:11px; color:#b3a5c9; line-height:1.35; flex:1; }
+  .card .crar { font-family:var(--font-mono); font-size:9px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:2px 8px; background:rgba(255,255,255,.07); }
+  .card .clvl { font-family:var(--font-mono); font-size:9px; color:#8c7ba8; font-weight:700; }
   #rerollBtn { margin-top:14px; }
-  #draftHint { font-size:11px; color:#7f95bb; margin-top:8px; }
+  #draftHint { font-size:11px; color:#8c7ba8; margin-top:8px; }
 
   /* results table */
   .rtable { width:100%; max-width:320px; margin:4px 0 16px; border-collapse:collapse; }
-  .rtable td { padding:4px 6px; font-size:13px; border-bottom:1px solid rgba(140,190,255,.12); }
-  .rtable td:first-child { color:#8fa8cc; text-align:left; }
-  .rtable td:last-child { color:#eaf2ff; font-weight:800; text-align:right; font-variant-numeric:tabular-nums; }
+  .rtable td { padding:4px 6px; font-size:13px; border-bottom:1px solid var(--edge); }
+  .rtable td:first-child { color:#a494bf; text-align:left; }
+  .rtable td:last-child { color:var(--ink); font-weight:800; text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
 
   /* home / meta */
-  #homeTitle { font-size:34px; font-weight:900; letter-spacing:2px; background:linear-gradient(180deg,#9fe8ff,#4f9dff);
-               -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:2px; }
-  #homeSub { font-size:12px; color:#7f95bb; letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; }
-  #metaPanel { width:100%; max-width:340px; background:rgba(14,22,44,.9); border:1px solid rgba(140,190,255,.25); border-radius:14px;
+  #homeTitle { font-family:var(--font-display); font-size:36px; font-weight:700; letter-spacing:2px; background:linear-gradient(180deg,#ffc2e6,#c9a6ff 55%,#7effc0);
+               -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:2px; text-shadow:0 0 30px rgba(201,166,255,.25); }
+  #homeSub { font-family:var(--font-mono); font-size:11px; color:#8c7ba8; letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; }
+  #metaPanel { width:100%; max-width:340px; background:rgba(18,8,28,.92); border:1px solid var(--edge);
                padding:12px; margin-bottom:14px; }
-  #metaPanel h3 { font-size:12px; letter-spacing:1.5px; color:#9fd4ff; text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; }
-  .metaRow { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid rgba(140,190,255,.1); }
+  #metaPanel h3 { font-family:var(--font-mono); font-size:12px; letter-spacing:1.5px; color:var(--violet); text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; }
+  .metaRow { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--edge); }
   .metaRow .mname { flex:1; text-align:left; font-size:12px; font-weight:700; }
-  .metaRow .mlv { font-size:11px; color:#8fa8cc; font-variant-numeric:tabular-nums; }
-  .metaRow button { pointer-events:auto; background:#1c3a72; border:1px solid #4f7fd0; color:#fff; border-radius:8px; font-size:11px;
+  .metaRow .mlv { font-family:var(--font-mono); font-size:11px; color:#a494bf; font-variant-numeric:tabular-nums; }
+  .metaRow button { pointer-events:auto; background:#241542; border:1px solid #6a4aa8; color:#fff; font-family:var(--font-mono); font-size:11px;
                     font-weight:800; padding:5px 10px; cursor:pointer; min-width:74px; }
   .metaRow button:disabled { opacity:.35; }
-  #biomassTxt { color:#a8ff6a; }
+  #biomassTxt { color:var(--core); font-family:var(--font-mono); }
 
-  /* segment info popup */
-  #segInfo { position:absolute; z-index:15; display:none; background:rgba(10,16,32,.94); border:1px solid rgba(140,190,255,.4);
-             border-radius:10px; padding:8px 12px; font-size:11px; line-height:1.6; pointer-events:none; max-width:200px; }
-  #segInfo b { color:#9fd4ff; }
-
-  #toast { position:absolute; top:26%; left:50%; transform:translateX(-50%); z-index:18; font-size:17px; font-weight:900; letter-spacing:1px;
-           color:#fff; text-shadow:0 0 12px rgba(120,200,255,.8); opacity:0; transition:opacity .3s; pointer-events:none; text-align:center; }
+  #toast { position:absolute; top:26%; left:50%; transform:translateX(-50%); z-index:18; font-family:var(--font-display); font-size:18px; font-weight:700; letter-spacing:1px;
+           color:#fff; text-shadow:0 0 12px rgba(201,166,255,.85); opacity:0; transition:opacity .3s; pointer-events:none; text-align:center; }
 </style>
 </head>
 <body>
@@ -112,8 +118,8 @@
     <div id="stageName">STAGE 1</div>
     <div id="progWrap"><div id="progBar"></div></div>
     <div id="progPct">0%</div>
-    <button class="hbtn" id="speedBtn">1×</button>
-    <button class="hbtn" id="pauseBtn">❚❚</button>
+    <button class="hbtn chamfer" id="speedBtn">1×</button>
+    <button class="hbtn chamfer" id="pauseBtn">❚❚</button>
   </div>
 
   <div id="bossbar" class="bar">
@@ -133,7 +139,6 @@
     </div>
   </div>
 
-  <div id="segInfo"></div>
   <div id="toast"></div>
 
   <!-- HOME -->
@@ -144,10 +149,10 @@
       <h3><span>Permanent Mutations</span><span id="biomassTxt">⬡ 0</span></h3>
       <div id="metaRows"></div>
     </div>
-    <button class="obtn" id="startBtn">START RUN</button>
+    <button class="obtn chamfer" id="startBtn">START RUN</button>
     <div style="display:flex;gap:8px;margin-top:4px;">
-      <button class="obtn dim" id="soundBtn" style="min-width:120px;">SOUND: ON</button>
-      <button class="obtn dim" id="helpBtn" style="min-width:120px;">HOW TO PLAY</button>
+      <button class="obtn dim chamfer" id="soundBtn" style="min-width:120px;">SOUND: ON</button>
+      <button class="obtn dim chamfer" id="helpBtn" style="min-width:120px;">HOW TO PLAY</button>
     </div>
     <div class="osub" style="margin-top:14px;font-size:11px;" id="bestTxt"></div>
   </div>
@@ -156,13 +161,13 @@
   <div class="overlay" id="helpOv">
     <div class="otitle" style="font-size:20px;">HOW TO PLAY</div>
     <div class="osub" style="text-align:left;">
-      A giant worm descends a winding route toward your core. Your organism fires automatically.<br/><br/>
-      • <b>Tap a segment</b> to focus all fire on it.<br/>
-      • <b>Tap empty space</b> to return to auto-targeting.<br/>
-      • <b>Press &amp; hold</b> a segment to inspect it.<br/><br/>
-      Sealed <b style="color:#e9a7ff;">mutation capsules</b> hide upgrades — crack one to 50% to reveal its category, destroy it to claim a reward. Kill the <b>head</b> to drop the whole worm fast, or farm its body for power. Anything that reaches the core hurts — every surviving segment adds damage.
+      A colossal worm descends a shifting route toward the breach. Your organism fires on its own — <b>drag left and right</b> (or press ← →) to slide your turret and line up with what you want to hit.<br/><br/>
+      • Needles, orbs and bolts fire <b style="color:#3dffb0;">straight up</b> from wherever you're standing — there's no auto-aim, you have to get under your target.<br/>
+      • The readout above your turret shows whatever's locked in your lane right now.<br/>
+      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide upgrades — crack one to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
+      Kill the <b>head</b> to collapse the whole worm fast, or farm its body for power. Anything that reaches the breach hurts — every surviving segment adds damage. Mutations you draft last for the whole run and are lost only when the run ends.
     </div>
-    <button class="obtn" id="helpBack">BACK</button>
+    <button class="obtn chamfer" id="helpBack">BACK</button>
   </div>
 
   <!-- STAGE INTRO -->
@@ -175,15 +180,15 @@
   <div class="overlay" id="draftOv">
     <div class="otitle" style="font-size:18px;" id="draftTitle">CHOOSE A MUTATION</div>
     <div id="draftCards"></div>
-    <button class="obtn dim" id="rerollBtn">↻ REROLL (1)</button>
+    <button class="obtn dim chamfer" id="rerollBtn">↻ REROLL (1)</button>
     <div id="draftHint"></div>
   </div>
 
   <!-- PAUSE -->
   <div class="overlay" id="pauseOv">
     <div class="otitle">PAUSED</div>
-    <button class="obtn" id="resumeBtn">RESUME</button>
-    <button class="obtn dim" id="abandonBtn">ABANDON RUN</button>
+    <button class="obtn chamfer" id="resumeBtn">RESUME</button>
+    <button class="obtn dim chamfer" id="abandonBtn">ABANDON RUN</button>
   </div>
 
   <!-- RESULTS -->
@@ -191,8 +196,8 @@
     <div class="otitle" id="resTitle">STAGE CLEAR</div>
     <table class="rtable" id="resTable"></table>
     <div class="osub" id="resBiomass"></div>
-    <button class="obtn" id="resNextBtn">CONTINUE</button>
-    <button class="obtn dim" id="resHomeBtn">RETREAT &amp; BANK</button>
+    <button class="obtn chamfer" id="resNextBtn">CONTINUE</button>
+    <button class="obtn dim chamfer" id="resHomeBtn">RETREAT &amp; BANK</button>
   </div>
 </div>
 
@@ -273,6 +278,8 @@ const SFX = {
 /* ---------------- canvas ---------------- */
 const cv = $('cv'), ctx = cv.getContext('2d');
 let W=0, H=0, DPR=1;
+function turretMin(){ return clamp(W*0.09,30,70); }
+function turretMax(){ return W-turretMin(); }
 function resize(){
   DPR = Math.min(2, window.devicePixelRatio||1);
   W = window.innerWidth; H = window.innerHeight;
@@ -280,23 +287,77 @@ function resize(){
   cv.style.width = W+'px'; cv.style.height = H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
   if(run && run.path) rebuildPathPixels();
+  if(run) run.turretX = clamp(run.turretX, turretMin(), turretMax());
 }
 window.addEventListener('resize', resize);
 
 /* ---------------- spline path ---------------- */
-/* Anchors in screen fractions; Catmull-Rom sampled into an arc-length table. */
+/* Anchors in screen fractions; Catmull-Rom sampled into an arc-length table.
+   A handful of distinct pattern generators keep every stage's route feeling different. */
+const PATH_PATTERNS = [
+  function zigzag(stage, mirror){
+    const turns = Math.min(6, 3 + Math.floor((stage-1)/2));
+    const pts=[]; const yTop=0.12, yBot=0.60;
+    for(let i=0;i<turns;i++){
+      const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
+      const side = ((i%2===0)!==mirror) ? 0.14 : 0.86;
+      pts.push([side, y]);
+    }
+    return pts;
+  },
+  function serpentine(stage, mirror){
+    const n=9, freq=1.3+Math.min(1.5,stage*0.09), amp=0.35, phase=mirror?Math.PI:0;
+    const pts=[];
+    for(let i=1;i<=n;i++){
+      const t=i/n, y=0.10+0.52*t;
+      const x=0.5+Math.sin(t*Math.PI*freq+phase)*amp;
+      pts.push([clamp(x,0.08,0.92), y]);
+    }
+    return pts;
+  },
+  function spiralTighten(stage, mirror){
+    const n=10, freq=2.0+Math.min(1.8,stage*0.11);
+    const pts=[];
+    for(let i=1;i<=n;i++){
+      const t=i/n, amp=0.37*(1-t*0.55);
+      const x=0.5+Math.sin(t*Math.PI*freq+(mirror?Math.PI:0))*amp;
+      pts.push([clamp(x,0.08,0.92), 0.10+0.54*t]);
+    }
+    return pts;
+  },
+  function funnelWide(stage, mirror){
+    const turns = 2+Math.min(2,Math.floor(stage/4));
+    const pts=[]; const yTop=0.11, yBot=0.60;
+    for(let i=0;i<=turns*2;i++){
+      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.39*(1-t*0.7);
+      const side = (i%2===0)!==mirror ? -1:1;
+      pts.push([clamp(0.5+side*amp,0.08,0.92), y]);
+    }
+    return pts;
+  },
+  function staircase(stage, mirror){
+    const steps=4+Math.min(3,Math.floor(stage/3));
+    const pts=[]; const yTop=0.11, yBot=0.60;
+    for(let i=0;i<steps;i++){
+      const t0=i/steps, t1=(i+0.65)/steps;
+      const side=((i%2===0)!==mirror)?0.16:0.84;
+      pts.push([side, yTop+(yBot-yTop)*t0]);
+      pts.push([side, yTop+(yBot-yTop)*t1]);
+    }
+    return pts;
+  },
+  function doubleSwing(stage, mirror){
+    const amp=0.4, s=mirror?-1:1;
+    return [[0.5+s*amp,0.20],[0.5-s*amp,0.40],[0.5+s*amp*0.7,0.58]];
+  },
+];
 function makeAnchors(stage){
-  const turns = Math.min(5, 3 + Math.floor((stage-1)/3));   // 3..5 zig-zag turns
-  const leftFirst = stage%2===1;
-  const a=[[0.5,-0.12]];
-  const yTop=0.13, yBot=0.60;
-  for(let i=0;i<turns;i++){
-    const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
-    a.push([(i%2===0)===leftFirst?0.15:0.85, y]);
-  }
-  a.push([0.5,0.72]);
-  a.push([0.5,0.84]);   // core mouth
-  return a;
+  const pat = PATH_PATTERNS[(stage-1)%PATH_PATTERNS.length];
+  const mirror = Math.random()<0.5;
+  const pts = [[0.5,-0.15]].concat(pat(stage, mirror));
+  pts.push([0.5,0.74]);
+  pts.push([0.5,0.90]);
+  return pts;
 }
 function catmull(p0,p1,p2,p3,t){
   const t2=t*t, t3=t2*t;
@@ -353,8 +414,8 @@ const SEG_TYPES = {
   mite:    { hpMult:0.35,energy:2,  label:'Broodling' },
 };
 const CAPSULE_POOLS = ['power','speed','critical','quantity','control','chain','recovery','evolution'];
-const POOL_COLORS = { power:'#ff5f6e', speed:'#ffd257', critical:'#c77dff', quantity:'#ffb14e',
-                      control:'#6ee7ff', chain:'#5f9dff', recovery:'#5fff9d', evolution:'#ff8dff', trap:'#ff3355' };
+const POOL_COLORS = { power:'#ff3d6e', speed:'#ffb23d', critical:'#c77dff', quantity:'#ff8f5f',
+                      control:'#6ee7ff', chain:'#4fd2ff', recovery:'#3dffb0', evolution:'#e07fff', trap:'#ff2f5e' };
 const POOL_ICONS  = { power:'☀', speed:'»', critical:'✦', quantity:'⁂', control:'❄', chain:'⌁', recovery:'✚', evolution:'§', trap:'☠' };
 
 /* Worm archetypes — data only; combat code reads these fields. */
@@ -368,9 +429,11 @@ const WORM_TYPES = {
   split:   { name:'Split Worm',      speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, splits:true },
 };
 
+const HP_EXP = 1.24; // exponential HP growth per stage — steeper than before, on purpose
+
 function buildWormSegments(typeKey, stage, count, opts={}){
   const wt = WORM_TYPES[typeKey]||WORM_TYPES.basic;
-  const baseHp = 22 * Math.pow(1.18, stage-1) * wt.hpMult * (opts.hpMult||1);
+  const baseHp = 22 * Math.pow(HP_EXP, stage-1) * wt.hpMult * (opts.hpMult||1);
   const segs = [];
   segs.push(mkSeg('head', baseHp));
   // guaranteed capsules: one per 5-7 standard segments, min 2, max 8, never adjacent
@@ -420,17 +483,17 @@ function pickCapsulePool(){
 
 /* ---------------- weapons ---------------- */
 const WEAPON_DEFS = {
-  needle: { name:'Pulse Needle',     icon:'🜂', glyph:'▲', color:'#7ef0ff', interval:0.65, dmg:1.0,
-            desc:'Rapid single-target dart', evoName:'Needle Constellation' },
-  orb:    { name:'Cleanse Orb',      icon:'🜄', glyph:'●', color:'#8aff9e', interval:1.7,  dmg:1.7,
-            desc:'Slow orb that bursts in an area', evoName:'Purge Nova' },
-  drones: { name:'Antibody Drones',  icon:'🜁', glyph:'✦', color:'#ffd684', interval:0.9,  dmg:0.55,
-            desc:'Autonomous orbiting attackers', evoName:'Phage Swarm' },
-  arc:    { name:'Ion Arc',          icon:'🜅', glyph:'⌁', color:'#9db4ff', interval:1.35, dmg:0.9,
+  needle: { name:'Pulse Needle',     icon:'🜂', glyph:'▲', color:'#6ee7ff', interval:0.65, dmg:1.0,
+            desc:'Rapid dart fired straight up', evoName:'Needle Constellation' },
+  orb:    { name:'Cleanse Orb',      icon:'🜄', glyph:'●', color:'#3dffb0', interval:1.7,  dmg:1.7,
+            desc:'Lobbed orb that bursts in an area', evoName:'Purge Nova' },
+  drones: { name:'Antibody Drones',  icon:'🜁', glyph:'✦', color:'#ffb23d', interval:0.9,  dmg:0.55,
+            desc:'Orbiting attackers that fire on their own', evoName:'Phage Swarm' },
+  arc:    { name:'Ion Arc',          icon:'🜅', glyph:'⌁', color:'#a78bff', interval:1.35, dmg:0.9,
             desc:'Lightning that jumps between segments', evoName:'Storm Lattice' },
-  cloud:  { name:'Enzyme Cloud',     icon:'🜆', glyph:'☁', color:'#b6ff5f', interval:2.8,  dmg:0.4,
+  cloud:  { name:'Enzyme Cloud',     icon:'🜆', glyph:'☁', color:'#8fe05a', interval:2.8,  dmg:0.4,
             desc:'Persistent dissolving area', evoName:'Necrotic Bloom' },
-  wave:   { name:'Compression Wave', icon:'🜇', glyph:'≈', color:'#ff9db0', interval:3.4,  dmg:1.2,
+  wave:   { name:'Compression Wave', icon:'🜇', glyph:'≈', color:'#ff6fa8', interval:3.4,  dmg:1.2,
             desc:'Pushes the worm back up its route', evoName:'Seismic Collapse' },
 };
 function addWeapon(key){
@@ -453,12 +516,12 @@ function weaponInterval(w){
 }
 
 /* ---------------- upgrade cards ---------------- */
-/* cat colors: damage=red firing=yellow critical=purple technology=blue survival=green */
-const CAT_COLORS = { damage:'#ff5f6e', firing:'#ffd257', critical:'#c77dff', technology:'#5f9dff', survival:'#5fff9d' };
+/* cat colors: damage=red firing=amber critical=purple technology=cyan survival=green */
+const CAT_COLORS = { damage:'#ff3d6e', firing:'#ffb23d', critical:'#c77dff', technology:'#4fd2ff', survival:'#3dffb0' };
 const CAT_ICONS  = { damage:'☀', firing:'»', critical:'✦', technology:'⌁', survival:'✚' };
 const RARITIES = [
-  { key:'common',   w:55, color:'#9fb4cc', name:'Common' },
-  { key:'enhanced', w:28, color:'#5fd0ff', name:'Enhanced' },
+  { key:'common',   w:55, color:'#8a7fa3', name:'Common' },
+  { key:'enhanced', w:28, color:'#4fd2ff', name:'Enhanced' },
   { key:'rare',     w:12, color:'#c77dff', name:'Rare' },
   { key:'mutant',   w:4,  color:'#ff8d5f', name:'Mutant' },
   { key:'apex',     w:1,  color:'#ffe45f', name:'Apex' },
@@ -477,19 +540,19 @@ const CARDS = [
   { id:'chainrx', name:'Chain Reaction', cat:'damage', pools:['chain','power'], rarity:'rare', max:3,
     desc:l=>'Destroyed segments deal 15% of their max health to neighbours.', apply:()=>{ run.stats.chainReaction+=0.15; } },
   { id:'focusramp', name:'Predatory Focus', cat:'damage', pools:['power'], rarity:'enhanced', max:2,
-    desc:l=>'+2%/s damage on the same target, up to 30%.', apply:()=>{ run.stats.focusRamp+=0.30; } },
+    desc:l=>'+30% damage while you hold your position still (ramps over ~1s).', apply:()=>{ run.stats.focusRamp+=0.30; } },
   { id:'adaptive', name:'Adaptive Immunity', cat:'damage', pools:['power','quantity'], rarity:'enhanced', max:2,
     desc:l=>'Every equipped weapon grants +5% global damage.', apply:()=>{ run.stats.adaptive+=1; } },
   { id:'headhunt', name:'Cephalotoxin', cat:'damage', pools:['power'], rarity:'enhanced', max:3,
     desc:l=>'Heads take +25% damage.', apply:()=>{ run.stats.headDmg+=0.25; } },
 
-  /* --- firing (yellow) --- */
+  /* --- firing (amber) --- */
   { id:'aspd', name:'Accelerated Response', cat:'firing', pools:['speed'], rarity:'common', max:6,
     desc:l=>'All weapons attack 10% faster.', apply:()=>{ run.stats.atkSpeedMult*=1.10; } },
   { id:'needlespd', name:'Rapid Culture', cat:'firing', pools:['speed'], rarity:'common', max:4, needs:'needle',
     desc:l=>'Pulse Needle attack speed +25%.', apply:()=>{ mulW('weaponSpd','needle',1.25); } },
   { id:'needle2', name:'Double Inoculation', cat:'firing', pools:['quantity'], rarity:'enhanced', max:3, needs:'needle',
-    desc:l=>'Fire +1 needle. Needle damage −15%.', apply:()=>{ run.stats.needleCount+=1; mulW('weaponDmg','needle',0.85); } },
+    desc:l=>'Fire +1 needle, side by side. Needle damage −15%.', apply:()=>{ run.stats.needleCount+=1; mulW('weaponDmg','needle',0.85); } },
   { id:'orbrad', name:'Volatile Culture', cat:'firing', pools:['speed','quantity'], rarity:'common', max:4, needs:'orb',
     desc:l=>'Cleanse Orb blast radius +25%.', apply:()=>{ run.stats.orbRadius*=1.25; } },
   { id:'drone1', name:'Mitosis', cat:'firing', pools:['quantity'], rarity:'enhanced', max:3, needs:'drones',
@@ -511,13 +574,13 @@ const CARDS = [
   { id:'arcstun', name:'Synaptic Shock', cat:'critical', pools:['control','chain'], rarity:'rare', max:2, needs:'arc',
     desc:l=>'Ion Arc critical hits stun the worm 0.6s.', apply:()=>{ run.stats.arcStun+=0.6; } },
 
-  /* --- technology (blue) --- */
+  /* --- technology (cyan) --- */
   { id:'pierce', name:'Deep Injection', cat:'technology', pools:['chain','quantity'], rarity:'enhanced', max:3, needs:'needle',
     desc:l=>'Needles pierce +1 segment.', apply:()=>{ run.stats.pierce+=1; } },
   { id:'arcchain', name:'Conductive Tissue', cat:'technology', pools:['chain'], rarity:'enhanced', max:3, needs:'arc',
     desc:l=>'Ion Arc jumps to +2 more segments.', apply:()=>{ run.stats.arcChains+=2; } },
   { id:'needlestorm', name:'Needle Storm', cat:'technology', pools:['quantity','chain'], rarity:'rare', max:1, needs:'needle',
-    desc:l=>'Every 8th volley also fires needles at every visible capsule.', apply:()=>{ run.stats.needleStorm=true; } },
+    desc:l=>'Every 8th volley, smart munitions rise straight up under every visible capsule.', apply:()=>{ run.stats.needleStorm=true; } },
   { id:'cloudcorr', name:'Caustic Blend', cat:'technology', pools:['chain'], rarity:'enhanced', max:3, needs:'cloud',
     desc:l=>'Enzyme Clouds are 30% larger and strip armour.', apply:()=>{ run.stats.cloudRadius*=1.3; run.stats.cloudArmour+=1; } },
   { id:'scanner', name:'Deep Scan', cat:'technology', pools:['control'], rarity:'enhanced', max:1,
@@ -551,7 +614,7 @@ function evolveCards(){
   return run.weapons.filter(w=>w.level>=5 && !w.evolved).map(w=>({
     id:'evolve_'+w.key, name:'EVOLVE: '+WEAPON_DEFS[w.key].evoName, cat:'technology', pools:['evolution'],
     rarity:'mutant', max:1, evolve:w.key,
-    desc:()=>evoDesc(w.key), apply:()=>{ w.evolved=true; SFX.evolve(); toast(WEAPON_DEFS[w.key].evoName+'!', '#ff8dff'); renderWeaponIcons(); },
+    desc:()=>evoDesc(w.key), apply:()=>{ w.evolved=true; SFX.evolve(); toast(WEAPON_DEFS[w.key].evoName+'!', '#e07fff'); renderWeaponIcons(); },
   }));
 }
 function evoDesc(k){
@@ -588,7 +651,7 @@ function newRun(){
     coreMax:Math.round(100*stats.coreHpMult), coreHp:0,
     energy:0, energyThresh:30, draftsQueued:[],
     rerolls:1, worms:[], projectiles:[], clouds:[], arcs:[], waves:[], particles:[], dnums:[],
-    focus:null, focusTime:0, abilityT:0, freezeT:0,
+    turretX:W/2, turretStillT:0, abilityT:0, freezeT:0,
     path:null, schedule:[], schedT:0, scheduled:false, bossSpawned:false, boss:null,
     totalHp:1, destroyedHp:0, shake:0,
     rs:{ dmg:0, segs:0, capsules:0, bestCrit:0, weapons:{} },
@@ -607,14 +670,14 @@ function startStage(n){
   run.path = buildPath(makeAnchors(n));
   rebuildPathPixels();
   run.worms=[]; run.projectiles=[]; run.clouds=[]; run.arcs=[]; run.waves=[]; run.particles=[]; run.dnums=[];
-  run.focus=null; run.rerolls=1; run.bossSpawned=false; run.boss=null;
+  run.turretX=W/2; run.turretStillT=0; run.rerolls=1; run.bossSpawned=false; run.boss=null;
   run.schedT=0; run.destroyedHp=0;
-  // spawn schedule: worm type mix by stage
+  // spawn schedule: worm type mix by stage — denser and faster than a casual crawl
   const sched=[];
   const kinds = Object.keys(WORM_TYPES).filter(k=>WORM_TYPES[k].minStage<=n);
-  const baseCount = 8 + Math.floor(n*1.5);
-  const wormN = 6 + Math.min(4, Math.floor(n/2));
-  let t=1.5;
+  const baseCount = 9 + Math.floor(n*1.6);
+  const wormN = 7 + Math.min(6, Math.floor(n/1.5));
+  let t=1.4;
   for(let i=0;i<wormN;i++){
     let k='basic';
     if(i>0){
@@ -622,9 +685,9 @@ function startStage(n){
       const opts = kinds.filter(x=>x!=='basic');
       if(opts.length && Math.random()<0.25+late*0.5) k=opts[rint(0,opts.length-1)];
     }
-    const elite = Math.random() < Math.min(0.35, 0.05+n*0.015);
+    const elite = Math.random() < Math.min(0.45, 0.08+n*0.02);
     sched.push({ t, kind:k, count:Math.round(baseCount*WORM_TYPES[k].segMult), elite });
-    t += rand(17,26) * Math.pow(0.97, n);
+    t += rand(12,19) * Math.pow(0.965, n);
   }
   run.schedule=sched;
   // total scheduled hp (weighted, incl. boss)
@@ -635,14 +698,14 @@ function startStage(n){
   run.totalHp = tot;
   setState('INTRO');
   $('introTitle').textContent = stageName(n);
-  $('introSub').textContent = n===1 ? 'Tap a segment to focus fire. Crack the sealed capsules.' :
-    'The worms grow '+(n%2?'longer':'faster')+'. New anatomy detected.';
+  $('introSub').textContent = n===1 ? 'Drag to aim — your weapons fire straight up. Crack the sealed capsules.' :
+    'The worms grow '+(n%2?'longer':'faster')+', and the route bends differently. New anatomy detected.';
   setTimeout(()=>{ if(state==='INTRO') setState('COMBAT'); }, 2200);
   updateHud();
 }
 function estWormHp(kind,stage,count,elite){
   const wt=WORM_TYPES[kind];
-  return 22*Math.pow(1.18,stage-1)*wt.hpMult*(elite?1.6:1)*count*1.3;
+  return 22*Math.pow(HP_EXP,stage-1)*wt.hpMult*(elite?1.6:1)*count*1.3;
 }
 
 /* ---------------- worm spawning ---------------- */
@@ -650,7 +713,7 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
   const n = run.stage;
   const wt = WORM_TYPES[kind]||WORM_TYPES.basic;
   const spacing = clamp(W*0.075, 24, 44);
-  const speedF = 0.032 * Math.min(1.5, 1+0.025*n) * wt.speed * (elite?1.08:1);
+  const speedF = 0.037 * Math.min(1.9, 1+0.033*n) * wt.speed * (elite?1.1:1);
   const w = {
     kind, elite, isBoss, bossKind,
     segs: buildWormSegments(kind, n, count, {hpMult: elite?1.6:1}),
@@ -670,7 +733,7 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
   return w;
 }
 function buildBossSegments(bossKind, n){
-  const baseHp = 22*Math.pow(1.18,n-1)*2.0;
+  const baseHp = 22*Math.pow(HP_EXP,n-1)*2.0;
   const segs=[ mkSeg('head', baseHp*1.2) ];
   const body = 22 + Math.min(10,n);
   const capSlots=[4, Math.floor(body/2), body-4];
@@ -693,9 +756,9 @@ function buildBossSegments(bossKind, n){
 function spawnMite(fromDist){
   const w = {
     kind:'mite', elite:false, isBoss:false,
-    segs:[mkSeg('mite', 22*Math.pow(1.18,run.stage-1))],
+    segs:[mkSeg('mite', 22*Math.pow(HP_EXP,run.stage-1))],
     headDist: fromDist, spacing: 18,
-    baseSpeed: H*0.052, speedMult:1, stunT:0, phased:false, phaseT:0, phaseCycle:99,
+    baseSpeed: H*0.058, speedMult:1, stunT:0, phased:false, phaseT:0, phaseCycle:99,
     dead:false, waveHits:{}, splitDone:true, radius: 9, name:'Broodling', bossPhase:1, shieldT:0, detached:false,
   };
   run.worms.push(w);
@@ -711,6 +774,15 @@ function segDist(w, seg){
 function segPos(w, seg){
   const d = segDist(w,seg);
   return pathPoint(d);
+}
+/* Only segments actually visible on screen can be targeted or damaged — fixes
+   sniping segments that are still travelling above the top of the viewport. */
+function segVisiblePos(w, seg){
+  const d = segDist(w, seg);
+  if(d<=0) return null;
+  const p = pathPoint(d);
+  if(p[1] < -16 || p[1] > H+16 || p[0] < -40 || p[0] > W+40) return null;
+  return p;
 }
 function neighbours(w, seg){
   const alive=aliveSegs(w); const k=alive.indexOf(seg); const out=[];
@@ -731,9 +803,9 @@ function hitSegment(w, seg, raw, opts={}){
     const alive=aliveSegs(w);
     if(alive.indexOf(seg)<5 && seg.type!=='head') dmg*=0.4;
   }
-  // focus ramp
-  if(run.focus && run.focus.seg===seg && run.stats.focusRamp>0){
-    dmg *= 1+Math.min(run.stats.focusRamp, 0.02*run.focusTime*15);
+  // predatory focus: reward holding the turret still
+  if(run.stats.focusRamp>0){
+    dmg *= 1+Math.min(run.stats.focusRamp, 0.3*(run.turretStillT||0));
   }
   // crit
   let crit = false;
@@ -783,7 +855,7 @@ function destroySegment(w, seg){
   const p = segPos(w,seg);
   run.destroyedHp += seg.maxHp + (seg.maxArmour||0);
   run.rs.segs++;
-  burst(p, seg.type==='capsule'?POOL_COLORS[seg.pool||'power']:'#ff8a9a', 16);
+  burst(p, seg.type==='capsule'?POOL_COLORS[seg.pool||'power']:'#ff6f8a', 16);
   SFX.segDie();
   // energy
   const e = SEG_TYPES[seg.type].energy * (1+run.stage*0.15) * (w.elite?1.5:1);
@@ -802,7 +874,7 @@ function destroySegment(w, seg){
   if(seg.type==='capsule'){
     run.rs.capsules++;
     if(seg.pool==='trap'){
-      toast('TRAP CAPSULE!', '#ff3355');
+      toast('TRAP CAPSULE!', '#ff2f5e');
       for(let i=0;i<3;i++) spawnMite(segDist(w,seg)-i*14);
     } else {
       const pool = seg.pool||'power';
@@ -812,7 +884,6 @@ function destroySegment(w, seg){
       (pool==='evolution'?SFX.rare:SFX.reveal)();
     }
   }
-  if(run.focus && run.focus.seg===seg) clearFocus();
   // head destroyed -> whole worm collapses (partial energy for the rest)
   if(seg.type==='head'){ killWorm(w, true); return; }
   // split worm check
@@ -835,9 +906,8 @@ function killWorm(w, headKill){
     s.alive=false;
     run.destroyedHp += s.maxHp+(s.maxArmour||0);
     if(headKill){ gainEnergy(SEG_TYPES[s.type].energy*0.4); }
-    burst(segPos(w,s), '#ffb0c0', 8);
+    burst(segPos(w,s), '#ff8fb0', 8);
   });
-  if(run.focus && run.focus.worm===w) clearFocus();
   if(w.isBoss){ onBossDead(); }
 }
 function splitWorm(w){
@@ -854,7 +924,7 @@ function splitWorm(w){
   };
   if(rear[0]) rear[0].type='head';
   run.worms.push(nw);
-  toast('THE WORM SPLITS!', '#ffd257');
+  toast('THE WORM SPLITS!', '#ffb23d');
 }
 function gainEnergy(e){
   run.energy += e;
@@ -875,7 +945,7 @@ function maybeSpawnBoss(){
     setState('BOSSINTRO');
     const bossKind = (run.stage%2===0)?1:0;
     $('introTitle').textContent = bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH';
-    $('introTitle').style.color='#ff9db0';
+    $('introTitle').style.color='#ff6fa8';
     $('introSub').textContent = bossKind===0 ? 'Its crown shields the vanguard. Break the sealed organs — or take the head.' :
       'A vault of armoured plate. Every broken segment births hungry spawn.';
     setTimeout(()=>{
@@ -898,11 +968,11 @@ function updateBoss(w, dt){
     // Crowned Devourer phases
     if(w.bossPhase===1){
       w.shieldT = (Math.sin(run.schedT*0.7)>0)?1:0;   // periodic vanguard shield
-      if(frac<=0.6){ w.bossPhase=2; w.baseSpeed*=1.2; toast('PHASE 2 — IT ACCELERATES','#ff9db0'); SFX.phase();
+      if(frac<=0.6){ w.bossPhase=2; w.baseSpeed*=1.2; toast('PHASE 2 — IT ACCELERATES','#ff6fa8'); SFX.phase();
         let conv=0; w.segs.forEach(s=>{ if(conv<2 && s.alive && s.type==='standard'){ s.type='regen'; conv++; } }); }
     } else if(w.bossPhase===2){
       w.shieldT=0;
-      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES!','#ff5f6e'); SFX.phase();
+      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES!','#ff2f5e'); SFX.phase();
         // release body as mites, keep head as a fast solo worm
         const alive=aliveSegs(w);
         alive.slice(1).forEach((s,i)=>{ if(i%3===0) spawnMite(segDist(w,s)); s.alive=false; run.destroyedHp+=s.maxHp+(s.maxArmour||0); });
@@ -912,7 +982,7 @@ function updateBoss(w, dt){
   } else {
     // Vault Matriarch: broods on every segment death (handled via kind flag) — emulate here
     if(!w._broodHook){ w._broodHook=true; }
-    if(frac<=0.5 && w.bossPhase===1){ w.bossPhase=2; w.baseSpeed*=1.15; toast('THE VAULT CRACKS','#ffd257'); SFX.phase(); }
+    if(frac<=0.5 && w.bossPhase===1){ w.bossPhase=2; w.baseSpeed*=1.15; toast('THE VAULT CRACKS','#ffb23d'); SFX.phase(); }
   }
   const hb=$('bossHpBar'); if(hb) hb.style.width=(frac*100).toFixed(1)+'%';
 }
@@ -924,6 +994,9 @@ function onBossDead(){
 }
 
 /* ---------------- drafts ---------------- */
+/* Mutations picked here persist for the rest of THIS run (weapons, cardLevels,
+   stats) — they are only cleared when a new run begins via newRun(). Stage
+   transitions (startStage) intentionally never touch run.stats/weapons/cardLevels. */
 function queueDraft(pool){
   run.draftsQueued.push({pool});
   if(state==='COMBAT') openDraft();
@@ -990,7 +1063,7 @@ function renderDraft(){
     const rar = RARITIES.find(r=>r.key===c.rarity);
     const col = CAT_COLORS[c.cat];
     const el=document.createElement('div');
-    el.className='card';
+    el.className='card chamfer';
     el.style.borderColor = rar.color;
     el.innerHTML = '<div class="cicon" style="color:'+col+'">'+(CAT_ICONS[c.cat]||'?')+'</div>'
       +'<div class="cname" style="color:'+col+'">'+c.name+'</div>'
@@ -1020,82 +1093,46 @@ $('rerollBtn').onclick=()=>{
   renderDraft();
 };
 
-/* ---------------- targeting & input ---------------- */
-function clearFocus(){ run.focus=null; run.focusTime=0; }
-function autoTarget(){
-  // closest to the core = largest path distance
-  let best=null, bd=-1e9;
-  run.worms.forEach(w=>{
-    if(w.dead||w.phased) return;
-    const alive=aliveSegs(w);
-    for(let k=0;k<alive.length;k++){
-      const d=w.headDist-w.spacing*k;
-      if(d>0 && d>bd){ bd=d; best={worm:w, seg:alive[k]}; }
-    }
-  });
-  return best;
-}
-function currentTarget(){
-  if(run.focus){
-    const f=run.focus;
-    if(!f.worm.dead && f.seg.alive && !f.worm.phased && segDist(f.worm,f.seg)>0) return f;
-    clearFocus();
-  }
-  return autoTarget();
-}
-function segAtPoint(x,y){
-  let best=null, bd=1e9;
-  run.worms.forEach(w=>{
-    if(w.dead) return;
-    aliveSegs(w).forEach(s=>{
-      const d=segDist(w,s); if(d<=0) return;
-      const p=pathPoint(d);
-      const dd=dist2(x,y,p[0],p[1]);
-      const rr=(w.radius*1.9)*(w.radius*1.9);
-      if(dd<rr && dd<bd){ bd=dd; best={worm:w, seg:s}; }
-    });
-  });
-  return best;
-}
+/* ---------------- turret control ---------------- */
+/* No more tap-to-focus / auto-aim: the player drags (or uses ←/→) to slide
+   the turret left-right along the rail; every weapon fires straight up from
+   wherever the turret currently is. Positioning IS the aiming. */
+function turretPos(){ return [run.turretX, H*0.80]; }
+function corePos(){ return [W*0.5, H*0.90]; }
 
-let pressT=null, pressPos=null, holdShown=false;
+let dragging=false;
+const keys = { left:false, right:false };
+function setTurretFromClientX(cx){
+  if(!run) return;
+  run.turretX = clamp(cx, turretMin(), turretMax());
+}
 cv.addEventListener('pointerdown', e=>{
   audioInit();
   if(state!=='COMBAT') return;
-  pressPos=[e.clientX,e.clientY]; holdShown=false;
-  pressT=setTimeout(()=>{ // press & hold: inspect
-    const hit=segAtPoint(pressPos[0],pressPos[1]);
-    if(hit){ showSegInfo(hit, pressPos); holdShown=true; }
-  },380);
+  dragging=true;
+  setTurretFromClientX(e.clientX);
 });
-cv.addEventListener('pointerup', e=>{
-  if(pressT){ clearTimeout(pressT); pressT=null; }
-  hideSegInfo();
-  if(holdShown || state!=='COMBAT') return;
-  const hit=segAtPoint(e.clientX,e.clientY);
-  if(hit){ run.focus=hit; run.focusTime=0; beep(600,0.06,'sine',0.08,200); }
-  else clearFocus();
+cv.addEventListener('pointermove', e=>{
+  if(!dragging || state!=='COMBAT') return;
+  setTurretFromClientX(e.clientX);
 });
-cv.addEventListener('pointercancel', ()=>{ if(pressT){clearTimeout(pressT);pressT=null;} hideSegInfo(); });
-
-function showSegInfo(hit, pos){
-  const {worm,seg}=hit;
-  const el=$('segInfo');
-  const st=SEG_TYPES[seg.type];
-  let html='<b>'+st.label+'</b><br/>HP: '+fmt(Math.max(0,seg.hp))+' / '+fmt(seg.maxHp);
-  if(seg.maxArmour>0) html+='<br/>Armour: '+fmt(Math.max(0,seg.armourHp))+' / '+fmt(seg.maxArmour);
-  if(seg.type==='capsule') html+='<br/>Contents: '+(seg.revealed?('<b style="color:'+POOL_COLORS[seg.pool]+'">'+(seg.pool==='trap'?'TRAP':seg.pool.toUpperCase())+'</b>'):'sealed (crack to 50%)');
-  if(seg.type==='support') html+='<br/>Shields neighbours (−35% dmg)';
-  if(seg.type==='regen') html+='<br/>Heals neighbouring segments';
-  if(seg.type==='speedorg') html+='<br/>Worm speed +15% while alive';
-  if(seg.type==='weak') html+='<br/>Takes bonus critical damage';
-  if(neighbours(worm,seg).some(s=>s.type==='support')) html+='<br/><i>Protected by a support organ</i>';
-  el.innerHTML=html;
-  el.style.display='block';
-  const x=clamp(pos[0]-90, 8, W-208), y=clamp(pos[1]-110, 60, H-200);
-  el.style.left=x+'px'; el.style.top=y+'px';
+window.addEventListener('pointerup', ()=>{ dragging=false; });
+window.addEventListener('pointercancel', ()=>{ dragging=false; });
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=true;
+});
+window.addEventListener('keyup', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=false;
+});
+function updateTurret(dt){
+  const spd = W*0.95;
+  let moved=dragging;
+  if(keys.left){ run.turretX = clamp(run.turretX-spd*dt, turretMin(), turretMax()); moved=true; }
+  if(keys.right){ run.turretX = clamp(run.turretX+spd*dt, turretMin(), turretMax()); moved=true; }
+  run.turretStillT = moved ? 0 : (run.turretStillT||0)+dt;
 }
-function hideSegInfo(){ $('segInfo').style.display='none'; }
 
 /* ---------------- ability ---------------- */
 const ABILITY_CD = 28, FREEZE_DUR = 3;
@@ -1112,6 +1149,7 @@ $('abilityBtn').onclick=()=>{
 /* ---------------- combat update ---------------- */
 function updateCombat(dt){
   run.schedT += dt;
+  updateTurret(dt);
   // no dead air: if the field is clear, pull the next scheduled worm forward
   if(run.schedule.length && run.worms.every(w=>w.dead) && run.schedule[0].t > run.schedT+1.5){
     run.schedule[0].t = run.schedT+1.5;
@@ -1125,7 +1163,6 @@ function updateCombat(dt){
   // ability + freeze
   if(run.abilityT>0) run.abilityT=Math.max(0,run.abilityT-dt);
   if(run.freezeT>0) run.freezeT=Math.max(0,run.freezeT-dt);
-  if(run.focus) run.focusTime+=dt;
   // core regen
   if(run.stats.coreRegen>0) run.coreHp=Math.min(run.coreMax, run.coreHp+run.stats.coreRegen*dt);
 
@@ -1184,79 +1221,71 @@ function updateWorm(w, dt){
 function coreImpact(w){
   const alive=aliveSegs(w);
   const isMite = w.kind==='mite';
-  let dmg = isMite ? 3 : 20 + 2*(alive.length-1) + (w.elite?10:0) + (w.isBoss?40:0);
-  if(run.stats.barrier>0){ run.stats.barrier--; dmg=0; toast('BARRIER ABSORBED THE IMPACT','#5fff9d'); }
+  let dmg = isMite ? 4 : 24 + 2.6*(alive.length-1) + (w.elite?12:0) + (w.isBoss?46:0);
+  if(run.stats.barrier>0){ run.stats.barrier--; dmg=0; toast('BARRIER ABSORBED THE IMPACT','#3dffb0'); }
   run.coreHp -= dmg;
   run.shake = 1;
   SFX.coreHit();
-  if(dmg>0) addDnum([W/2,H*0.8], dmg, '#ff5f6e', true);
+  if(dmg>0) addDnum(corePos(), dmg, '#ff3d6e', true);
   // count remaining hp as "destroyed" for progress so progress can't stall
   alive.forEach(s=>{ run.destroyedHp += s.hp+(s.armourHp||0); s.alive=false; });
   w.dead=true;
-  if(run.focus&&run.focus.worm===w) clearFocus();
   if(w.isBoss){ /* boss reaching the core doesn't end stage; player must survive */ $('bossbar').style.display='none'; run.destroyedHp=run.totalHp; if(run.coreHp>0) setTimeout(()=>{if(run&&state==='COMBAT')showResults(true);},600); }
 }
 
 /* ---------------- weapon behaviours ---------------- */
 function updateWeapon(w, dt){
-  const def=WEAPON_DEFS[w.key];
-  // drones live update
   if(w.key==='drones'){
     const n = run.stats.droneCount * (w.evolved?2:1);
     while(w.drones.length<n) w.drones.push({a:rand(0,6.28), cd:rand(0,1)});
     w.drones.length=n;
-    w.drones.forEach((d,i)=>{
+    w.drones.forEach(d=>{
       d.a += dt*1.4;
       d.cd -= dt;
       if(d.cd<=0){
-        const tgt=currentTarget()||autoTarget();
-        if(tgt){
-          d.cd = weaponInterval(w);
-          const [cx,cy]=dronePos(d);
-          fireProjectile(w, cx, cy, tgt, { dmgMult:1, pierce:w.evolved?1:0, small:true });
-        } else d.cd=0.3;
+        d.cd = weaponInterval(w);
+        const [dx,dy]=dronePos(d);
+        fireStraight(w, dx, dy, { pierce:w.evolved?1:0, small:true });
       }
     });
     return;
   }
   w.cd -= dt;
   if(w.cd>0) return;
-  const tgt = currentTarget();
-  if(!tgt){ w.cd=0.15; return; }
   w.cd = weaponInterval(w);
   w.shots++;
-  const [cx,cy]=corePos();
+  const [tx,ty] = turretPos();
   switch(w.key){
     case 'needle': {
       let n = run.stats.needleCount + (w.evolved?2:0);
       for(let i=0;i<n;i++){
-        fireProjectile(w, cx+rand(-8,8), cy, tgt, { pierce:run.stats.pierce, critBonus:0, critMultBonus:run.stats.needleCritBonus, spread:i-(n-1)/2 });
+        const off = (i-(n-1)/2) * 13;
+        fireStraight(w, tx+off, ty, { pierce:run.stats.pierce, critMultBonus:run.stats.needleCritBonus });
       }
       if((run.stats.needleStorm||w.evolved) && w.shots%8===0){
-        // volley at every visible capsule
+        // smart munitions: straight-up shots launched under every visible capsule
         run.worms.forEach(ww=>{ if(ww.dead)return; aliveSegs(ww).forEach(s=>{
-          if(s.type==='capsule' && segDist(ww,s)>0) fireProjectile(w, cx, cy, {worm:ww,seg:s}, {pierce:0});
+          if(s.type!=='capsule') return;
+          const p=segVisiblePos(ww,s); if(!p) return;
+          fireStraight(w, p[0], ty, { pierce:0 });
         });});
       }
       SFX.shot();
       break;
     }
     case 'orb': {
-      const p=segPos(tgt.worm,tgt.seg);
-      run.projectiles.push({ kind:'orb', x:cx, y:cy, tx:p[0], ty:p[1], sp:H*0.5, w, alive:true,
-        radius: W*0.14*run.stats.orbRadius*(w.evolved?1.4:1), evolved:w.evolved });
+      run.projectiles.push({ kind:'orb', x:tx, y:ty, vy:-H*0.62, w, alive:true,
+        radius: W*0.14*run.stats.orbRadius*(w.evolved?1.4:1), evolved:w.evolved, apexY: ty-H*0.58 });
       SFX.shot();
       break;
     }
     case 'arc': {
       const chains = 3 + run.stats.arcChains + (w.evolved?3:0);
-      fireArc(w, tgt, chains);
+      fireArc(w, tx, ty, chains);
       break;
     }
     case 'cloud': {
-      const p=segPos(tgt.worm,tgt.seg);
-      run.clouds.push({ x:p[0], y:p[1], r: W*0.13*run.stats.cloudRadius*(w.evolved?1.3:1),
-        t: 3.2*run.stats.cloudDur, tick:0, w, evolved:w.evolved });
+      run.projectiles.push({ kind:'cloudlob', x:tx, y:ty, vy:-H*0.5, w, alive:true, apexY: ty-H*0.52 });
       SFX.shot();
       break;
     }
@@ -1267,43 +1296,65 @@ function updateWeapon(w, dt){
     }
   }
 }
-function corePos(){ return [W*0.5, H*0.84]; }
 function dronePos(d){
-  const [cx,cy]=corePos();
-  return [cx+Math.cos(d.a)*W*0.16, cy-28+Math.sin(d.a)*22];
+  const [cx,cy]=turretPos();
+  return [cx+Math.cos(d.a)*W*0.14, cy-24+Math.sin(d.a)*18];
 }
-function fireProjectile(w, x, y, tgt, opts={}){
+function fireStraight(w, x, y, opts={}){
   run.projectiles.push({
     kind:'needle', x, y, w, alive:true,
-    tgt, sp: H*(opts.small?0.9:1.1), pierce: opts.pierce||0, hitList:[],
+    pierce: opts.pierce||0, hitList:[],
     critBonus: opts.critBonus||0, critMultBonus: opts.critMultBonus||0,
-    vx:0, vy:-H*1.1, small:!!opts.small, spread:opts.spread||0,
+    vy: -H*(opts.small?1.0:1.25), small:!!opts.small,
   });
 }
-function fireArc(w, tgt, chains){
+function fireArc(w, tx, ty, chains){
+  const LANE = clamp(W*0.10, 30, 70);
+  let start=null, bd=1e9;
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q)return;
+    if(Math.abs(q[0]-tx)>LANE) return;
+    const dd=Math.abs(q[1]-ty);
+    if(dd<bd){ bd=dd; start={worm:ww,seg:s}; }
+  });});
+  if(!start){
+    run.arcs.push({pts:[[tx,ty],[tx,ty-60]], t:0.15, evolved:w.evolved});
+    return;
+  }
   const dmgBase = weaponDamage(w);
-  let cur = tgt, hops=[[corePos()[0],corePos()[1]]];
+  let cur = start, hops=[[tx,ty]];
   const hit = new Set();
   let dmg = dmgBase;
   for(let i=0;i<chains && cur;i++){
-    const p=segPos(cur.worm,cur.seg);
+    const p=segVisiblePos(cur.worm,cur.seg); if(!p) break;
     hops.push(p);
     hitSegment(cur.worm, cur.seg, dmg, {arcCrit:true});
     run.rs.weapons.arc=(run.rs.weapons.arc||0)+dmg;
-    if(w.evolved && run.stats.arcStun>=0) cur.worm.stunT=Math.max(cur.worm.stunT,0.25);
+    if(w.evolved) cur.worm.stunT=Math.max(cur.worm.stunT,0.25);
     hit.add(cur.seg);
     dmg*=0.8;
-    // next: nearest alive segment not hit (same or other worm)
-    let best=null,bd=1e9;
+    // next: nearest alive on-screen segment not hit (same or other worm)
+    let best=null,bdd=1e9;
     run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
-      if(hit.has(s)||segDist(ww,s)<=0) return;
-      const q=segPos(ww,s); const dd=dist2(p[0],p[1],q[0],q[1]);
-      if(dd<bd && dd < (W*0.3)*(W*0.3)){ bd=dd; best={worm:ww,seg:s}; }
+      if(hit.has(s)) return;
+      const q=segVisiblePos(ww,s); if(!q) return;
+      const dd=dist2(p[0],p[1],q[0],q[1]);
+      if(dd<bdd && dd < (W*0.3)*(W*0.3)){ bdd=dd; best={worm:ww,seg:s}; }
     });});
     cur=best;
   }
   run.arcs.push({pts:hops, t:0.18, evolved:w.evolved});
   beep(rand(700,900),0.08,'sawtooth',0.06,-400);
+}
+function collideAt(x,y,r){
+  for(const ww of run.worms){
+    if(ww.dead||ww.phased) continue;
+    for(const s of aliveSegs(ww)){
+      const q=segVisiblePos(ww,s); if(!q) continue;
+      if(dist2(x,y,q[0],q[1]) < (ww.radius+r)*(ww.radius+r)) return true;
+    }
+  }
+  return false;
 }
 function updateProjectiles(dt){
   const list=run.projectiles;
@@ -1311,37 +1362,27 @@ function updateProjectiles(dt){
     const p=list[i];
     if(!p.alive){ list.splice(i,1); continue; }
     if(p.kind==='orb'){
-      const dx=p.tx-p.x, dy=p.ty-p.y, L=Math.hypot(dx,dy);
-      if(L < p.sp*dt*1.2){
-        // explode
-        explodeOrb(p);
-        list.splice(i,1); continue;
-      }
-      p.x+=dx/L*p.sp*dt; p.y+=dy/L*p.sp*dt;
+      p.y += p.vy*dt;
+      if(collideAt(p.x,p.y,14) || p.y<=p.apexY){ explodeOrb(p); list.splice(i,1); continue; }
+      if(p.y<-40){ list.splice(i,1); }
       continue;
     }
-    // needle: home to target
-    let t=p.tgt;
-    if(!t || t.worm.dead || !t.seg.alive || t.worm.phased || segDist(t.worm,t.seg)<=0){
-      t = currentTarget(); p.tgt=t;
+    if(p.kind==='cloudlob'){
+      p.y += p.vy*dt;
+      if(p.y<=p.apexY){ deployCloud(p); list.splice(i,1); continue; }
+      continue;
     }
-    if(t){
-      const q=segPos(t.worm,t.seg);
-      const dx=q[0]-p.x+p.spread*14, dy=q[1]-p.y, L=Math.hypot(dx,dy)||1;
-      p.vx = dx/L*p.sp; p.vy = dy/L*p.sp;
-    }
-    p.x+=p.vx*dt; p.y+=p.vy*dt;
-    // collide with any segment
+    // needle-type: straight vertical shot, fixed x
+    p.y += p.vy*dt;
     let consumed=false;
     for(const ww of run.worms){
       if(ww.dead||ww.phased) continue;
       for(const s of aliveSegs(ww)){
         if(p.hitList.includes(s)) continue;
-        const d=segDist(ww,s); if(d<=0) continue;
-        const q=pathPoint(d);
+        const q=segVisiblePos(ww,s); if(!q) continue;
         if(dist2(p.x,p.y,q[0],q[1]) < ww.radius*ww.radius){
           p.hitList.push(s);
-          const dmg = weaponDamage(p.w)*(p.small?1:1);
+          const dmg = weaponDamage(p.w);
           hitSegment(ww,s,dmg,{critBonus:p.critBonus, critMultBonus:p.critMultBonus});
           p.w.dmgDealt+=dmg; run.rs.weapons[p.w.key]=(run.rs.weapons[p.w.key]||0)+dmg;
           if(p.pierce>0){ p.pierce--; }
@@ -1351,7 +1392,7 @@ function updateProjectiles(dt){
       }
       if(consumed) break;
     }
-    if(consumed || p.y<-40 || p.y>H+40 || p.x<-40 || p.x>W+40){ list.splice(i,1); }
+    if(consumed || p.y<-40){ list.splice(i,1); }
   }
 }
 function explodeOrb(p){
@@ -1359,8 +1400,7 @@ function explodeOrb(p){
   beep(160,0.2,'square',0.15,-60);
   const r2=p.radius*p.radius;
   run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
-    const d=segDist(ww,s); if(d<=0)return;
-    const q=pathPoint(d);
+    const q=segVisiblePos(ww,s); if(!q)return;
     if(dist2(p.x,p.y,q[0],q[1])<r2){
       const dmg=weaponDamage(p.w);
       hitSegment(ww,s,dmg,{});
@@ -1371,6 +1411,11 @@ function explodeOrb(p){
     run.clouds.push({ x:p.x, y:p.y, r:p.radius*0.7, t:2.0, tick:0, w:{key:'orb',level:1,evolved:false}, evolved:false, fromOrb:true });
   }
 }
+function deployCloud(p){
+  run.clouds.push({ x:p.x, y:p.y, r: W*0.13*run.stats.cloudRadius*(p.w.evolved?1.3:1),
+    t: 3.2*run.stats.cloudDur, tick:0, w:p.w, evolved:p.w.evolved });
+  burst([p.x,p.y], WEAPON_DEFS.cloud.color, 10);
+}
 function updateClouds(dt){
   for(let i=run.clouds.length-1;i>=0;i--){
     const c=run.clouds[i];
@@ -1379,8 +1424,7 @@ function updateClouds(dt){
       c.tick=0.4;
       const r2=c.r*c.r;
       run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
-        const d=segDist(ww,s); if(d<=0)return;
-        const q=pathPoint(d);
+        const q=segVisiblePos(ww,s); if(!q)return;
         if(dist2(c.x,c.y,q[0],q[1])<r2){
           const base = c.fromOrb ? run.stats.baseDamage*0.35*run.stats.dmgMult : weaponDamage(c.w)*0.5;
           hitSegment(ww,s,base,{armourMult:1+run.stats.cloudArmour});
@@ -1401,11 +1445,9 @@ function updateWaves(dt){
     run.worms.forEach(ww=>{
       if(ww.dead||ww.phased)return;
       aliveSegs(ww).forEach(s=>{
-        const key=wv.id+'_'; // per-wave per-segment
         if(!s._waveIds) s._waveIds={};
         if(s._waveIds[wv.id]) return;
-        const d=segDist(ww,s); if(d<=0)return;
-        const q=pathPoint(d);
+        const q=segVisiblePos(ww,s); if(!q)return;
         const dd=Math.hypot(q[0]-cx,q[1]-cy);
         if(Math.abs(dd-wv.r)<band && (wv.evolved || Math.abs(q[0]-cx)<W*0.4)){
           s._waveIds[wv.id]=1;
@@ -1458,36 +1500,53 @@ function toast(msg,color){
 }
 
 /* ---------------- rendering ---------------- */
-let bgMotes=null;
-function drawBg(){
-  ctx.fillStyle='#060a14';
-  ctx.fillRect(0,0,W,H);
-  const g=ctx.createRadialGradient(W/2,H*0.4,50, W/2,H*0.4,H*0.8);
-  g.addColorStop(0,'rgba(24,42,66,0.55)');
-  g.addColorStop(1,'rgba(6,10,20,0)');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-  if(!bgMotes||bgMotes.length!==26){
-    bgMotes=[]; for(let i=0;i<26;i++) bgMotes.push({x:Math.random(),y:Math.random(),r:rand(1,3.5),s:rand(3,10)});
+let bgMotes=null, grainPattern=null;
+function makeGrain(){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const g=c.getContext('2d');
+  const id=g.createImageData(64,64);
+  for(let i=0;i<id.data.length;i+=4){
+    const v = Math.random()*255;
+    id.data[i]=v; id.data[i+1]=v; id.data[i+2]=v; id.data[i+3]=Math.random()*14;
   }
-  ctx.fillStyle='rgba(120,180,220,0.10)';
+  g.putImageData(id,0,0);
+  return ctx.createPattern(c,'repeat');
+}
+function drawBg(){
+  ctx.fillStyle='#050308';
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W/2,H*0.32,40, W/2,H*0.5,H*0.95);
+  g.addColorStop(0,'rgba(48,16,58,0.55)');
+  g.addColorStop(0.55,'rgba(18,6,26,0.35)');
+  g.addColorStop(1,'rgba(3,2,6,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(!bgMotes||bgMotes.length!==30){
+    bgMotes=[]; for(let i=0;i<30;i++) bgMotes.push({x:Math.random(),y:Math.random(),r:rand(1,3.2),s:rand(3,11),h:Math.random()<0.5});
+  }
   const t=performance.now()/1000;
   bgMotes.forEach(m=>{
     const y=((m.y*H + t*m.s)%(H+20))-10;
+    ctx.fillStyle = m.h?'rgba(255,80,150,0.09)':'rgba(90,220,190,0.08)';
     ctx.beginPath(); ctx.arc(m.x*W, y, m.r, 0, 6.28); ctx.fill();
   });
+  if(!grainPattern) grainPattern=makeGrain();
+  ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=grainPattern; ctx.fillRect(0,0,W,H); ctx.restore();
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.3, W/2,H/2,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
 function drawPathLine(){
   const pts=run.path.pts;
   ctx.save();
-  ctx.strokeStyle='rgba(90,140,200,0.12)';
+  ctx.strokeStyle='rgba(120,40,90,0.18)';
   ctx.lineWidth=clamp(W*0.09,26,52);
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
   ctx.moveTo(pts[0][0],pts[0][1]);
   for(let i=1;i<pts.length;i+=4) ctx.lineTo(pts[i][0],pts[i][1]);
   ctx.stroke();
-  ctx.strokeStyle='rgba(120,180,255,0.09)';
-  ctx.lineWidth=2; ctx.setLineDash([4,10]);
+  ctx.strokeStyle='rgba(200,80,150,0.16)';
+  ctx.lineWidth=2; ctx.setLineDash([3,11]);
   ctx.beginPath();
   ctx.moveTo(pts[0][0],pts[0][1]);
   for(let i=1;i<pts.length;i+=4) ctx.lineTo(pts[i][0],pts[i][1]);
@@ -1497,38 +1556,95 @@ function drawPathLine(){
 function drawCore(){
   const [cx,cy]=corePos();
   const t=performance.now()/1000;
-  const r=clamp(W*0.085,26,44)*(1+Math.sin(t*2.2)*0.04);
-  const g=ctx.createRadialGradient(cx,cy,4,cx,cy,r*1.7);
-  g.addColorStop(0,'rgba(120,255,190,0.9)');
-  g.addColorStop(0.5,'rgba(40,180,130,0.5)');
-  g.addColorStop(1,'rgba(20,80,70,0)');
-  ctx.fillStyle=g;
-  ctx.beginPath(); ctx.arc(cx,cy,r*1.7,0,6.28); ctx.fill();
-  ctx.fillStyle='#0f4438';
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,6.28); ctx.fill();
-  ctx.strokeStyle='rgba(140,255,200,0.8)'; ctx.lineWidth=2.5;
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,6.28); ctx.stroke();
-  // nucleus
-  ctx.fillStyle='rgba(180,255,220,0.9)';
-  ctx.beginPath(); ctx.arc(cx,cy,r*0.35,0,6.28); ctx.fill();
+  const r=clamp(W*0.078,24,40)*(1+Math.sin(t*2.1)*0.035);
+  const g=ctx.createRadialGradient(cx,cy,4,cx,cy,r*1.8);
+  g.addColorStop(0,'rgba(61,255,176,0.85)');
+  g.addColorStop(0.5,'rgba(30,140,110,0.4)');
+  g.addColorStop(1,'rgba(10,40,35,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r*1.8,0,6.28); ctx.fill();
+  // spiked iris ring — the fixed "breach" the worm is crawling toward
+  ctx.fillStyle='#0a1f1a';
+  ctx.beginPath();
+  const spikes=10;
+  for(let i=0;i<spikes*2;i++){
+    const a=(i/(spikes*2))*6.28;
+    const rr = i%2===0? r : r*0.74;
+    const px=cx+Math.cos(a)*rr, py=cy+Math.sin(a)*rr;
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(157,255,224,0.85)'; ctx.lineWidth=2;
+  ctx.stroke();
+  ctx.fillStyle='rgba(200,255,230,0.92)';
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.32,0,6.28); ctx.fill();
   if(run.freezeT>0){
     ctx.strokeStyle='rgba(110,231,255,0.9)'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.arc(cx,cy,r*1.25,0,6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,r*1.3,0,6.28); ctx.stroke();
   }
-  // drones
+}
+function drawDrones(){
   run.weapons.filter(w=>w.key==='drones').forEach(w=>{
     w.drones.forEach(d=>{
       const [dx,dy]=dronePos(d);
       ctx.fillStyle=WEAPON_DEFS.drones.color;
       ctx.beginPath(); ctx.arc(dx,dy,5,0,6.28); ctx.fill();
-      ctx.strokeStyle='rgba(255,214,132,0.4)';
+      ctx.strokeStyle='rgba(255,178,61,0.4)';
       ctx.beginPath(); ctx.arc(dx,dy,8,0,6.28); ctx.stroke();
     });
   });
 }
+function drawTurret(){
+  const [x,y]=turretPos();
+  const t=performance.now()/1000;
+  ctx.save();
+  ctx.strokeStyle='rgba(61,255,176,0.14)';
+  ctx.lineWidth=2; ctx.setLineDash([2,10]);
+  ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x,6); ctx.stroke();
+  ctx.setLineDash([]);
+  const bob=Math.sin(t*2.4)*3;
+  ctx.translate(x,y+bob);
+  const glow=ctx.createRadialGradient(0,0,2,0,0,26);
+  glow.addColorStop(0,'rgba(61,255,176,0.55)');
+  glow.addColorStop(1,'rgba(61,255,176,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,26,0,6.28); ctx.fill();
+  ctx.fillStyle='#0f2620';
+  ctx.beginPath();
+  ctx.moveTo(0,-16); ctx.lineTo(11,8); ctx.lineTo(0,3); ctx.lineTo(-11,8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#3dffb0'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#9dffe0';
+  ctx.beginPath(); ctx.arc(0,-9,3.4,0,6.28); ctx.fill();
+  ctx.restore();
+  drawTurretLock(x,y);
+}
+function drawTurretLock(tx,ty){
+  const LANE = clamp(W*0.10,30,70);
+  let found=null,bd=1e9;
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q) return;
+    if(Math.abs(q[0]-tx)>LANE) return;
+    const dd=Math.abs(q[1]-ty);
+    if(dd<bd){ bd=dd; found={seg:s,pos:q}; }
+  });});
+  if(!found) return;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,60,120,0.55)';
+  ctx.lineWidth=1.5; ctx.setLineDash([3,5]);
+  ctx.beginPath(); ctx.moveTo(found.pos[0],found.pos[1]); ctx.lineTo(tx,ty); ctx.stroke();
+  ctx.setLineDash([]);
+  const label=(SEG_TYPES[found.seg.type].label).toUpperCase();
+  ctx.font='700 10px "Courier New", monospace';
+  const wpad=8, tw=ctx.measureText(label).width;
+  ctx.fillStyle='rgba(10,4,10,0.8)';
+  ctx.fillRect(tx-tw/2-wpad, ty-40, tw+wpad*2, 18);
+  ctx.strokeStyle='rgba(255,60,120,0.4)'; ctx.strokeRect(tx-tw/2-wpad, ty-40, tw+wpad*2, 18);
+  ctx.fillStyle='#ffdce6';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(label, tx, ty-31);
+  ctx.restore();
+}
 const SEG_COLORS = {
-  head:'#c04a5a', standard:'#a56a7d', armoured:'#7c8698', capsule:'#8a6ab0',
-  regen:'#4fae72', speedorg:'#4fa0c8', support:'#c8964f', weak:'#e0708a', tail:'#8a5a6d', mite:'#c05a6a',
+  head:'#ff3d6e', standard:'#8a2f45', armoured:'#8f8a9c', capsule:'#b25fe0',
+  regen:'#3ddb8f', speedorg:'#5fc7e0', support:'#e0a13d', weak:'#ff7fa8', tail:'#5c2434', mite:'#d94566',
 };
 function drawWorm(w){
   const alive=aliveSegs(w);
@@ -1538,7 +1654,7 @@ function drawWorm(w){
   if(w.phased) ctx.globalAlpha=0.32;
   // membrane connecting segments
   const pos = alive.map(s=>pathPoint(segDist(w,s)));
-  ctx.strokeStyle = w.isBoss?'rgba(255,120,150,0.30)':'rgba(200,120,150,0.25)';
+  ctx.strokeStyle = w.isBoss?'rgba(255,110,150,0.32)':'rgba(180,90,140,0.26)';
   ctx.lineWidth = w.radius*1.35;
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
@@ -1559,7 +1675,7 @@ function drawWorm(w){
     let r=w.radius*(s.type==='head'?1.3:s.type==='tail'?0.75:s.type==='mite'?0.6:1);
     const wob = Math.sin(t*3+k*0.8)*r*0.05;
     r+=wob;
-    const col = SEG_COLORS[s.type]||'#a56a7d';
+    const col = SEG_COLORS[s.type]||'#8a2f45';
     // body
     const g=ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
     g.addColorStop(0, shade(col, 40));
@@ -1569,7 +1685,7 @@ function drawWorm(w){
     // damage cracks
     const frac=s.hp/s.maxHp;
     if(frac<0.6){
-      ctx.strokeStyle='rgba(40,10,20,'+(0.7-frac*0.5)+')';
+      ctx.strokeStyle='rgba(20,4,12,'+(0.7-frac*0.5)+')';
       ctx.lineWidth=1.5;
       for(let c=0;c<3;c++){
         const a=k*2.3+c*2.1;
@@ -1599,9 +1715,9 @@ function drawWorm(w){
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText(POOL_ICONS[s.pool]||'?', x, y+1);
       } else {
-        ctx.strokeStyle='rgba(233,167,255,0.9)'; ctx.lineWidth=2;
+        ctx.strokeStyle='rgba(224,127,255,0.9)'; ctx.lineWidth=2;
         ctx.beginPath(); ctx.arc(x,y,r*0.55*pulse,0,6.28); ctx.stroke();
-        ctx.fillStyle='rgba(233,167,255,0.95)';
+        ctx.fillStyle='rgba(224,127,255,0.95)';
         ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('?', x, y+1);
@@ -1644,7 +1760,7 @@ function drawWorm(w){
       ctx.lineTo(x+ex*r*0.9-px*r*0.5, y+ey*r*0.9-py*r*0.5);
       ctx.stroke();
       if(w.isBoss){
-        ctx.fillStyle='#ffd257';
+        ctx.fillStyle='#ffb23d';
         ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('♛', x-ex*r*0.4, y-ey*r*0.4);
@@ -1662,14 +1778,14 @@ function drawWorm(w){
     }
     // shield visual (boss)
     if(w.isBoss && w.shieldT>0 && k<5 && s.type!=='head'){
-      ctx.strokeStyle='rgba(255,220,120,0.55)'; ctx.lineWidth=2;
+      ctx.strokeStyle='rgba(255,178,61,0.55)'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.arc(x,y,r*1.15,0,6.28); ctx.stroke();
     }
     // health arc for damaged segments
     if(frac<1 && frac>0){
       ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(x,y,r+4,-Math.PI/2,-Math.PI/2+6.28,false); ctx.stroke();
-      ctx.strokeStyle=frac>0.5?'#7eff9e':frac>0.25?'#ffd257':'#ff5f6e';
+      ctx.strokeStyle=frac>0.5?'#7eff9e':frac>0.25?'#ffb23d':'#ff3d6e';
       ctx.beginPath(); ctx.arc(x,y,r+4,-Math.PI/2,-Math.PI/2+6.28*frac,false); ctx.stroke();
     }
   }
@@ -1692,22 +1808,24 @@ function drawProjectiles(){
     if(p.kind==='orb'){
       ctx.fillStyle=WEAPON_DEFS.orb.color;
       ctx.beginPath(); ctx.arc(p.x,p.y,7,0,6.28); ctx.fill();
-      ctx.strokeStyle='rgba(138,255,158,0.4)';
+      ctx.strokeStyle='rgba(61,255,176,0.4)';
       ctx.beginPath(); ctx.arc(p.x,p.y,11,0,6.28); ctx.stroke();
+    } else if(p.kind==='cloudlob'){
+      ctx.fillStyle=WEAPON_DEFS.cloud.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,6,0,6.28); ctx.fill();
     } else {
-      ctx.strokeStyle=p.small?'#ffd684':'#7ef0ff';
+      ctx.strokeStyle=p.small?'#ffb23d':'#6ee7ff';
       ctx.lineWidth=p.small?2:3;
       const L=p.small?8:13;
-      const vl=Math.hypot(p.vx,p.vy)||1;
       ctx.beginPath();
       ctx.moveTo(p.x,p.y);
-      ctx.lineTo(p.x-p.vx/vl*L, p.y-p.vy/vl*L);
+      ctx.lineTo(p.x, p.y-L);
       ctx.stroke();
     }
   });
   // arcs
   run.arcs.forEach(a=>{
-    ctx.strokeStyle=a.evolved?'rgba(200,160,255,'+(a.t*5)+')':'rgba(157,180,255,'+(a.t*5)+')';
+    ctx.strokeStyle=a.evolved?'rgba(224,127,255,'+(a.t*5)+')':'rgba(167,139,255,'+(a.t*5)+')';
     ctx.lineWidth=2.5;
     ctx.beginPath();
     for(let i=0;i<a.pts.length;i++){
@@ -1720,31 +1838,18 @@ function drawProjectiles(){
   // clouds
   run.clouds.forEach(c=>{
     const g=ctx.createRadialGradient(c.x,c.y,2,c.x,c.y,c.r);
-    g.addColorStop(0,'rgba(182,255,95,0.30)');
-    g.addColorStop(1,'rgba(182,255,95,0.02)');
+    g.addColorStop(0,'rgba(143,224,90,0.30)');
+    g.addColorStop(1,'rgba(143,224,90,0.02)');
     ctx.fillStyle=g;
     ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,6.28); ctx.fill();
   });
   // waves
   const [cx,cy]=corePos();
   run.waves.forEach(wv=>{
-    ctx.strokeStyle=wv.evolved?'rgba(255,157,176,0.7)':'rgba(255,157,176,0.45)';
+    ctx.strokeStyle=wv.evolved?'rgba(255,111,168,0.7)':'rgba(255,111,168,0.45)';
     ctx.lineWidth=6;
     ctx.beginPath(); ctx.arc(cx,cy,wv.r, Math.PI, 2*Math.PI); ctx.stroke();
   });
-}
-function drawFocus(){
-  const tgt = run.focus;
-  if(!tgt || tgt.worm.dead || !tgt.seg.alive) return;
-  const d=segDist(tgt.worm,tgt.seg); if(d<=0) return;
-  const [x,y]=pathPoint(d);
-  const t=performance.now()/1000;
-  ctx.save();
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=2;
-  ctx.setLineDash([6,6]); ctx.lineDashOffset=-t*30;
-  ctx.beginPath(); ctx.arc(x,y,tgt.worm.radius*1.45,0,6.28); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
 }
 function drawFx(){
   run.particles.forEach(q=>{
@@ -1772,8 +1877,9 @@ function render(){
     drawPathLine();
     run.worms.forEach(w=>{ if(!w.dead) drawWorm(w); });
     drawProjectiles();
+    drawDrones();
     drawCore();
-    drawFocus();
+    drawTurret();
     drawFx();
   }
   ctx.restore();
@@ -1843,7 +1949,7 @@ function showResults(victory, abandoned=false){
   else if(!victory && run.stage-1>save.best) save.best=run.stage-1;
   storeSave();
   $('resTitle').textContent = abandoned?'RUN ABANDONED':victory?'STAGE '+run.stage+' CLEAR':'THE CORE HAS FALLEN';
-  $('resTitle').style.color = victory?'#7eff9e':'#ff5f6e';
+  $('resTitle').style.color = victory?'#7eff9e':'#ff3d6e';
   const rows=[
     ['Stage reached', run.stage],
     ['Total damage', fmt(run.rs.dmg)],
@@ -1854,7 +1960,7 @@ function showResults(victory, abandoned=false){
   ];
   if(run.newCards.size) rows.push(['New mutations found', run.newCards.size]);
   $('resTable').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
-  $('resBiomass').innerHTML='Biomass earned: <b style="color:#a8ff6a">⬡ '+b+'</b>';
+  $('resBiomass').innerHTML='Biomass earned: <b style="color:#3dffb0">⬡ '+b+'</b>';
   $('resNextBtn').style.display = (victory&&!abandoned)?'':'none';
   $('resNextBtn').textContent='CONTINUE → STAGE '+(run.stage+1);
   setState(victory?'RESULTS':'GAMEOVER');
@@ -1878,7 +1984,7 @@ function renderHome(){
     const cost=Math.round(25*Math.pow(1.6,lv));
     const row=document.createElement('div');
     row.className='metaRow';
-    row.innerHTML='<div class="mname">'+m.name+'<br/><span style="font-size:10px;color:#7f95bb;">'+m.per+' / level</span></div>'
+    row.innerHTML='<div class="mname">'+m.name+'<br/><span style="font-size:10px;color:#8c7ba8;">'+m.per+' / level</span></div>'
       +'<div class="mlv">'+lv+'/'+m.max+'</div>';
     const btn=document.createElement('button');
     if(lv>=m.max){ btn.textContent='MAX'; btn.disabled=true; }
@@ -1910,7 +2016,8 @@ requestAnimationFrame(frame);
 /* dev hook for automated smoke tests */
 window.WD = {
   get run(){ return run; }, get state(){ return state; },
-  setState, newRun, startStage, spawnWorm, hitSegment, currentTarget, queueDraft, segPos, segAtPoint,
+  setState, newRun, startStage, spawnWorm, hitSegment, segPos, segVisiblePos,
+  turretPos, corePos, setTurretX: x=>{ if(run) run.turretX = clamp(x, turretMin(), turretMax()); },
 };
 </script>
 </body>
