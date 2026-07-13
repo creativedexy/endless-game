@@ -278,7 +278,7 @@ const SFX = {
 /* ---------------- canvas ---------------- */
 const cv = $('cv'), ctx = cv.getContext('2d');
 let W=0, H=0, DPR=1;
-function turretMin(){ return clamp(W*0.09,30,70); }
+function turretMin(){ return clamp(W*0.055,18,55); }
 function turretMax(){ return W-turretMin(); }
 function resize(){
   DPR = Math.min(2, window.devicePixelRatio||1);
@@ -300,18 +300,18 @@ const PATH_PATTERNS = [
     const pts=[]; const yTop=0.12, yBot=0.60;
     for(let i=0;i<turns;i++){
       const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
-      const side = ((i%2===0)!==mirror) ? 0.14 : 0.86;
+      const side = ((i%2===0)!==mirror) ? 0.06 : 0.94;
       pts.push([side, y]);
     }
     return pts;
   },
   function serpentine(stage, mirror){
-    const n=9, freq=1.3+Math.min(1.5,stage*0.09), amp=0.35, phase=mirror?Math.PI:0;
+    const n=9, freq=1.3+Math.min(1.5,stage*0.09), amp=0.43, phase=mirror?Math.PI:0;
     const pts=[];
     for(let i=1;i<=n;i++){
       const t=i/n, y=0.10+0.52*t;
       const x=0.5+Math.sin(t*Math.PI*freq+phase)*amp;
-      pts.push([clamp(x,0.08,0.92), y]);
+      pts.push([clamp(x,0.05,0.95), y]);
     }
     return pts;
   },
@@ -319,9 +319,9 @@ const PATH_PATTERNS = [
     const n=10, freq=2.0+Math.min(1.8,stage*0.11);
     const pts=[];
     for(let i=1;i<=n;i++){
-      const t=i/n, amp=0.37*(1-t*0.55);
+      const t=i/n, amp=0.44*(1-t*0.5);
       const x=0.5+Math.sin(t*Math.PI*freq+(mirror?Math.PI:0))*amp;
-      pts.push([clamp(x,0.08,0.92), 0.10+0.54*t]);
+      pts.push([clamp(x,0.05,0.95), 0.10+0.54*t]);
     }
     return pts;
   },
@@ -329,9 +329,9 @@ const PATH_PATTERNS = [
     const turns = 2+Math.min(2,Math.floor(stage/4));
     const pts=[]; const yTop=0.11, yBot=0.60;
     for(let i=0;i<=turns*2;i++){
-      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.39*(1-t*0.7);
+      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.44*(1-t*0.65);
       const side = (i%2===0)!==mirror ? -1:1;
-      pts.push([clamp(0.5+side*amp,0.08,0.92), y]);
+      pts.push([clamp(0.5+side*amp,0.05,0.95), y]);
     }
     return pts;
   },
@@ -340,15 +340,15 @@ const PATH_PATTERNS = [
     const pts=[]; const yTop=0.11, yBot=0.60;
     for(let i=0;i<steps;i++){
       const t0=i/steps, t1=(i+0.65)/steps;
-      const side=((i%2===0)!==mirror)?0.16:0.84;
+      const side=((i%2===0)!==mirror)?0.07:0.93;
       pts.push([side, yTop+(yBot-yTop)*t0]);
       pts.push([side, yTop+(yBot-yTop)*t1]);
     }
     return pts;
   },
   function doubleSwing(stage, mirror){
-    const amp=0.4, s=mirror?-1:1;
-    return [[0.5+s*amp,0.20],[0.5-s*amp,0.40],[0.5+s*amp*0.7,0.58]];
+    const amp=0.44, s=mirror?-1:1;
+    return [[0.5+s*amp,0.20],[0.5-s*amp,0.40],[0.5+s*amp*0.85,0.58]];
   },
 ];
 function makeAnchors(stage){
@@ -411,34 +411,36 @@ const SEG_TYPES = {
   support: { hpMult:1.1, energy:9,  label:'Support Organ' },
   weak:    { hpMult:0.8, energy:7,  label:'Critical Weak Point' },
   tail:    { hpMult:0.6, energy:14, label:'Tail' },
-  mite:    { hpMult:0.35,energy:2,  label:'Broodling' },
 };
 const CAPSULE_POOLS = ['power','speed','critical','quantity','control','chain','recovery','evolution'];
 const POOL_COLORS = { power:'#ff3d6e', speed:'#ffb23d', critical:'#c77dff', quantity:'#ff8f5f',
                       control:'#6ee7ff', chain:'#4fd2ff', recovery:'#3dffb0', evolution:'#e07fff', trap:'#ff2f5e' };
-const POOL_ICONS  = { power:'☀', speed:'»', critical:'✦', quantity:'⁂', control:'❄', chain:'⌁', recovery:'✚', evolution:'§', trap:'☠' };
 
-/* Worm archetypes — data only; combat code reads these fields. */
+/* Worm archetypes — data only; combat code reads these fields. Every worm is a
+   single continuous body for its whole life — nothing here ever spawns a
+   second worm entity. hardensOnDeath/hardensAt50 make a specific worm's own
+   remaining body tougher in response to combat instead. */
 const WORM_TYPES = {
   basic:   { name:'Worm',            speed:1.0,  segMult:1.0, hpMult:1.0, minStage:1 },
   runner:  { name:'Runner Worm',     speed:1.75, segMult:0.55,hpMult:0.6, minStage:2 },
   armoured:{ name:'Armoured Worm',   speed:0.85, segMult:0.9, hpMult:1.0, minStage:3, armourRate:0.45 },
   regen:   { name:'Regenerator',     speed:0.9,  segMult:1.0, hpMult:1.0, minStage:4, regenRate:0.3 },
-  brood:   { name:'Brood Worm',      speed:0.95, segMult:1.0, hpMult:0.9, minStage:5, brood:true },
+  brood:   { name:'Hive Worm',       speed:0.95, segMult:1.0, hpMult:0.9, minStage:5, hardensOnDeath:true },
   phase:   { name:'Phase Worm',      speed:1.1,  segMult:0.8, hpMult:0.9, minStage:6, phasing:true },
-  split:   { name:'Split Worm',      speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, splits:true },
+  split:   { name:'Ironclad Worm',   speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, hardensAt50:true },
 };
 
-const HP_EXP = 1.30; // exponential HP growth per stage — steeper than before, on purpose
+const HP_EXP = 1.30;    // exponential HP growth per stage — steeper than before, on purpose
+const BODY_GROWTH = 1.03; // each segment further from the head is this much tougher than the last
 
 function buildWormSegments(typeKey, stage, count, opts={}){
   const wt = WORM_TYPES[typeKey]||WORM_TYPES.basic;
   const baseHp = 22 * Math.pow(HP_EXP, stage-1) * wt.hpMult * (opts.hpMult||1);
   const segs = [];
-  segs.push(mkSeg('head', baseHp));
-  // guaranteed capsules: one per 5-7 standard segments, min 2, max 8, never adjacent
+  segs.push(mkSeg('head', baseHp, 1));
+  // capsules are deliberately rare now — roughly one per 9-13 standard segments
   const bodyN = Math.max(3, count-2);
-  let capsN = clamp(Math.round(bodyN/rand(5,7)), 2, 8);
+  let capsN = clamp(Math.round(bodyN/rand(9,13)), 1, 5);
   if(opts.noCapsules) capsN = 0;
   const capSlots = new Set();
   let guard=0;
@@ -447,9 +449,13 @@ function buildWormSegments(typeKey, stage, count, opts={}){
     if(!capSlots.has(i-1)&&!capSlots.has(i+1)) capSlots.add(i);
   }
   for(let i=1;i<=bodyN;i++){
+    // every segment further from the head is tougher than the last — the
+    // worm is one continuous body that gets harder to defeat the deeper
+    // into it you fight
+    const tough = Math.pow(BODY_GROWTH, i);
     if(capSlots.has(i)){
       const trap = (stage>=4 && Math.random()<0.18);
-      const s = mkSeg('capsule', baseHp);
+      const s = mkSeg('capsule', baseHp, tough);
       s.pool = trap ? 'trap' : pickCapsulePool();
       segs.push(s);
       continue;
@@ -462,17 +468,18 @@ function buildWormSegments(typeKey, stage, count, opts={}){
     else if(r<0.11 && stage>=3) t='support';
     else if(r<0.16) t='weak';
     else if(r<0.20 && stage>=3 && !wt.armourRate) t='armoured';
-    segs.push(mkSeg(t, baseHp));
+    segs.push(mkSeg(t, baseHp, tough));
   }
-  segs.push(mkSeg('tail', baseHp));
+  segs.push(mkSeg('tail', baseHp, Math.pow(BODY_GROWTH, bodyN+1)));
   return segs;
 }
-function mkSeg(type, baseHp){
+function mkSeg(type, baseHp, toughMult){
   const st = SEG_TYPES[type];
-  const hp = baseHp*st.hpMult;
-  return { type, hp, maxHp:hp, alive:true, armourHp:type==='armoured'?baseHp*(st.armourMult||1):0,
-           maxArmour:type==='armoured'?baseHp*(st.armourMult||1):0,
-           pool:null, revealed:false, hitFlash:0, slowT:0, regenGlow:0, burnT:0, burnDPS:0, _burnSpread:false, _visD:undefined };
+  const tm = toughMult||1;
+  const hp = baseHp*st.hpMult*tm;
+  return { type, hp, maxHp:hp, alive:true, armourHp:type==='armoured'?baseHp*(st.armourMult||1)*tm:0,
+           maxArmour:type==='armoured'?baseHp*(st.armourMult||1)*tm:0,
+           pool:null, revealed:false, hitFlash:0, slowT:0, regenGlow:0, burnT:0, burnDPS:0, _burnSpread:false, _visD:undefined, ripeT:0, _ripeWarned:false };
 }
 function pickCapsulePool(){
   // evolution pool only offered if some weapon can evolve; checked at reveal-time too
@@ -697,9 +704,9 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
     headDist: 0, spacing,
     baseSpeed: H*speedF * (isBoss?0.8:1),
     speedMult:1, stunT:0, phaseT:0, phased:false, phaseCycle:rand(3,6),
-    dead:false, waveHits:{}, splitDone:false, radius: clamp(spacing*0.62, 14, 30) * (isBoss?1.25:1),
+    dead:false, waveHits:{}, hardened50:false, radius: clamp(spacing*0.62, 14, 30) * (isBoss?1.25:1),
     name: isBoss ? (bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH') : wt.name,
-    bossPhase:1, shieldT:0, detached:false,
+    bossPhase:1, shieldT:0, detached:false, ripeBonus:0,
   };
   if(isBoss){
     w.segs = buildBossSegments(bossKind, n);
@@ -711,34 +718,34 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
 }
 function buildBossSegments(bossKind, n){
   const baseHp = 22*Math.pow(HP_EXP,n-1)*2.0;
-  const segs=[ mkSeg('head', baseHp*1.2) ];
+  const segs=[ mkSeg('head', baseHp*1.2, 1) ];
   const body = 22 + Math.min(10,n);
-  const capSlots=[4, Math.floor(body/2), body-4];
+  const capSlots=[Math.floor(body*0.4), body-4];
   for(let i=1;i<=body;i++){
+    const tough = Math.pow(BODY_GROWTH, i);
     if(capSlots.includes(i)){
-      const s=mkSeg('capsule', baseHp*1.3);
+      const s=mkSeg('capsule', baseHp*1.3, tough);
       s.pool = pickCapsulePool();
-      if(bossKind===0){ s.armourHp = baseHp*0.8; s.maxArmour=s.armourHp; }   // armoured capsules
+      if(bossKind===0){ s.armourHp = baseHp*0.8*tough; s.maxArmour=s.armourHp; }   // armoured capsules
       segs.push(s); continue;
     }
     let t='standard';
     if(bossKind===1 && Math.random()<0.55) t='armoured';
     else if(Math.random()<0.10) t='weak';
     else if(Math.random()<0.08) t='support';
-    segs.push(mkSeg(t, baseHp));
+    segs.push(mkSeg(t, baseHp, tough));
   }
-  segs.push(mkSeg('tail', baseHp));
+  segs.push(mkSeg('tail', baseHp, Math.pow(BODY_GROWTH, body+1)));
   return segs;
 }
-function spawnMite(fromDist){
-  const w = {
-    kind:'mite', elite:false, isBoss:false,
-    segs:[mkSeg('mite', 22*Math.pow(HP_EXP,run.stage-1))],
-    headDist: fromDist, spacing: 18,
-    baseSpeed: H*0.058, speedMult:1, stunT:0, phased:false, phaseT:0, phaseCycle:99,
-    dead:false, waveHits:{}, splitDone:true, radius: 9, name:'Broodling', bossPhase:1, shieldT:0, detached:false,
-  };
-  run.worms.push(w);
+/* Permanently toughens whatever's left alive on a worm — used instead of ever
+   spawning a second worm entity, so the game always stays one continuous body. */
+function hardenWorm(w, pct){
+  aliveSegs(w).forEach(s=>{
+    const add = s.maxHp*pct;
+    s.maxHp += add; s.hp = Math.min(s.maxHp, s.hp+add);
+    if(s.maxArmour){ const aAdd=s.maxArmour*pct; s.maxArmour+=aAdd; s.armourHp=Math.min(s.maxArmour, s.armourHp+aAdd); }
+  });
 }
 
 /* ---------------- damage model ---------------- */
@@ -842,17 +849,19 @@ function destroySegment(w, seg){
     neighbours(w,seg).forEach(nb=>{ if(nb.alive){ nb.hp -= seg.maxHp*run.stats.chainReaction;
       if(nb.hp<=0) destroySegment(w,nb); } });
   }
-  // brood release (brood worms + the Vault Matriarch)
-  const broody = (WORM_TYPES[w.kind] && WORM_TYPES[w.kind].brood) || (w.isBoss && w.bossKind===1);
-  if(broody && seg.type!=='head' && Math.random()<(w.isBoss?0.35:0.5)){
-    spawnMite(segDist(w,seg));
+  // Hive Worm + the Vault Matriarch: killing one segment permanently hardens
+  // what's left instead of birthing a second worm — the body itself gets
+  // more dangerous to fight through the longer the battle goes on.
+  const hardens = (WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensOnDeath) || (w.isBoss && w.bossKind===1);
+  if(hardens && seg.type!=='head' && aliveSegs(w).length){
+    hardenWorm(w, w.isBoss?0.05:0.06);
   }
   // capsule reward
   if(seg.type==='capsule'){
     run.rs.capsules++;
     if(seg.pool==='trap'){
-      toast('TRAP CAPSULE!', '#ff2f5e');
-      for(let i=0;i<3;i++) spawnMite(segDist(w,seg)-i*14);
+      toast('TRAP CAPSULE! THE WORM HARDENS', '#ff2f5e');
+      if(aliveSegs(w).length){ hardenWorm(w, 0.20); run.coreHp = Math.max(0, run.coreHp-6); }
     } else {
       const pool = seg.pool||'power';
       if(pool==='evolution' && !run.weapons.some(x=>x.level>=5&&!x.evolved)){
@@ -863,13 +872,14 @@ function destroySegment(w, seg){
   }
   // head destroyed -> whole worm collapses (partial energy for the rest)
   if(seg.type==='head'){ killWorm(w, true); return; }
-  // split worm check
-  if(WORM_TYPES[w.kind] && WORM_TYPES[w.kind].splits && !w.splitDone){
+  // Ironclad Worm: fuses and hardens at the 50% mark instead of splitting in two
+  if(WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensAt50 && !w.hardened50){
     const alive=aliveSegs(w);
     const totHp = w.segs.reduce((a,s)=>a+s.maxHp,0);
     const curHp = alive.reduce((a,s)=>a+s.hp,0);
-    if(curHp <= totHp*0.5 && alive.length>=6){
-      w.splitDone=true; splitWorm(w);
+    if(curHp <= totHp*0.5 && alive.length){
+      w.hardened50=true; hardenWorm(w, 0.35);
+      toast('THE WORM FUSES AND HARDENS', '#ffb23d');
     }
   }
   if(aliveSegs(w).length===0) killWorm(w,false);
@@ -886,22 +896,6 @@ function killWorm(w, headKill){
     burst(segPos(w,s), '#ff8fb0', 8);
   });
   if(w.isBoss){ onBossDead(); }
-}
-function splitWorm(w){
-  const alive = aliveSegs(w);
-  const cut = Math.floor(alive.length/2);
-  const rear = alive.slice(cut);
-  // detach rear from original
-  rear.forEach(s=>{ const i=w.segs.indexOf(s); w.segs.splice(i,1); });
-  const nw = {
-    kind:'basic', elite:w.elite, isBoss:false,
-    segs: rear, headDist: w.headDist - w.spacing*cut, spacing:w.spacing,
-    baseSpeed: w.baseSpeed*1.15, speedMult:1, stunT:0, phased:false, phaseT:0, phaseCycle:99,
-    dead:false, waveHits:{}, splitDone:true, radius:w.radius*0.9, name:'Split Spawn', bossPhase:1, shieldT:0, detached:false,
-  };
-  if(rear[0]) rear[0].type='head';
-  run.worms.push(nw);
-  toast('THE WORM SPLITS!', '#ffb23d');
 }
 function gainEnergy(e){
   run.energy += e;
@@ -924,7 +918,7 @@ function maybeSpawnBoss(){
     $('introTitle').textContent = bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH';
     $('introTitle').style.color='#ff6fa8';
     $('introSub').textContent = bossKind===0 ? 'Its crown shields the vanguard. Break the sealed organs — or take the head.' :
-      'A vault of armoured plate. Every broken segment births hungry spawn.';
+      'A vault of armoured plate. Every broken segment hardens what remains.';
     setTimeout(()=>{
       if(state!=='BOSSINTRO') return;
       $('introTitle').style.color='';
@@ -949,16 +943,19 @@ function updateBoss(w, dt){
         let conv=0; w.segs.forEach(s=>{ if(conv<2 && s.alive && s.type==='standard'){ s.type='regen'; conv++; } }); }
     } else if(w.bossPhase===2){
       w.shieldT=0;
-      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES!','#ff2f5e'); SFX.phase();
-        // release body as mites, keep head as a fast solo worm
+      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES AND GORGES ITSELF','#ff2f5e'); SFX.phase();
+        // the body is cast off, but the head absorbs its remaining mass instead
+        // of spawning anything — still one worm, now a smaller, tougher one
         const alive=aliveSegs(w);
-        alive.slice(1).forEach((s,i)=>{ if(i%3===0) spawnMite(segDist(w,s)); s.alive=false; run.destroyedHp+=s.maxHp+(s.maxArmour||0); });
+        const head=alive[0];
+        let absorbed=0;
+        alive.slice(1).forEach(s=>{ absorbed+=s.maxHp*0.5; s.alive=false; run.destroyedHp+=s.maxHp+(s.maxArmour||0); });
+        if(head){ head.maxHp+=absorbed; head.hp=Math.min(head.maxHp, head.hp+absorbed); }
         w.baseSpeed*=1.8; w.radius*=1.1;
       }
     }
   } else {
-    // Vault Matriarch: broods on every segment death (handled via kind flag) — emulate here
-    if(!w._broodHook){ w._broodHook=true; }
+    // Vault Matriarch hardens on every segment death instead of brooding spawn (see destroySegment)
     if(frac<=0.5 && w.bossPhase===1){ w.bossPhase=2; w.baseSpeed*=1.15; toast('THE VAULT CRACKS','#ffb23d'); SFX.phase(); }
   }
   const hb=$('bossHpBar'); if(hb) hb.style.width=(frac*100).toFixed(1)+'%';
@@ -1179,6 +1176,20 @@ function updateWorm(w, dt){
   sp *= 1+0.15*spOrgans;
   sp *= 1-Math.min(0.5, run.stats.slowAura);
   if(w.slowFxT>0) sp *= 1-run.stats.critSlow;
+  // capsule ripening: a cracked capsule left alone feeds the worm — +1.5%
+  // speed per second survived since it was revealed, capped per capsule at
+  // +40%, stacking across every capsule you've neglected. This is the whole
+  // point of "target it now, not eventually": ignoring a revealed capsule
+  // makes the worm carrying it measurably faster and harder to react to.
+  let ripeBonus=0;
+  alive.forEach(s=>{
+    if(s.type!=='capsule' || !s.revealed) return;
+    s.ripeT=(s.ripeT||0)+dt;
+    ripeBonus += Math.min(0.40, 0.015*s.ripeT);
+    if(!s._ripeWarned && s.ripeT>7){ s._ripeWarned=true; toast('A CAPSULE IS FEEDING THE WORM','#ff8f5f'); }
+  });
+  w.ripeBonus = ripeBonus;
+  sp *= 1+ripeBonus;
   if(w.stunT>0 || run.freezeT>0) sp=0;
   w.headDist += sp*dt*w.speedMult;
   // regen organs heal neighbours
@@ -1217,8 +1228,7 @@ function updateWorm(w, dt){
 }
 function coreImpact(w){
   const alive=aliveSegs(w);
-  const isMite = w.kind==='mite';
-  let dmg = isMite ? 5 : 28 + 3.0*(alive.length-1) + (w.elite?14:0) + (w.isBoss?52:0);
+  let dmg = (28 + 3.0*(alive.length-1) + (w.elite?14:0) + (w.isBoss?52:0)) * (1+(w.ripeBonus||0));
   if(run.stats.barrier>0){ run.stats.barrier--; dmg=0; toast('BARRIER ABSORBED THE IMPACT','#3dffb0'); }
   run.coreHp -= dmg;
   run.shake = 1;
@@ -1728,7 +1738,7 @@ function drawTurretLock(tx,ty){
 }
 const SEG_COLORS = {
   head:'#ff3d6e', standard:'#8a2f45', armoured:'#8f8a9c', capsule:'#b25fe0',
-  regen:'#3ddb8f', speedorg:'#5fc7e0', support:'#e0a13d', weak:'#ff7fa8', tail:'#5c2434', mite:'#d94566',
+  regen:'#3ddb8f', speedorg:'#5fc7e0', support:'#e0a13d', weak:'#ff7fa8', tail:'#5c2434',
 };
 function drawWorm(w){
   const alive=aliveSegs(w);
@@ -1757,7 +1767,7 @@ function drawWorm(w){
     const d=w.headDist-w.spacing*k;
     if(d<=0) continue;
     const [x,y]=pos[k];
-    let r=w.radius*(s.type==='head'?1.3:s.type==='tail'?0.75:s.type==='mite'?0.6:1);
+    let r=w.radius*(s.type==='head'?1.3:s.type==='tail'?0.75:1);
     const wob = Math.sin(t*3+k*0.8)*r*0.05;
     r+=wob;
     const col = SEG_COLORS[s.type]||'#8a2f45';
@@ -1789,17 +1799,21 @@ function drawWorm(w){
     }
     // type decorations
     if(s.type==='capsule'){
-      const pulse=1+Math.sin(t*4+k)*0.1;
       if(s.revealed){
-        ctx.fillStyle=POOL_COLORS[s.pool]||'#fff';
+        const ripe = clamp((s.ripeT||0)/22, 0, 1);
+        const pulse = 1+Math.sin(t*(4+ripe*9)+k)*(0.1+ripe*0.08);
+        const col = ripe>0 ? lerpColor(POOL_COLORS[s.pool]||'#fff', '#ff3b1f', ripe) : (POOL_COLORS[s.pool]||'#fff');
+        if(ripe>0.05){
+          ctx.strokeStyle='rgba(255,80,40,'+(0.2+ripe*0.55)+')'; ctx.lineWidth=2;
+          ctx.beginPath(); ctx.arc(x,y,r*(1.15+ripe*0.18),0,6.28); ctx.stroke();
+        }
+        ctx.fillStyle=col;
         ctx.globalAlpha=(w.phased?0.32:1)*0.9;
-        ctx.beginPath(); ctx.arc(x,y,r*0.45*pulse,0,6.28); ctx.fill();
+        ctx.beginPath(); ctx.arc(x,y,r*0.5*pulse,0,6.28); ctx.fill();
         ctx.globalAlpha=w.phased?0.32:1;
-        ctx.fillStyle='#0a0f1e';
-        ctx.font='bold '+Math.round(r*0.7)+'px system-ui';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(POOL_ICONS[s.pool]||'?', x, y+1);
+        drawCapsuleGlyph(s.pool, x, y, r*0.5*pulse);
       } else {
+        const pulse=1+Math.sin(t*4+k)*0.1;
         ctx.strokeStyle='rgba(224,127,255,0.9)'; ctx.lineWidth=2;
         ctx.beginPath(); ctx.arc(x,y,r*0.55*pulse,0,6.28); ctx.stroke();
         ctx.fillStyle='rgba(224,127,255,0.95)';
@@ -1850,12 +1864,6 @@ function drawWorm(w){
         ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('♛', x-ex*r*0.4, y-ey*r*0.4);
       }
-    } else if(s.type==='mite'){
-      // broodlings are single-segment worms — give them simple eyes so every
-      // worm entity, however small, still reads as having a head
-      ctx.fillStyle='#ffe9ec';
-      ctx.beginPath(); ctx.arc(x-r*0.32,y-r*0.15,r*0.16,0,6.28); ctx.fill();
-      ctx.beginPath(); ctx.arc(x+r*0.32,y-r*0.15,r*0.16,0,6.28); ctx.fill();
     }
     // burning
     if(s.burnT>0){
@@ -1898,6 +1906,73 @@ function shade(hex, amt){
   const n=parseInt(hex.slice(1),16);
   let r=(n>>16)+amt, g=((n>>8)&255)+amt, b=(n&255)+amt;
   return 'rgb('+clamp(r,0,255)+','+clamp(g,0,255)+','+clamp(b,0,255)+')';
+}
+function lerpColor(a, b, t){
+  const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
+  const ar=(pa>>16)&255, ag=(pa>>8)&255, ab=pa&255;
+  const br=(pb>>16)&255, bg=(pb>>8)&255, bb=pb&255;
+  return 'rgb('+Math.round(lerp(ar,br,t))+','+Math.round(lerp(ag,bg,t))+','+Math.round(lerp(ab,bb,t))+')';
+}
+/* Each capsule pool gets its own hand-drawn silhouette instead of a flat
+   unicode glyph — meant to read at a glance and give the bonus icons some
+   actual character. */
+function drawCapsuleGlyph(pool, x, y, r){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.strokeStyle='#0a0f1e'; ctx.fillStyle='#0a0f1e';
+  ctx.lineWidth=Math.max(1.4, r*0.16);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const s=r*0.85;
+  switch(pool){
+    case 'power':
+      for(let i=0;i<6;i++){ const a=i/6*6.28;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s); ctx.stroke(); }
+      break;
+    case 'speed':
+      ctx.beginPath();
+      ctx.moveTo(-s*0.55,-s*0.7); ctx.lineTo(s*0.15,0); ctx.lineTo(-s*0.55,s*0.7); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-s*0.05,-s*0.7); ctx.lineTo(s*0.65,0); ctx.lineTo(-s*0.05,s*0.7); ctx.stroke();
+      break;
+    case 'critical':
+      ctx.beginPath();
+      ctx.moveTo(0,-s); ctx.lineTo(s*0.72,0); ctx.lineTo(0,s); ctx.lineTo(-s*0.72,0); ctx.closePath();
+      ctx.fill();
+      break;
+    case 'quantity':
+      [[-0.42,-0.42],[0.42,-0.42],[0,0.05],[-0.4,0.6],[0.4,0.6]].forEach(([dx,dy])=>{
+        ctx.beginPath(); ctx.arc(dx*s,dy*s,s*0.2,0,6.28); ctx.fill();
+      });
+      break;
+    case 'control':
+      for(let i=0;i<3;i++){ const a=i/3*Math.PI;
+        ctx.beginPath(); ctx.moveTo(-Math.cos(a)*s,-Math.sin(a)*s); ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s); ctx.stroke(); }
+      break;
+    case 'chain':
+      ctx.lineWidth=Math.max(1.2, r*0.13);
+      ctx.beginPath(); ctx.arc(-s*0.34,0,s*0.4,0,6.28); ctx.stroke();
+      ctx.beginPath(); ctx.arc(s*0.34,0,s*0.4,0,6.28); ctx.stroke();
+      break;
+    case 'recovery':
+      ctx.lineWidth=Math.max(2, r*0.26);
+      ctx.beginPath(); ctx.moveTo(0,-s); ctx.lineTo(0,s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(s,0); ctx.stroke();
+      break;
+    case 'evolution':
+      ctx.lineWidth=Math.max(1.2, r*0.14);
+      ctx.beginPath(); ctx.arc(0,0,s*0.78,0.5,5.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,s*0.26,0,6.28); ctx.fill();
+      break;
+    case 'trap':
+      ctx.beginPath();
+      ctx.moveTo(-s*0.72,-s*0.15); ctx.lineTo(-s*0.28,-s*0.9); ctx.lineTo(s*0.08,-s*0.3);
+      ctx.lineTo(s*0.5,-s*0.9); ctx.lineTo(s*0.72,-s*0.05); ctx.lineTo(0,s*0.85); ctx.closePath();
+      ctx.fill();
+      break;
+    default:
+      ctx.beginPath(); ctx.arc(0,0,s*0.5,0,6.28); ctx.fill();
+  }
+  ctx.restore();
 }
 function drawProjectiles(){
   run.projectiles.forEach(p=>{
