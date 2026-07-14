@@ -164,8 +164,8 @@
       A colossal worm descends a shifting route toward the breach. Your organism fires on its own — <b>drag left and right</b> (or press ← →) to slide your turret and line up with what you want to hit.<br/><br/>
       • Weapons fire <b style="color:#3dffb0;">straight up (or down, for airborne ones)</b> from wherever they are — there's no auto-aim, you have to get under your target.<br/>
       • The readout above your turret shows whatever's locked in your lane right now.<br/>
-      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide rewards from two separate threads: <b>Abilities</b> (graft new weapons like the Spore Wing, Husk Roller or Cinder Gland, then level and evolve them) and <b>Boosts</b> (short, practical stat upgrades — extra shots, more damage, faster fire, tougher core). Crack a capsule to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
-      There is no head to snipe — every worm is an undifferentiated chain, and segments get measurably tougher the deeper you cut in, so you have to clear the whole body. Anything that reaches the breach hurts — every surviving segment adds damage. Everything you draft lasts for the whole run and is lost only when the run ends.
+      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide rewards from two separate threads: <b>Abilities</b> (graft new weapons like the Spore Wing, Husk Roller or Cinder Gland, then level and evolve them — permanent for the whole run) and <b>Boosts</b> (short, practical stat upgrades — extra shots, more damage, faster fire, tougher core — wiped and re-earned fresh every stage). Crack a capsule to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
+      There is no head to snipe — every worm is an undifferentiated chain, and segments get measurably tougher the deeper you cut in, so you have to clear the whole body. Anything that reaches the breach hurts — every surviving segment adds damage.
     </div>
     <button class="obtn chamfer" id="helpBack">BACK</button>
   </div>
@@ -617,7 +617,9 @@ let run = null;
 let state = 'HOME';   // HOME, INTRO, COMBAT, DRAFT, BOSSINTRO, RESULTS, PAUSE, GAMEOVER
 let prevState = 'COMBAT';
 
-function newRun(){
+/* Base combat stats before any in-run Boost cards are applied — permanent
+   between-run meta upgrades are baked in, but nothing drafted this run is. */
+function baseStats(){
   const stats = {
     baseDamage:10, dmgMult:1, atkSpeedMult:1, critChance:0.05, critMult:1.75,
     coreHpMult:1, luck:0,
@@ -628,6 +630,10 @@ function newRun(){
     weaponSpd:{}, weaponDmg:{},
   };
   META_DEFS.forEach(m=>m.apply(stats, save.meta[m.id]));
+  return stats;
+}
+function newRun(){
+  const stats = baseStats();
   run = {
     stage:1, stats, weapons:[], cardLevels:{},
     coreMax:Math.round(100*stats.coreHpMult), coreHp:0,
@@ -649,6 +655,16 @@ function stageName(n){ return 'STAGE '+n+' — '+['SHALLOW TISSUE','DERMAL FIELD
 
 function startStage(n){
   run.stage=n;
+  if(n>1){
+    // Boosts are a per-stage thread now — every drafted Boost card is wiped
+    // at the start of each new stage and has to be re-earned. Abilities
+    // (weapons: installs, levels, evolutions) are a separate thread and
+    // always persist for the whole run.
+    run.stats = baseStats();
+    CARDS.forEach(c=>delete run.cardLevels[c.id]);
+    run.coreMax = Math.round(100*run.stats.coreHpMult);
+    run.coreHp = Math.min(run.coreHp, run.coreMax);
+  }
   run.path = buildPath(makeAnchors(n));
   rebuildPathPixels();
   run.worms=[]; run.projectiles=[]; run.clouds=[]; run.arcs=[]; run.waves=[]; run.particles=[]; run.dnums=[];
@@ -681,7 +697,7 @@ function startStage(n){
   setState('INTRO');
   $('introTitle').textContent = stageName(n);
   $('introSub').textContent = n===1 ? 'Drag to aim — your weapons fire straight up. Crack the sealed capsules.' :
-    'The worms grow '+(n%2?'longer':'faster')+', and the route bends differently. New anatomy detected.';
+    'Boosts wiped — re-earn them this stage. The worms grow '+(n%2?'longer':'faster')+', and the route bends differently. New anatomy detected.';
   setTimeout(()=>{ if(state==='INTRO') setState('COMBAT'); }, 2200);
   updateHud();
 }
@@ -702,7 +718,7 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
     headDist: 0, spacing,
     baseSpeed: H*speedF * (isBoss?0.8:1),
     speedMult:1, stunT:0, phaseT:0, phased:false, phaseCycle:rand(3,6),
-    dead:false, waveHits:{}, hardened50:false, radius: clamp(spacing*0.62, 14, 30) * (isBoss?1.25:1),
+    dead:false, waveHits:{}, hardened50:false, radius: clamp(spacing*0.86, 16, 36) * (isBoss?1.25:1),
     name: isBoss ? (bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH') : wt.name,
     bossPhase:1, shieldT:0, detached:false, ripeBonus:0,
   };
@@ -963,9 +979,11 @@ function onBossDead(){
 }
 
 /* ---------------- drafts ---------------- */
-/* Mutations picked here persist for the rest of THIS run (weapons, cardLevels,
-   stats) — they are only cleared when a new run begins via newRun(). Stage
-   transitions (startStage) intentionally never touch run.stats/weapons/cardLevels. */
+/* Abilities (weapons: installs, levels, evolutions) persist for the whole
+   run and are only cleared when a new run begins via newRun(). Boosts (the
+   CARDS pool below) are a per-stage thread instead — startStage() wipes
+   run.stats and every Boost card's level back to baseline at the start of
+   each new stage, so they have to be re-earned stage over stage. */
 function queueDraft(pool){
   run.draftsQueued.push({pool});
   if(state==='COMBAT') openDraft();
@@ -1744,8 +1762,8 @@ function drawWorm(w){
   // membrane connecting segments — uses the smoothed visual distance so a
   // segment dying mid-body doesn't teleport the segments behind it forward
   const pos = alive.map(s=>pathPoint(s._visD===undefined?segDist(w,s):s._visD));
-  ctx.strokeStyle = w.isBoss?'rgba(255,110,150,0.32)':'rgba(180,90,140,0.26)';
-  ctx.lineWidth = w.radius*1.35;
+  ctx.strokeStyle = w.isBoss?'rgba(255,110,150,0.55)':'rgba(160,70,110,0.5)';
+  ctx.lineWidth = w.radius*1.5;
   ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
   let started=false;
