@@ -294,61 +294,31 @@ window.addEventListener('resize', resize);
 /* ---------------- spline path ---------------- */
 /* Anchors in screen fractions; Catmull-Rom sampled into an arc-length table.
    A handful of distinct pattern generators keep every stage's route feeling different. */
+/* Raster / boustrophedon rows: straight horizontal run to one wall, a sharp
+   corner, a straight vertical drop, a sharp corner, straight horizontal run
+   to the other wall — repeat. No diagonals, no curves; every leg is
+   axis-aligned, matching the requested route shape exactly. */
+function rasterRows(rows, yTop, yBot, mirror){
+  const xA=0.045, xB=0.955;
+  const dy=(yBot-yTop)/rows;
+  const pts=[];
+  for(let i=0;i<rows;i++){
+    const x = ((i%2===0)!==mirror) ? xB : xA;
+    const y = yTop+dy*i;
+    pts.push([x,y]);
+    if(i<rows-1) pts.push([x, y+dy]);
+  }
+  return pts;
+}
 const PATH_PATTERNS = [
-  function zigzag(stage, mirror){
-    const turns = Math.min(8, 4 + Math.floor((stage-1)/2));
-    const pts=[]; const yTop=0.12, yBot=0.60;
-    for(let i=0;i<turns;i++){
-      const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
-      const side = ((i%2===0)!==mirror) ? 0.045 : 0.955;
-      pts.push([side, y]);
-    }
-    return pts;
+  function raster(stage, mirror){
+    return rasterRows(clamp(4+Math.floor((stage-1)/1.5), 4, 9), 0.12, 0.60, mirror);
   },
-  function serpentine(stage, mirror){
-    const n=9, freq=1.7+Math.min(1.8,stage*0.10), amp=0.47, phase=mirror?Math.PI:0;
-    const pts=[];
-    for(let i=1;i<=n;i++){
-      const t=i/n, y=0.10+0.52*t;
-      const x=0.5+Math.sin(t*Math.PI*freq+phase)*amp;
-      pts.push([clamp(x,0.045,0.955), y]);
-    }
-    return pts;
+  function rasterWide(stage, mirror){
+    return rasterRows(clamp(3+Math.floor((stage-1)/2), 3, 6), 0.11, 0.60, mirror);
   },
-  function spiralTighten(stage, mirror){
-    const n=10, freq=2.0+Math.min(1.8,stage*0.11);
-    const pts=[];
-    for(let i=1;i<=n;i++){
-      const t=i/n, amp=0.47*(1-t*0.28);
-      const x=0.5+Math.sin(t*Math.PI*freq+(mirror?Math.PI:0))*amp;
-      pts.push([clamp(x,0.045,0.955), 0.10+0.54*t]);
-    }
-    return pts;
-  },
-  function funnelWide(stage, mirror){
-    const turns = 3+Math.min(2,Math.floor(stage/4));
-    const pts=[]; const yTop=0.11, yBot=0.60;
-    for(let i=0;i<=turns*2;i++){
-      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.47*(1-t*0.4);
-      const side = (i%2===0)!==mirror ? -1:1;
-      pts.push([clamp(0.5+side*amp,0.045,0.955), y]);
-    }
-    return pts;
-  },
-  function staircase(stage, mirror){
-    const steps=5+Math.min(3,Math.floor(stage/3));
-    const pts=[]; const yTop=0.11, yBot=0.60;
-    for(let i=0;i<steps;i++){
-      const t0=i/steps, t1=(i+0.65)/steps;
-      const side=((i%2===0)!==mirror)?0.045:0.955;
-      pts.push([side, yTop+(yBot-yTop)*t0]);
-      pts.push([side, yTop+(yBot-yTop)*t1]);
-    }
-    return pts;
-  },
-  function doubleSwing(stage, mirror){
-    const amp=0.47, s=mirror?-1:1;
-    return [[0.5+s*amp,0.16],[0.5-s*amp,0.34],[0.5+s*amp*0.95,0.50],[0.5-s*amp*0.9,0.62]];
+  function rasterTight(stage, mirror){
+    return rasterRows(clamp(5+Math.floor((stage-1)/1.2), 5, 11), 0.12, 0.58, mirror);
   },
 ];
 function makeAnchors(stage){
@@ -359,22 +329,20 @@ function makeAnchors(stage){
   pts.push([0.5,0.90]);
   return pts;
 }
-function catmull(p0,p1,p2,p3,t){
-  const t2=t*t, t3=t2*t;
-  return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3);
-}
 function buildPath(anchorsFrac){
   return { frac: anchorsFrac, pts:[], cum:[], len:0 };
 }
 function rebuildPathPixels(){
   const p = run.path;
   const A = p.frac.map(([fx,fy])=>[fx*W, fy*H]);
+  // straight-line interpolation between anchors only — no spline smoothing —
+  // so every corner comes out as a sharp, exact right angle
   const pts=[], SUB=26;
   for(let i=0;i<A.length-1;i++){
-    const p0=A[Math.max(0,i-1)], p1=A[i], p2=A[i+1], p3=A[Math.min(A.length-1,i+2)];
+    const p1=A[i], p2=A[i+1];
     for(let s=0;s<SUB;s++){
       const t=s/SUB;
-      pts.push([catmull(p0[0],p1[0],p2[0],p3[0],t), catmull(p0[1],p1[1],p2[1],p3[1],t)]);
+      pts.push([lerp(p1[0],p2[0],t), lerp(p1[1],p2[1],t)]);
     }
   }
   pts.push(A[A.length-1].slice());
