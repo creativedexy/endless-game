@@ -165,7 +165,7 @@
       • Weapons fire <b style="color:#3dffb0;">straight up (or down, for airborne ones)</b> from wherever they are — there's no auto-aim, you have to get under your target.<br/>
       • The readout above your turret shows whatever's locked in your lane right now.<br/>
       • Sealed <b style="color:#e07fff;">mutation capsules</b> hide rewards from two separate threads: <b>Abilities</b> (graft new weapons like the Spore Wing, Husk Roller or Cinder Gland, then level and evolve them) and <b>Boosts</b> (short, practical stat upgrades — extra shots, more damage, faster fire, tougher core). Crack a capsule to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
-      Kill the <b>head</b> to collapse the whole worm fast, or farm its body for power. Anything that reaches the breach hurts — every surviving segment adds damage. Everything you draft lasts for the whole run and is lost only when the run ends.
+      There is no head to snipe — every worm is an undifferentiated chain, and segments get measurably tougher the deeper you cut in, so you have to clear the whole body. Anything that reaches the breach hurts — every surviving segment adds damage. Everything you draft lasts for the whole run and is lost only when the run ends.
     </div>
     <button class="obtn chamfer" id="helpBack">BACK</button>
   </div>
@@ -296,22 +296,22 @@ window.addEventListener('resize', resize);
    A handful of distinct pattern generators keep every stage's route feeling different. */
 const PATH_PATTERNS = [
   function zigzag(stage, mirror){
-    const turns = Math.min(6, 3 + Math.floor((stage-1)/2));
+    const turns = Math.min(8, 4 + Math.floor((stage-1)/2));
     const pts=[]; const yTop=0.12, yBot=0.60;
     for(let i=0;i<turns;i++){
       const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
-      const side = ((i%2===0)!==mirror) ? 0.06 : 0.94;
+      const side = ((i%2===0)!==mirror) ? 0.045 : 0.955;
       pts.push([side, y]);
     }
     return pts;
   },
   function serpentine(stage, mirror){
-    const n=9, freq=1.3+Math.min(1.5,stage*0.09), amp=0.43, phase=mirror?Math.PI:0;
+    const n=9, freq=1.7+Math.min(1.8,stage*0.10), amp=0.47, phase=mirror?Math.PI:0;
     const pts=[];
     for(let i=1;i<=n;i++){
       const t=i/n, y=0.10+0.52*t;
       const x=0.5+Math.sin(t*Math.PI*freq+phase)*amp;
-      pts.push([clamp(x,0.05,0.95), y]);
+      pts.push([clamp(x,0.045,0.955), y]);
     }
     return pts;
   },
@@ -319,36 +319,36 @@ const PATH_PATTERNS = [
     const n=10, freq=2.0+Math.min(1.8,stage*0.11);
     const pts=[];
     for(let i=1;i<=n;i++){
-      const t=i/n, amp=0.44*(1-t*0.5);
+      const t=i/n, amp=0.47*(1-t*0.28);
       const x=0.5+Math.sin(t*Math.PI*freq+(mirror?Math.PI:0))*amp;
-      pts.push([clamp(x,0.05,0.95), 0.10+0.54*t]);
+      pts.push([clamp(x,0.045,0.955), 0.10+0.54*t]);
     }
     return pts;
   },
   function funnelWide(stage, mirror){
-    const turns = 2+Math.min(2,Math.floor(stage/4));
+    const turns = 3+Math.min(2,Math.floor(stage/4));
     const pts=[]; const yTop=0.11, yBot=0.60;
     for(let i=0;i<=turns*2;i++){
-      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.44*(1-t*0.65);
+      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.47*(1-t*0.4);
       const side = (i%2===0)!==mirror ? -1:1;
-      pts.push([clamp(0.5+side*amp,0.05,0.95), y]);
+      pts.push([clamp(0.5+side*amp,0.045,0.955), y]);
     }
     return pts;
   },
   function staircase(stage, mirror){
-    const steps=4+Math.min(3,Math.floor(stage/3));
+    const steps=5+Math.min(3,Math.floor(stage/3));
     const pts=[]; const yTop=0.11, yBot=0.60;
     for(let i=0;i<steps;i++){
       const t0=i/steps, t1=(i+0.65)/steps;
-      const side=((i%2===0)!==mirror)?0.07:0.93;
+      const side=((i%2===0)!==mirror)?0.045:0.955;
       pts.push([side, yTop+(yBot-yTop)*t0]);
       pts.push([side, yTop+(yBot-yTop)*t1]);
     }
     return pts;
   },
   function doubleSwing(stage, mirror){
-    const amp=0.44, s=mirror?-1:1;
-    return [[0.5+s*amp,0.20],[0.5-s*amp,0.40],[0.5+s*amp*0.85,0.58]];
+    const amp=0.47, s=mirror?-1:1;
+    return [[0.5+s*amp,0.16],[0.5-s*amp,0.34],[0.5+s*amp*0.95,0.50],[0.5-s*amp*0.9,0.62]];
   },
 ];
 function makeAnchors(stage){
@@ -402,7 +402,6 @@ function pathPoint(d){
 
 /* ---------------- segment & worm definitions ---------------- */
 const SEG_TYPES = {
-  head:    { hpMult:8.0, energy:20, label:'Head' },
   standard:{ hpMult:1.0, energy:6,  label:'Segment' },
   armoured:{ hpMult:1.0, energy:8,  label:'Armoured Segment', armourMult:1.2 },
   capsule: { hpMult:1.4, energy:12, label:'Mutation Capsule' },
@@ -430,17 +429,17 @@ const WORM_TYPES = {
   split:   { name:'Ironclad Worm',   speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, hardensAt50:true },
 };
 
-const HP_EXP = 1.30;    // exponential HP growth per stage — steeper than before, on purpose
-const BODY_GROWTH = 1.03; // each segment further from the head is this much tougher than the last
+const HP_EXP = 1.42;    // exponential HP growth per stage — much steeper than before, on purpose
+const BODY_GROWTH = 1.055; // each segment further into the body is this much tougher than the last
 
 function buildWormSegments(typeKey, stage, count, opts={}){
   const wt = WORM_TYPES[typeKey]||WORM_TYPES.basic;
-  const baseHp = 22 * Math.pow(HP_EXP, stage-1) * wt.hpMult * (opts.hpMult||1);
+  const baseHp = 27 * Math.pow(HP_EXP, stage-1) * wt.hpMult * (opts.hpMult||1);
   const segs = [];
-  segs.push(mkSeg('head', baseHp, 1));
-  // capsules are deliberately rare now — roughly one per 9-13 standard segments
+  segs.push(mkSeg('standard', baseHp, 1));
+  // capsules are now deliberately scarce — roughly one per 16-22 standard segments
   const bodyN = Math.max(3, count-2);
-  let capsN = clamp(Math.round(bodyN/rand(9,13)), 1, 5);
+  let capsN = clamp(Math.round(bodyN/rand(16,22)), 1, 3);
   if(opts.noCapsules) capsN = 0;
   const capSlots = new Set();
   let guard=0;
@@ -449,9 +448,8 @@ function buildWormSegments(typeKey, stage, count, opts={}){
     if(!capSlots.has(i-1)&&!capSlots.has(i+1)) capSlots.add(i);
   }
   for(let i=1;i<=bodyN;i++){
-    // every segment further from the head is tougher than the last — the
-    // worm is one continuous body that gets harder to defeat the deeper
-    // into it you fight
+    // there is no head — every worm is an undifferentiated chain that gets
+    // harder to defeat the deeper into it you fight
     const tough = Math.pow(BODY_GROWTH, i);
     if(capSlots.has(i)){
       const trap = (stage>=4 && Math.random()<0.18);
@@ -623,7 +621,7 @@ function newRun(){
   const stats = {
     baseDamage:10, dmgMult:1, atkSpeedMult:1, critChance:0.05, critMult:1.75,
     coreHpMult:1, luck:0,
-    capsuleDmg:0, armourPen:0, execute:0, chainReaction:0, focusRamp:0, adaptive:0, headDmg:0,
+    capsuleDmg:0, armourPen:0, execute:0, chainReaction:0, focusRamp:0, adaptive:0,
     needleCount:1, orbRadius:1, droneCount:2, cloudDur:1, cloudRadius:1, cloudArmour:0,
     critSlow:0, critSlowDur:0, arcStun:0, pierce:0, arcChains:0, needleStorm:false, needleCritBonus:0,
     scanner:false, barrier:0, coreRegen:0, slowAura:0, abilityCd:1,
@@ -717,10 +715,10 @@ function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
   return w;
 }
 function buildBossSegments(bossKind, n){
-  const baseHp = 22*Math.pow(HP_EXP,n-1)*2.0;
-  const segs=[ mkSeg('head', baseHp*1.2, 1) ];
+  const baseHp = 27*Math.pow(HP_EXP,n-1)*2.3;
+  const segs=[ mkSeg('standard', baseHp*1.2, 1) ];
   const body = 22 + Math.min(10,n);
-  const capSlots=[Math.floor(body*0.4), body-4];
+  const capSlots=[Math.floor(body*0.5)];
   for(let i=1;i<=body;i++){
     const tough = Math.pow(BODY_GROWTH, i);
     if(capSlots.includes(i)){
@@ -779,13 +777,12 @@ function hitSegment(w, seg, raw, opts={}){
   let dmg = raw;
   // conditional groups (stack multiplicatively per spec §8)
   if(seg.type==='capsule') dmg *= 1+run.stats.capsuleDmg;
-  if(seg.type==='head')    dmg *= 1+run.stats.headDmg;
   // support organ aura
   if(neighbours(w,seg).some(s=>s.type==='support')) dmg *= 0.65;
-  // boss head shield (phase 1 Devourer): front 5 segments protected while shieldT
+  // boss vanguard shield (phase 1 Devourer): front 5 segments protected while shieldT
   if(w.isBoss && w.shieldT>0){
     const alive=aliveSegs(w);
-    if(alive.indexOf(seg)<5 && seg.type!=='head') dmg*=0.4;
+    if(alive.indexOf(seg)<5) dmg*=0.4;
   }
   // predatory focus: reward holding the turret still
   if(run.stats.focusRamp>0){
@@ -823,7 +820,7 @@ function hitSegment(w, seg, raw, opts={}){
   // capsule reveal at 50%
   if(seg.type==='capsule' && !seg.revealed && seg.hp<=seg.maxHp*0.5) revealCapsule(seg,true);
   // execute
-  if(run.stats.execute>0 && seg.type!=='head' && !w.isBoss && seg.hp>0 && seg.hp<seg.maxHp*run.stats.execute){
+  if(run.stats.execute>0 && !w.isBoss && seg.hp>0 && seg.hp<seg.maxHp*run.stats.execute){
     seg.hp = 0;
   }
   if(seg.hp<=0) destroySegment(w, seg);
@@ -853,7 +850,7 @@ function destroySegment(w, seg){
   // what's left instead of birthing a second worm — the body itself gets
   // more dangerous to fight through the longer the battle goes on.
   const hardens = (WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensOnDeath) || (w.isBoss && w.bossKind===1);
-  if(hardens && seg.type!=='head' && aliveSegs(w).length){
+  if(hardens && aliveSegs(w).length){
     hardenWorm(w, w.isBoss?0.05:0.06);
   }
   // capsule reward
@@ -870,8 +867,6 @@ function destroySegment(w, seg){
       (pool==='evolution'?SFX.rare:SFX.reveal)();
     }
   }
-  // head destroyed -> whole worm collapses (partial energy for the rest)
-  if(seg.type==='head'){ killWorm(w, true); return; }
   // Ironclad Worm: fuses and hardens at the 50% mark instead of splitting in two
   if(WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensAt50 && !w.hardened50){
     const alive=aliveSegs(w);
@@ -882,9 +877,9 @@ function destroySegment(w, seg){
       toast('THE WORM FUSES AND HARDENS', '#ffb23d');
     }
   }
-  if(aliveSegs(w).length===0) killWorm(w,false);
+  if(aliveSegs(w).length===0) killWorm(w);
 }
-function killWorm(w, headKill){
+function killWorm(w){
   if(w.dead) return;
   w.dead=true;
   const alive = aliveSegs(w);
@@ -892,7 +887,6 @@ function killWorm(w, headKill){
     if(!s.alive) return;
     s.alive=false;
     run.destroyedHp += s.maxHp+(s.maxArmour||0);
-    if(headKill){ gainEnergy(SEG_TYPES[s.type].energy*0.4); }
     burst(segPos(w,s), '#ff8fb0', 8);
   });
   if(w.isBoss){ onBossDead(); }
@@ -917,7 +911,7 @@ function maybeSpawnBoss(){
     const bossKind = (run.stage%2===0)?1:0;
     $('introTitle').textContent = bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH';
     $('introTitle').style.color='#ff6fa8';
-    $('introSub').textContent = bossKind===0 ? 'Its crown shields the vanguard. Break the sealed organs — or take the head.' :
+    $('introSub').textContent = bossKind===0 ? 'Its crown shields the vanguard. Break the sealed organs and grind through every segment.' :
       'A vault of armoured plate. Every broken segment hardens what remains.';
     setTimeout(()=>{
       if(state!=='BOSSINTRO') return;
@@ -943,14 +937,15 @@ function updateBoss(w, dt){
         let conv=0; w.segs.forEach(s=>{ if(conv<2 && s.alive && s.type==='standard'){ s.type='regen'; conv++; } }); }
     } else if(w.bossPhase===2){
       w.shieldT=0;
-      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES AND GORGES ITSELF','#ff2f5e'); SFX.phase();
-        // the body is cast off, but the head absorbs its remaining mass instead
-        // of spawning anything — still one worm, now a smaller, tougher one
+      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE VANGUARD GORGES ITSELF AND SURGES','#ff2f5e'); SFX.phase();
+        // the trailing body is cast off, but the foremost segment absorbs its
+        // remaining mass instead of spawning anything — still one worm, now
+        // a smaller, tougher, faster one
         const alive=aliveSegs(w);
-        const head=alive[0];
+        const vanguard=alive[0];
         let absorbed=0;
         alive.slice(1).forEach(s=>{ absorbed+=s.maxHp*0.5; s.alive=false; run.destroyedHp+=s.maxHp+(s.maxArmour||0); });
-        if(head){ head.maxHp+=absorbed; head.hp=Math.min(head.maxHp, head.hp+absorbed); }
+        if(vanguard){ vanguard.maxHp+=absorbed; vanguard.hp=Math.min(vanguard.maxHp, vanguard.hp+absorbed); }
         w.baseSpeed*=1.8; w.radius*=1.1;
       }
     }
@@ -1737,7 +1732,7 @@ function drawTurretLock(tx,ty){
   ctx.restore();
 }
 const SEG_COLORS = {
-  head:'#ff3d6e', standard:'#8a2f45', armoured:'#8f8a9c', capsule:'#b25fe0',
+  standard:'#8a2f45', armoured:'#8f8a9c', capsule:'#b25fe0',
   regen:'#3ddb8f', speedorg:'#5fc7e0', support:'#e0a13d', weak:'#ff7fa8', tail:'#5c2434',
 };
 function drawWorm(w){
@@ -1761,13 +1756,13 @@ function drawWorm(w){
     else ctx.lineTo(pos[k][0],pos[k][1]);
   }
   if(started) ctx.stroke();
-  // segments tail->head so head on top
+  // segments tail->front so the leading segment renders on top
   for(let k=alive.length-1;k>=0;k--){
     const s=alive[k];
     const d=w.headDist-w.spacing*k;
     if(d<=0) continue;
     const [x,y]=pos[k];
-    let r=w.radius*(s.type==='head'?1.3:s.type==='tail'?0.75:1);
+    let r=w.radius*(s.type==='tail'?0.75:1);
     const wob = Math.sin(t*3+k*0.8)*r*0.05;
     r+=wob;
     const col = SEG_COLORS[s.type]||'#8a2f45';
@@ -1843,27 +1838,6 @@ function drawWorm(w){
       ctx.beginPath(); ctx.arc(x,y,r*0.22,0,6.28); ctx.fill();
       ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(x,y,r*0.45,0,6.28); ctx.stroke();
-    } else if(s.type==='head'){
-      // eyes + mandibles
-      const nd = pathPoint(Math.max(1,d-6));
-      const ang=Math.atan2(y-nd[1], x-nd[0]); // facing direction of travel
-      ctx.fillStyle='#ffe9ec';
-      const ex=Math.cos(ang), ey=Math.sin(ang);
-      const px=-ey, py=ex;
-      ctx.beginPath(); ctx.arc(x+ex*r*0.4+px*r*0.35, y+ey*r*0.4+py*r*0.35, r*0.14,0,6.28); ctx.fill();
-      ctx.beginPath(); ctx.arc(x+ex*r*0.4-px*r*0.35, y+ey*r*0.4-py*r*0.35, r*0.14,0,6.28); ctx.fill();
-      ctx.strokeStyle='#5a1620'; ctx.lineWidth=2.5;
-      ctx.beginPath();
-      ctx.moveTo(x+ex*r*0.9+px*r*0.5, y+ey*r*0.9+py*r*0.5);
-      ctx.lineTo(x+ex*r*1.3, y+ey*r*1.3);
-      ctx.lineTo(x+ex*r*0.9-px*r*0.5, y+ey*r*0.9-py*r*0.5);
-      ctx.stroke();
-      if(w.isBoss){
-        ctx.fillStyle='#ffb23d';
-        ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('♛', x-ex*r*0.4, y-ey*r*0.4);
-      }
     }
     // burning
     if(s.burnT>0){
@@ -1881,7 +1855,7 @@ function drawWorm(w){
       ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill();
     }
     // shield visual (boss)
-    if(w.isBoss && w.shieldT>0 && k<5 && s.type!=='head'){
+    if(w.isBoss && w.shieldT>0 && k<5){
       ctx.strokeStyle='rgba(255,178,61,0.55)'; ctx.lineWidth=2;
       ctx.beginPath(); ctx.arc(x,y,r*1.15,0,6.28); ctx.stroke();
     }
