@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#050308" />
+<title>Wormline Defense</title>
+<style>
+  :root{
+    --void:#050308; --void2:#0c0616;
+    --core:#3dffb0; --core-dim:#0f7a5c;
+    --threat:#ff2f5e; --threat-dim:#5c1330;
+    --violet:#c9a6ff; --violet-dim:#4a2d78;
+    --amber:#ffb23d; --bone:#d8d2c8; --ink:#f0e9fb;
+    --panel:#12081c; --panel2:#1c1029; --edge:rgba(201,166,255,.28);
+    --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-mono: 'Courier New', ui-monospace, SFMono-Regular, monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:var(--void); font-family:'Trebuchet MS','Segoe UI',sans-serif; color:var(--ink); touch-action:none; }
+  #game { position:fixed; inset:0; }
+  canvas { display:block; position:absolute; inset:0; cursor:ew-resize; }
+
+  .bar { position:absolute; left:0; right:0; pointer-events:none; user-select:none; }
+  .chamfer{ clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+
+  /* ---- top HUD ---- */
+  #topbar { top:0; padding:10px 12px 6px; display:flex; align-items:center; gap:8px; z-index:5; }
+  #stageName { font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:1.4px; color:var(--violet); text-shadow:0 0 10px rgba(201,166,255,.55); white-space:nowrap; }
+  #progWrap { flex:1; height:8px; border-radius:2px; background:rgba(255,255,255,.06); border:1px solid var(--edge); overflow:hidden; }
+  #progBar { height:100%; width:0%; background:linear-gradient(90deg,#1fb37a,#3dffb0); transition:width .3s linear; }
+  #progPct { font-family:var(--font-mono); font-size:11px; font-weight:700; color:#b9a8d8; min-width:34px; text-align:right; font-variant-numeric:tabular-nums; }
+  .hbtn { pointer-events:auto; background:rgba(28,16,41,.8); border:1px solid var(--edge); color:var(--ink); border-radius:3px;
+          font-family:var(--font-mono); font-size:13px; font-weight:700; padding:5px 10px; cursor:pointer; }
+  .hbtn:active { background:rgba(74,45,120,.85); }
+
+  #bossbar { top:44px; padding:0 24px; z-index:5; display:none; }
+  #bossName { text-align:center; font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:2px; color:var(--threat); margin-bottom:3px; text-transform:uppercase; text-shadow:0 0 8px rgba(255,47,94,.6); }
+  #bossHpWrap { height:10px; border-radius:2px; background:rgba(0,0,0,.6); border:1px solid rgba(255,110,150,.4); overflow:hidden; }
+  #bossHpBar { height:100%; width:100%; background:linear-gradient(90deg,#ff2f5e,#ffb23d); transition:width .2s linear; }
+
+  /* ---- bottom HUD ---- */
+  #bottombar { bottom:0; padding:6px 12px calc(10px + env(safe-area-inset-bottom)); z-index:5; display:flex; flex-direction:column; gap:6px; }
+  #coreRow { display:flex; align-items:center; gap:8px; }
+  #coreLabel { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--core); letter-spacing:1px; }
+  #coreHpWrap { flex:1; height:12px; border-radius:3px; background:rgba(0,0,0,.6); border:1px solid rgba(61,255,176,.35); overflow:hidden; }
+  #coreHpBar { height:100%; width:100%; background:linear-gradient(90deg,#0f7a5c,#3dffb0); transition:width .15s linear; }
+  #coreHpTxt { font-family:var(--font-mono); font-size:11px; font-weight:700; color:#cdf; font-variant-numeric:tabular-nums; min-width:56px; text-align:right; }
+  #weaponRow { display:flex; align-items:center; gap:6px; }
+  .wicon { width:38px; height:38px; background:rgba(18,8,28,.88); border:1px solid var(--edge);
+           display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:15px; position:relative; }
+  .wicon .lv { position:absolute; bottom:1px; right:4px; font-family:var(--font-mono); font-size:8px; font-weight:900; color:var(--violet); }
+  .wicon.evolved { border-color:var(--amber); box-shadow:0 0 10px rgba(255,178,61,.5); }
+  #abilityBtn { pointer-events:auto; margin-left:auto; width:62px; height:62px; border-radius:50%; border:2px solid rgba(110,231,255,.6);
+                background:radial-gradient(circle at 35% 30%, rgba(110,231,255,.4), rgba(10,20,40,.92)); color:#dff4ff;
+                font-family:var(--font-mono); font-size:10px; font-weight:900; letter-spacing:.4px; cursor:pointer; position:relative; overflow:hidden; }
+  #abilityBtn .cdmask { position:absolute; inset:0; background:rgba(0,0,0,.68); transform-origin:bottom; }
+  #abilityBtn span { position:relative; z-index:2; }
+  #abilityBtn:disabled { opacity:.85; }
+  #abilityBtn.ready { animation:abGlow 1.2s ease-in-out infinite alternate; }
+  @keyframes abGlow { from { box-shadow:0 0 4px rgba(110,231,255,.3);} to { box-shadow:0 0 18px rgba(110,231,255,.9);} }
+
+  /* ---- overlays ---- */
+  .overlay { position:absolute; inset:0; z-index:20; display:none; align-items:center; justify-content:center; flex-direction:column;
+             background:rgba(5,3,8,.86); backdrop-filter:blur(4px); padding:20px; text-align:center; }
+  .overlay.show { display:flex; }
+  .otitle { font-family:var(--font-display); font-size:27px; font-weight:700; letter-spacing:1px; margin-bottom:8px; color:var(--ink); }
+  .osub { font-size:13px; color:#b8a8d0; margin-bottom:18px; max-width:340px; line-height:1.55; }
+  .obtn { pointer-events:auto; background:linear-gradient(180deg,#3dffb0,#0f7a5c); border:1px solid #6effc8; color:#04140e; font-family:var(--font-mono); font-size:15px;
+          font-weight:900; letter-spacing:.8px; padding:13px 34px; cursor:pointer; margin:5px; min-width:200px; }
+  .obtn.dim { background:rgba(28,16,41,.85); border-color:var(--edge); color:var(--ink); }
+  .obtn:active { transform:scale(.97); }
+
+  /* draft cards */
+  #draftCards { display:flex; gap:10px; justify-content:center; width:100%; max-width:430px; }
+  .card { flex:1; min-width:0; background:linear-gradient(180deg, rgba(28,16,41,.97), rgba(14,7,20,.97)); padding:12px 8px;
+          border:2px solid #443; cursor:pointer; pointer-events:auto; display:flex; flex-direction:column; align-items:center; gap:6px;
+          min-height:190px; transition:transform .1s; }
+  .card:active { transform:scale(.96); }
+  .card .cicon { font-size:30px; line-height:1; margin-top:4px; filter:drop-shadow(0 0 6px currentColor); }
+  .card .cname { font-family:var(--font-display); font-size:13px; font-weight:700; line-height:1.25; }
+  .card .cdesc { font-size:11px; color:#b3a5c9; line-height:1.35; flex:1; }
+  .card .crar { font-family:var(--font-mono); font-size:9px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; padding:2px 8px; background:rgba(255,255,255,.07); }
+  .card .clvl { font-family:var(--font-mono); font-size:9px; color:#8c7ba8; font-weight:700; }
+  #rerollBtn { margin-top:14px; }
+  #draftHint { font-size:11px; color:#8c7ba8; margin-top:8px; }
+
+  /* results table */
+  .rtable { width:100%; max-width:320px; margin:4px 0 16px; border-collapse:collapse; }
+  .rtable td { padding:4px 6px; font-size:13px; border-bottom:1px solid var(--edge); }
+  .rtable td:first-child { color:#a494bf; text-align:left; }
+  .rtable td:last-child { color:var(--ink); font-weight:800; text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+
+  /* home / meta */
+  #homeTitle { font-family:var(--font-display); font-size:36px; font-weight:700; letter-spacing:2px; background:linear-gradient(180deg,#ffc2e6,#c9a6ff 55%,#7effc0);
+               -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:2px; text-shadow:0 0 30px rgba(201,166,255,.25); }
+  #homeSub { font-family:var(--font-mono); font-size:11px; color:#8c7ba8; letter-spacing:3px; text-transform:uppercase; margin-bottom:16px; }
+  #metaPanel { width:100%; max-width:340px; background:rgba(18,8,28,.92); border:1px solid var(--edge);
+               padding:12px; margin-bottom:14px; }
+  #metaPanel h3 { font-family:var(--font-mono); font-size:12px; letter-spacing:1.5px; color:var(--violet); text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; }
+  .metaRow { display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--edge); }
+  .metaRow .mname { flex:1; text-align:left; font-size:12px; font-weight:700; }
+  .metaRow .mlv { font-family:var(--font-mono); font-size:11px; color:#a494bf; font-variant-numeric:tabular-nums; }
+  .metaRow button { pointer-events:auto; background:#241542; border:1px solid #6a4aa8; color:#fff; font-family:var(--font-mono); font-size:11px;
+                    font-weight:800; padding:5px 10px; cursor:pointer; min-width:74px; }
+  .metaRow button:disabled { opacity:.35; }
+  #biomassTxt { color:var(--core); font-family:var(--font-mono); }
+
+  #toast { position:absolute; top:26%; left:50%; transform:translateX(-50%); z-index:18; font-family:var(--font-display); font-size:18px; font-weight:700; letter-spacing:1px;
+           color:#fff; text-shadow:0 0 12px rgba(201,166,255,.85); opacity:0; transition:opacity .3s; pointer-events:none; text-align:center; }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+
+  <div id="topbar" class="bar">
+    <div id="stageName">STAGE 1</div>
+    <div id="progWrap"><div id="progBar"></div></div>
+    <div id="progPct">0%</div>
+    <button class="hbtn chamfer" id="speedBtn">1×</button>
+    <button class="hbtn chamfer" id="pauseBtn">❚❚</button>
+  </div>
+
+  <div id="bossbar" class="bar">
+    <div id="bossName">BOSS</div>
+    <div id="bossHpWrap"><div id="bossHpBar"></div></div>
+  </div>
+
+  <div id="bottombar" class="bar">
+    <div id="coreRow">
+      <div id="coreLabel">CORE</div>
+      <div id="coreHpWrap"><div id="coreHpBar"></div></div>
+      <div id="coreHpTxt">100/100</div>
+    </div>
+    <div id="weaponRow">
+      <div id="weaponIcons" style="display:flex;gap:6px;"></div>
+      <button id="abilityBtn"><div class="cdmask"></div><span>STASIS</span></button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- HOME -->
+  <div class="overlay show" id="homeOv">
+    <div id="homeTitle">WORMLINE<br/>DEFENSE</div>
+    <div id="homeSub">segmented invasion protocol</div>
+    <div id="metaPanel">
+      <h3><span>Permanent Mutations</span><span id="biomassTxt">⬡ 0</span></h3>
+      <div id="metaRows"></div>
+    </div>
+    <button class="obtn chamfer" id="startBtn">START RUN</button>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="obtn dim chamfer" id="soundBtn" style="min-width:120px;">SOUND: ON</button>
+      <button class="obtn dim chamfer" id="helpBtn" style="min-width:120px;">HOW TO PLAY</button>
+    </div>
+    <div class="osub" style="margin-top:14px;font-size:11px;" id="bestTxt"></div>
+  </div>
+
+  <!-- HELP -->
+  <div class="overlay" id="helpOv">
+    <div class="otitle" style="font-size:20px;">HOW TO PLAY</div>
+    <div class="osub" style="text-align:left;">
+      A colossal worm descends a shifting route toward the breach. Your organism fires on its own — <b>drag left and right</b> (or press ← →) to slide your turret and line up with what you want to hit.<br/><br/>
+      • Weapons fire <b style="color:#3dffb0;">straight up (or down, for airborne ones)</b> from wherever they are — there's no auto-aim, you have to get under your target.<br/>
+      • The readout above your turret shows whatever's locked in your lane right now.<br/>
+      • Sealed <b style="color:#e07fff;">mutation capsules</b> hide rewards from two separate threads: <b>Abilities</b> (graft new weapons like the Spore Wing, Husk Roller or Cinder Gland, then level and evolve them) and <b>Boosts</b> (short, practical stat upgrades — extra shots, more damage, faster fire, tougher core). Crack a capsule to 50% to reveal its category, destroy it to claim a reward.<br/><br/>
+      Kill the <b>head</b> to collapse the whole worm fast, or farm its body for power. Anything that reaches the breach hurts — every surviving segment adds damage. Everything you draft lasts for the whole run and is lost only when the run ends.
+    </div>
+    <button class="obtn chamfer" id="helpBack">BACK</button>
+  </div>
+
+  <!-- STAGE INTRO -->
+  <div class="overlay" id="introOv">
+    <div class="otitle" id="introTitle">STAGE 1</div>
+    <div class="osub" id="introSub"></div>
+  </div>
+
+  <!-- DRAFT -->
+  <div class="overlay" id="draftOv">
+    <div class="otitle" style="font-size:18px;" id="draftTitle">CHOOSE A MUTATION</div>
+    <div id="draftCards"></div>
+    <button class="obtn dim chamfer" id="rerollBtn">↻ REROLL (1)</button>
+    <div id="draftHint"></div>
+  </div>
+
+  <!-- PAUSE -->
+  <div class="overlay" id="pauseOv">
+    <div class="otitle">PAUSED</div>
+    <button class="obtn chamfer" id="resumeBtn">RESUME</button>
+    <button class="obtn dim chamfer" id="abandonBtn">ABANDON RUN</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="overlay" id="resultsOv">
+    <div class="otitle" id="resTitle">STAGE CLEAR</div>
+    <table class="rtable" id="resTable"></table>
+    <div class="osub" id="resBiomass"></div>
+    <button class="obtn chamfer" id="resNextBtn">CONTINUE</button>
+    <button class="obtn dim chamfer" id="resHomeBtn">RETREAT &amp; BANK</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   WORMLINE DEFENSE — single-file portrait defense roguelite
+   Everything data-driven: worms, segments, upgrades, stages.
+   ============================================================ */
+
+/* ---------------- utilities ---------------- */
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+const lerp  = (a,b,t)=>a+(b-a)*t;
+const rand  = (a,b)=>a+Math.random()*(b-a);
+const rint  = (a,b)=>Math.floor(rand(a,b+1));
+const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
+const fmt   = n=>n>=1000?(n/1000).toFixed(1)+'k':Math.round(n).toString();
+const $     = id=>document.getElementById(id);
+
+/* ---------------- persistent save ---------------- */
+const SAVE_KEY = 'wormline_save_v1';
+const META_DEFS = [
+  { id:'dmg',  name:'Starting Damage',  per:'+5% damage',      max:10, apply:(s,l)=>s.dmgMult*=1+0.05*l },
+  { id:'spd',  name:'Attack Speed',     per:'+3% fire rate',   max:10, apply:(s,l)=>s.atkSpeedMult*=1+0.03*l },
+  { id:'crit', name:'Critical Chance',  per:'+1% crit',        max:10, apply:(s,l)=>s.critChance+=0.01*l },
+  { id:'hp',   name:'Core Health',      per:'+10% core HP',    max:10, apply:(s,l)=>s.coreHpMult*=1+0.10*l },
+  { id:'luck', name:'Capsule Rarity',   per:'+luck',           max:10, apply:(s,l)=>s.luck+=l },
+];
+let save;
+function loadSave(){
+  try { save = JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch(e){ save = null; }
+  if(!save) save = { biomass:0, best:0, meta:{}, sound:true, discovered:[] };
+  META_DEFS.forEach(m=>{ if(!(m.id in save.meta)) save.meta[m.id]=0; });
+  if(!Array.isArray(save.discovered)) save.discovered=[];
+}
+function storeSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+loadSave();
+
+/* ---------------- audio ---------------- */
+let AC=null, masterGain=null;
+function audioInit(){
+  if(AC) return;
+  try{
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = AC.createGain(); masterGain.gain.value = 0.5; masterGain.connect(AC.destination);
+  }catch(e){ AC=null; }
+}
+function beep(freq, dur, type='sine', vol=0.2, slide=0){
+  if(!AC || !save.sound) return;
+  if(AC.state==='suspended') AC.resume();
+  const o=AC.createOscillator(), g=AC.createGain();
+  const f = freq*rand(0.94,1.06);
+  o.type=type; o.frequency.setValueAtTime(f,AC.currentTime);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide), AC.currentTime+dur);
+  g.gain.setValueAtTime(vol,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);
+  o.connect(g); g.connect(masterGain);
+  o.start(); o.stop(AC.currentTime+dur+0.02);
+}
+const SFX = {
+  hit:      ()=>beep(rand(320,420),0.05,'triangle',0.07,-80),
+  crit:     ()=>{ beep(880,0.08,'square',0.12,-200); beep(1320,0.1,'sine',0.08); },
+  armour:   ()=>beep(180,0.09,'square',0.1,-60),
+  armourBreak:()=>{ beep(140,0.2,'sawtooth',0.18,-90); beep(560,0.12,'square',0.1,-300); },
+  segDie:   ()=>{ beep(rand(180,240),0.18,'sawtooth',0.14,-120); },
+  crack:    ()=>{ beep(700,0.12,'triangle',0.15,300); beep(1050,0.15,'sine',0.1,200); },
+  reveal:   ()=>{ beep(520,0.15,'sine',0.15,260); beep(780,0.2,'sine',0.12,390); },
+  rare:     ()=>{ [660,830,990,1320].forEach((f,i)=>setTimeout(()=>beep(f,0.25,'sine',0.16),i*90)); },
+  coreHit:  ()=>{ beep(90,0.4,'sawtooth',0.3,-40); beep(60,0.5,'square',0.2); },
+  phase:    ()=>{ beep(200,0.5,'sawtooth',0.2,400); },
+  evolve:   ()=>{ [440,554,659,880].forEach((f,i)=>setTimeout(()=>beep(f,0.3,'triangle',0.18),i*110)); },
+  victory:  ()=>{ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.35,'sine',0.2),i*140)); },
+  defeat:   ()=>{ [330,277,220,165].forEach((f,i)=>setTimeout(()=>beep(f,0.45,'sawtooth',0.16),i*180)); },
+  freeze:   ()=>{ beep(1400,0.4,'sine',0.15,-900); },
+  shot:     ()=>beep(rand(900,1100),0.03,'square',0.025,-300),
+};
+
+/* ---------------- canvas ---------------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let W=0, H=0, DPR=1;
+function turretMin(){ return clamp(W*0.055,18,55); }
+function turretMax(){ return W-turretMin(); }
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio||1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(run && run.path) rebuildPathPixels();
+  if(run) run.turretX = clamp(run.turretX, turretMin(), turretMax());
+}
+window.addEventListener('resize', resize);
+
+/* ---------------- spline path ---------------- */
+/* Anchors in screen fractions; Catmull-Rom sampled into an arc-length table.
+   A handful of distinct pattern generators keep every stage's route feeling different. */
+const PATH_PATTERNS = [
+  function zigzag(stage, mirror){
+    const turns = Math.min(6, 3 + Math.floor((stage-1)/2));
+    const pts=[]; const yTop=0.12, yBot=0.60;
+    for(let i=0;i<turns;i++){
+      const y = yTop + (yBot-yTop)*(turns===1?0.5:i/(turns-1));
+      const side = ((i%2===0)!==mirror) ? 0.06 : 0.94;
+      pts.push([side, y]);
+    }
+    return pts;
+  },
+  function serpentine(stage, mirror){
+    const n=9, freq=1.3+Math.min(1.5,stage*0.09), amp=0.43, phase=mirror?Math.PI:0;
+    const pts=[];
+    for(let i=1;i<=n;i++){
+      const t=i/n, y=0.10+0.52*t;
+      const x=0.5+Math.sin(t*Math.PI*freq+phase)*amp;
+      pts.push([clamp(x,0.05,0.95), y]);
+    }
+    return pts;
+  },
+  function spiralTighten(stage, mirror){
+    const n=10, freq=2.0+Math.min(1.8,stage*0.11);
+    const pts=[];
+    for(let i=1;i<=n;i++){
+      const t=i/n, amp=0.44*(1-t*0.5);
+      const x=0.5+Math.sin(t*Math.PI*freq+(mirror?Math.PI:0))*amp;
+      pts.push([clamp(x,0.05,0.95), 0.10+0.54*t]);
+    }
+    return pts;
+  },
+  function funnelWide(stage, mirror){
+    const turns = 2+Math.min(2,Math.floor(stage/4));
+    const pts=[]; const yTop=0.11, yBot=0.60;
+    for(let i=0;i<=turns*2;i++){
+      const t=i/(turns*2), y=yTop+(yBot-yTop)*t, amp=0.44*(1-t*0.65);
+      const side = (i%2===0)!==mirror ? -1:1;
+      pts.push([clamp(0.5+side*amp,0.05,0.95), y]);
+    }
+    return pts;
+  },
+  function staircase(stage, mirror){
+    const steps=4+Math.min(3,Math.floor(stage/3));
+    const pts=[]; const yTop=0.11, yBot=0.60;
+    for(let i=0;i<steps;i++){
+      const t0=i/steps, t1=(i+0.65)/steps;
+      const side=((i%2===0)!==mirror)?0.07:0.93;
+      pts.push([side, yTop+(yBot-yTop)*t0]);
+      pts.push([side, yTop+(yBot-yTop)*t1]);
+    }
+    return pts;
+  },
+  function doubleSwing(stage, mirror){
+    const amp=0.44, s=mirror?-1:1;
+    return [[0.5+s*amp,0.20],[0.5-s*amp,0.40],[0.5+s*amp*0.85,0.58]];
+  },
+];
+function makeAnchors(stage){
+  const pat = PATH_PATTERNS[(stage-1)%PATH_PATTERNS.length];
+  const mirror = Math.random()<0.5;
+  const pts = [[0.5,-0.15]].concat(pat(stage, mirror));
+  pts.push([0.5,0.74]);
+  pts.push([0.5,0.90]);
+  return pts;
+}
+function catmull(p0,p1,p2,p3,t){
+  const t2=t*t, t3=t2*t;
+  return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3);
+}
+function buildPath(anchorsFrac){
+  return { frac: anchorsFrac, pts:[], cum:[], len:0 };
+}
+function rebuildPathPixels(){
+  const p = run.path;
+  const A = p.frac.map(([fx,fy])=>[fx*W, fy*H]);
+  const pts=[], SUB=26;
+  for(let i=0;i<A.length-1;i++){
+    const p0=A[Math.max(0,i-1)], p1=A[i], p2=A[i+1], p3=A[Math.min(A.length-1,i+2)];
+    for(let s=0;s<SUB;s++){
+      const t=s/SUB;
+      pts.push([catmull(p0[0],p1[0],p2[0],p3[0],t), catmull(p0[1],p1[1],p2[1],p3[1],t)]);
+    }
+  }
+  pts.push(A[A.length-1].slice());
+  const cum=[0];
+  for(let i=1;i<pts.length;i++){
+    cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]));
+  }
+  const oldLen = p.len;
+  p.pts=pts; p.cum=cum; p.len=cum[cum.length-1];
+  if(oldLen>0 && run.worms){ const k=p.len/oldLen; run.worms.forEach(w=>w.headDist*=k); }
+}
+function pathPoint(d){
+  const p=run.path, cum=p.cum, pts=p.pts;
+  if(d<=0){ // extrapolate above screen along first direction
+    const [x0,y0]=pts[0],[x1,y1]=pts[1];
+    const L=Math.hypot(x1-x0,y1-y0)||1;
+    return [x0+(x0-x1)/L*(-d), y0+(y0-y1)/L*(-d)];
+  }
+  if(d>=p.len) return [pts[pts.length-1][0], pts[pts.length-1][1]];
+  let lo=0, hi=cum.length-1;
+  while(lo<hi-1){ const mid=(lo+hi)>>1; if(cum[mid]<=d) lo=mid; else hi=mid; }
+  const t=(d-cum[lo])/((cum[hi]-cum[lo])||1);
+  return [lerp(pts[lo][0],pts[hi][0],t), lerp(pts[lo][1],pts[hi][1],t)];
+}
+
+/* ---------------- segment & worm definitions ---------------- */
+const SEG_TYPES = {
+  head:    { hpMult:8.0, energy:20, label:'Head' },
+  standard:{ hpMult:1.0, energy:6,  label:'Segment' },
+  armoured:{ hpMult:1.0, energy:8,  label:'Armoured Segment', armourMult:1.2 },
+  capsule: { hpMult:1.4, energy:12, label:'Mutation Capsule' },
+  regen:   { hpMult:1.1, energy:9,  label:'Regeneration Organ' },
+  speedorg:{ hpMult:0.9, energy:9,  label:'Speed Organ' },
+  support: { hpMult:1.1, energy:9,  label:'Support Organ' },
+  weak:    { hpMult:0.8, energy:7,  label:'Critical Weak Point' },
+  tail:    { hpMult:0.6, energy:14, label:'Tail' },
+};
+const CAPSULE_POOLS = ['power','speed','critical','quantity','control','chain','recovery','evolution'];
+const POOL_COLORS = { power:'#ff3d6e', speed:'#ffb23d', critical:'#c77dff', quantity:'#ff8f5f',
+                      control:'#6ee7ff', chain:'#4fd2ff', recovery:'#3dffb0', evolution:'#e07fff', trap:'#ff2f5e' };
+
+/* Worm archetypes — data only; combat code reads these fields. Every worm is a
+   single continuous body for its whole life — nothing here ever spawns a
+   second worm entity. hardensOnDeath/hardensAt50 make a specific worm's own
+   remaining body tougher in response to combat instead. */
+const WORM_TYPES = {
+  basic:   { name:'Worm',            speed:1.0,  segMult:1.0, hpMult:1.0, minStage:1 },
+  runner:  { name:'Runner Worm',     speed:1.75, segMult:0.55,hpMult:0.6, minStage:2 },
+  armoured:{ name:'Armoured Worm',   speed:0.85, segMult:0.9, hpMult:1.0, minStage:3, armourRate:0.45 },
+  regen:   { name:'Regenerator',     speed:0.9,  segMult:1.0, hpMult:1.0, minStage:4, regenRate:0.3 },
+  brood:   { name:'Hive Worm',       speed:0.95, segMult:1.0, hpMult:0.9, minStage:5, hardensOnDeath:true },
+  phase:   { name:'Phase Worm',      speed:1.1,  segMult:0.8, hpMult:0.9, minStage:6, phasing:true },
+  split:   { name:'Ironclad Worm',   speed:0.95, segMult:1.2, hpMult:0.9, minStage:7, hardensAt50:true },
+};
+
+const HP_EXP = 1.30;    // exponential HP growth per stage — steeper than before, on purpose
+const BODY_GROWTH = 1.03; // each segment further from the head is this much tougher than the last
+
+function buildWormSegments(typeKey, stage, count, opts={}){
+  const wt = WORM_TYPES[typeKey]||WORM_TYPES.basic;
+  const baseHp = 22 * Math.pow(HP_EXP, stage-1) * wt.hpMult * (opts.hpMult||1);
+  const segs = [];
+  segs.push(mkSeg('head', baseHp, 1));
+  // capsules are deliberately rare now — roughly one per 9-13 standard segments
+  const bodyN = Math.max(3, count-2);
+  let capsN = clamp(Math.round(bodyN/rand(9,13)), 1, 5);
+  if(opts.noCapsules) capsN = 0;
+  const capSlots = new Set();
+  let guard=0;
+  while(capSlots.size<capsN && guard++<200){
+    const i = rint(1,bodyN);
+    if(!capSlots.has(i-1)&&!capSlots.has(i+1)) capSlots.add(i);
+  }
+  for(let i=1;i<=bodyN;i++){
+    // every segment further from the head is tougher than the last — the
+    // worm is one continuous body that gets harder to defeat the deeper
+    // into it you fight
+    const tough = Math.pow(BODY_GROWTH, i);
+    if(capSlots.has(i)){
+      const trap = (stage>=4 && Math.random()<0.18);
+      const s = mkSeg('capsule', baseHp, tough);
+      s.pool = trap ? 'trap' : pickCapsulePool();
+      segs.push(s);
+      continue;
+    }
+    let t='standard';
+    const r=Math.random();
+    if(wt.armourRate && r<wt.armourRate) t='armoured';
+    else if(wt.regenRate && r<0.18) t='regen';
+    else if(r<0.06 && stage>=2) t='speedorg';
+    else if(r<0.11 && stage>=3) t='support';
+    else if(r<0.16) t='weak';
+    else if(r<0.20 && stage>=3 && !wt.armourRate) t='armoured';
+    segs.push(mkSeg(t, baseHp, tough));
+  }
+  segs.push(mkSeg('tail', baseHp, Math.pow(BODY_GROWTH, bodyN+1)));
+  return segs;
+}
+function mkSeg(type, baseHp, toughMult){
+  const st = SEG_TYPES[type];
+  const tm = toughMult||1;
+  const hp = baseHp*st.hpMult*tm;
+  return { type, hp, maxHp:hp, alive:true, armourHp:type==='armoured'?baseHp*(st.armourMult||1)*tm:0,
+           maxArmour:type==='armoured'?baseHp*(st.armourMult||1)*tm:0,
+           pool:null, revealed:false, hitFlash:0, slowT:0, regenGlow:0, burnT:0, burnDPS:0, _burnSpread:false, _visD:undefined, ripeT:0, _ripeWarned:false };
+}
+function pickCapsulePool(){
+  // evolution pool only offered if some weapon can evolve; checked at reveal-time too
+  const pools=['power','speed','critical','quantity','control','chain','recovery'];
+  if(run && run.weapons.some(w=>w.level>=5 && !w.evolved) && Math.random()<0.30) return 'evolution';
+  return pools[rint(0,pools.length-1)];
+}
+
+/* ---------------- weapons ---------------- */
+const WEAPON_DEFS = {
+  needle: { name:'Pulse Needle',     icon:'🜂', glyph:'▲', color:'#6ee7ff', interval:0.65, dmg:1.0,
+            desc:'Rapid dart fired straight up', evoName:'Needle Constellation' },
+  orb:    { name:'Cleanse Orb',      icon:'🜄', glyph:'●', color:'#3dffb0', interval:1.7,  dmg:1.7,
+            desc:'Lobbed orb that bursts in an area', evoName:'Purge Nova' },
+  drones: { name:'Antibody Drones',  icon:'🜁', glyph:'✦', color:'#ffb23d', interval:0.9,  dmg:0.55,
+            desc:'Orbiting attackers that fire on their own', evoName:'Phage Swarm' },
+  arc:    { name:'Ion Arc',          icon:'🜅', glyph:'⌁', color:'#a78bff', interval:1.35, dmg:0.9,
+            desc:'Lightning that jumps between segments', evoName:'Storm Lattice' },
+  cloud:  { name:'Enzyme Cloud',     icon:'🜆', glyph:'☁', color:'#8fe05a', interval:2.8,  dmg:0.4,
+            desc:'Persistent dissolving area', evoName:'Necrotic Bloom' },
+  wave:   { name:'Compression Wave', icon:'🜇', glyph:'≈', color:'#ff6fa8', interval:3.4,  dmg:1.2,
+            desc:'Pushes the worm back up its route', evoName:'Seismic Collapse' },
+  flyer:  { name:'Spore Wing',       icon:'🜈', glyph:'✈', color:'#ffe45f', interval:1.1,  dmg:0.8,
+            desc:'An airborne drone patrols overhead and strikes down', evoName:'Wing Squadron' },
+  roller: { name:'Husk Roller',      icon:'🜉', glyph:'◍', color:'#ff8d5f', interval:2.6,  dmg:1.3,
+            desc:'A heavy husk rolls upward, crushing a wide path', evoName:'Avalanche' },
+  ember:  { name:'Cinder Gland',     icon:'🜊', glyph:'🔥', color:'#ff6a2f', interval:2.2,  dmg:0.6,
+            desc:'Lobbed fire that burns and spreads along the body', evoName:'Wildfire' },
+};
+const MAX_WEAPONS = 5;
+function addWeapon(key){
+  if(run.weapons.some(w=>w.key===key)) return;
+  run.weapons.push({ key, level:1, evolved:false, cd:rand(0.1,0.4), shots:0, drones:[], flyers:[], dmgDealt:0 });
+  renderWeaponIcons();
+}
+function weaponDamage(w){
+  const def=WEAPON_DEFS[w.key];
+  let d = run.stats.baseDamage * def.dmg * (1+0.28*(w.level-1)) * run.stats.dmgMult;
+  d *= (run.stats.weaponDmg[w.key]||1);
+  if(w.evolved) d*=1.45;
+  d *= 1 + run.stats.adaptive*0.05*run.weapons.length;
+  return d;
+}
+function weaponInterval(w){
+  const def=WEAPON_DEFS[w.key];
+  let iv = def.interval / (run.stats.atkSpeedMult * (run.stats.weaponSpd[w.key]||1));
+  return Math.max(0.08, iv);
+}
+
+/* ---------------- upgrade cards ---------------- */
+/* cat colors: damage=red firing=amber critical=purple technology=cyan survival=green */
+const CAT_COLORS = { damage:'#ff3d6e', firing:'#ffb23d', critical:'#c77dff', technology:'#4fd2ff', survival:'#3dffb0' };
+const CAT_ICONS  = { damage:'☀', firing:'»', critical:'✦', technology:'⌁', survival:'✚' };
+const RARITIES = [
+  { key:'common',   w:55, color:'#8a7fa3', name:'Common' },
+  { key:'enhanced', w:28, color:'#4fd2ff', name:'Enhanced' },
+  { key:'rare',     w:12, color:'#c77dff', name:'Rare' },
+  { key:'mutant',   w:4,  color:'#ff8d5f', name:'Mutant' },
+  { key:'apex',     w:1,  color:'#ffe45f', name:'Apex' },
+];
+
+/* Boosts are deliberately short and universal now — practical, weapon-agnostic
+   stat tweaks. Weapon flavour and depth live in the separate Abilities thread
+   below (installing, levelling and evolving weapons via Graft/EVOLVE cards). */
+const CARDS = [
+  /* --- damage (red) --- */
+  { id:'dmg1', name:'Cytotoxin', cat:'damage', pools:['power'], rarity:'common', max:6,
+    desc:l=>'All damage +15%.', apply:()=>{ run.stats.dmgMult*=1.15; } },
+  { id:'apen', name:'Dissolving Agent', cat:'damage', pools:['power','chain'], rarity:'enhanced', max:3,
+    desc:l=>'Attacks damage armour +60% faster.', apply:()=>{ run.stats.armourPen+=0.60; } },
+
+  /* --- firing (amber) --- */
+  { id:'aspd', name:'Accelerated Response', cat:'firing', pools:['speed'], rarity:'common', max:6,
+    desc:l=>'All weapons attack 10% faster.', apply:()=>{ run.stats.atkSpeedMult*=1.10; } },
+  { id:'needle2', name:'Twin Barrel', cat:'firing', pools:['quantity'], rarity:'enhanced', max:4, needs:'needle',
+    desc:l=>'Fire +1 needle, side by side.', apply:()=>{ run.stats.needleCount+=1; } },
+  { id:'pierce', name:'Deep Injection', cat:'firing', pools:['chain','quantity'], rarity:'enhanced', max:3, needs:'needle',
+    desc:l=>'Needles pierce +1 segment.', apply:()=>{ run.stats.pierce+=1; } },
+
+  /* --- critical (purple) --- */
+  { id:'crit1', name:'Sharpened Enzymes', cat:'critical', pools:['critical'], rarity:'common', max:6,
+    desc:l=>'Critical chance +4%.', apply:()=>{ run.stats.critChance+=0.04; } },
+  { id:'critd', name:'Deep Rupture', cat:'critical', pools:['critical'], rarity:'common', max:5,
+    desc:l=>'Critical damage +25%.', apply:()=>{ run.stats.critMult+=0.25; } },
+  { id:'critslow', name:'Paralytic Strike', cat:'critical', pools:['control','critical'], rarity:'enhanced', max:2,
+    desc:l=>'Critical hits slow the worm 25% for 1.5s.', apply:()=>{ run.stats.critSlow=Math.max(run.stats.critSlow,0.25); run.stats.critSlowDur=1.5; } },
+
+  /* --- survival (green) --- */
+  { id:'heal', name:'Cytoplasm Draught', cat:'survival', pools:['recovery'], rarity:'common', max:9,
+    desc:l=>'Restore 25 core health.', apply:()=>{ run.coreHp=Math.min(run.coreMax, run.coreHp+25); } },
+  { id:'maxhp', name:'Thickened Membrane', cat:'survival', pools:['recovery'], rarity:'common', max:5,
+    desc:l=>'Max core health +25, heal 25.', apply:()=>{ run.coreMax+=25; run.coreHp+=25; } },
+  { id:'barrier', name:'Emergency Barrier', cat:'survival', pools:['recovery','control'], rarity:'enhanced', max:3,
+    desc:l=>'Block the next core impact completely.', apply:()=>{ run.stats.barrier+=1; } },
+  { id:'regen', name:'Mending Culture', cat:'survival', pools:['recovery'], rarity:'rare', max:3,
+    desc:l=>'Core regenerates 0.6 health per second.', apply:()=>{ run.stats.coreRegen+=0.6; } },
+  { id:'slowaura', name:'Viscous Field', cat:'survival', pools:['control'], rarity:'enhanced', max:3,
+    desc:l=>'All worms move 8% slower.', apply:()=>{ run.stats.slowAura+=0.08; } },
+  { id:'abilcd', name:'Reflex Loop', cat:'survival', pools:['control','speed'], rarity:'common', max:3,
+    desc:l=>'Stasis ability cooldown −20%.', apply:()=>{ run.stats.abilityCd*=0.8; } },
+];
+/* ---- Abilities thread: install, level and evolve weapons — separate from Boosts above ---- */
+function newWeaponCards(){
+  const owned = run.weapons.map(w=>w.key);
+  if(owned.length>=MAX_WEAPONS) return [];
+  return Object.keys(WEAPON_DEFS).filter(k=>!owned.includes(k)).map(k=>({
+    id:'install_'+k, name:'Graft: '+WEAPON_DEFS[k].name, cat:'technology', pools:['quantity','chain','power','speed'],
+    rarity:'rare', max:1, install:k,
+    desc:()=>WEAPON_DEFS[k].desc+'.', apply:()=>addWeapon(k),
+  }));
+}
+function evolveCards(){
+  return run.weapons.filter(w=>w.level>=5 && !w.evolved).map(w=>({
+    id:'evolve_'+w.key, name:'EVOLVE: '+WEAPON_DEFS[w.key].evoName, cat:'technology', pools:['evolution'],
+    rarity:'mutant', max:1, evolve:w.key,
+    desc:()=>evoDesc(w.key), apply:()=>{ w.evolved=true; SFX.evolve(); toast(WEAPON_DEFS[w.key].evoName+'!', '#e07fff'); renderWeaponIcons(); },
+  }));
+}
+function evoDesc(k){
+  return {
+    needle:'Needles triple and every volley seeks capsules.',
+    orb:'Bursts are huge and leave dissolving pools.',
+    drones:'Drone count doubles and shots pierce.',
+    arc:'Chains double and every jump briefly stuns.',
+    cloud:'Clouds bloom outward when segments die inside.',
+    wave:'Waves span the arena and hurl the worm back.',
+    flyer:'Two drones patrol in formation and their shots pierce.',
+    roller:'Rollers are wider and never stop rolling.',
+    ember:'Burning spreads instantly across the whole worm.',
+  }[k];
+}
+function cardLv(id){ return run.cardLevels[id]||0; }
+function mulW(bag,key,m){ run.stats[bag][key]=(run.stats[bag][key]||1)*m; }
+
+/* ---------------- run state ---------------- */
+let run = null;
+let state = 'HOME';   // HOME, INTRO, COMBAT, DRAFT, BOSSINTRO, RESULTS, PAUSE, GAMEOVER
+let prevState = 'COMBAT';
+
+function newRun(){
+  const stats = {
+    baseDamage:10, dmgMult:1, atkSpeedMult:1, critChance:0.05, critMult:1.75,
+    coreHpMult:1, luck:0,
+    capsuleDmg:0, armourPen:0, execute:0, chainReaction:0, focusRamp:0, adaptive:0, headDmg:0,
+    needleCount:1, orbRadius:1, droneCount:2, cloudDur:1, cloudRadius:1, cloudArmour:0,
+    critSlow:0, critSlowDur:0, arcStun:0, pierce:0, arcChains:0, needleStorm:false, needleCritBonus:0,
+    scanner:false, barrier:0, coreRegen:0, slowAura:0, abilityCd:1,
+    weaponSpd:{}, weaponDmg:{},
+  };
+  META_DEFS.forEach(m=>m.apply(stats, save.meta[m.id]));
+  run = {
+    stage:1, stats, weapons:[], cardLevels:{},
+    coreMax:Math.round(100*stats.coreHpMult), coreHp:0,
+    energy:0, energyThresh:30, draftsQueued:[],
+    rerolls:1, worms:[], projectiles:[], clouds:[], arcs:[], waves:[], particles:[], dnums:[],
+    turretX:W/2, turretStillT:0, abilityT:0, freezeT:0,
+    path:null, schedule:[], schedT:0, scheduled:false, bossSpawned:false, boss:null,
+    totalHp:1, destroyedHp:0, shake:0,
+    rs:{ dmg:0, segs:0, capsules:0, bestCrit:0, weapons:{} },
+    newCards:new Set(),
+  };
+  run.coreHp = run.coreMax;
+  addWeapon('needle');
+  startStage(1);
+}
+
+/* ---------------- stage setup ---------------- */
+function stageName(n){ return 'STAGE '+n+' — '+['SHALLOW TISSUE','DERMAL FIELDS','LYMPH CHANNEL','MARROW GATE','NERVE GARDEN','DEEP FASCIA','CARDIAC APPROACH','SPINAL RUN','CRANIAL VAULT','THE WOMB'][(n-1)%10]; }
+
+function startStage(n){
+  run.stage=n;
+  run.path = buildPath(makeAnchors(n));
+  rebuildPathPixels();
+  run.worms=[]; run.projectiles=[]; run.clouds=[]; run.arcs=[]; run.waves=[]; run.particles=[]; run.dnums=[];
+  run.turretX=W/2; run.turretStillT=0; run.rerolls=1; run.bossSpawned=false; run.boss=null;
+  run.schedT=0; run.destroyedHp=0;
+  // spawn schedule: worm type mix by stage — denser and faster than a casual crawl
+  const sched=[];
+  const kinds = Object.keys(WORM_TYPES).filter(k=>WORM_TYPES[k].minStage<=n);
+  const baseCount = 10 + Math.floor(n*1.8);
+  const wormN = 8 + Math.min(8, Math.floor(n/1.3));
+  let t=1.2;
+  for(let i=0;i<wormN;i++){
+    let k='basic';
+    if(i>0){
+      const late = i/wormN;
+      const opts = kinds.filter(x=>x!=='basic');
+      if(opts.length && Math.random()<0.25+late*0.5) k=opts[rint(0,opts.length-1)];
+    }
+    const elite = Math.random() < Math.min(0.55, 0.10+n*0.025);
+    sched.push({ t, kind:k, count:Math.round(baseCount*WORM_TYPES[k].segMult), elite });
+    t += rand(9,15) * Math.pow(0.955, n);
+  }
+  run.schedule=sched;
+  // total scheduled hp (weighted, incl. boss)
+  let tot=0;
+  sched.forEach(s=>{ tot += estWormHp(s.kind, n, s.count, s.elite); });
+  run.bossHpEst = estWormHp('basic', n, 24+n, true)*2.2;
+  tot += run.bossHpEst;
+  run.totalHp = tot;
+  setState('INTRO');
+  $('introTitle').textContent = stageName(n);
+  $('introSub').textContent = n===1 ? 'Drag to aim — your weapons fire straight up. Crack the sealed capsules.' :
+    'The worms grow '+(n%2?'longer':'faster')+', and the route bends differently. New anatomy detected.';
+  setTimeout(()=>{ if(state==='INTRO') setState('COMBAT'); }, 2200);
+  updateHud();
+}
+function estWormHp(kind,stage,count,elite){
+  const wt=WORM_TYPES[kind];
+  return 22*Math.pow(HP_EXP,stage-1)*wt.hpMult*(elite?1.6:1)*count*1.3;
+}
+
+/* ---------------- worm spawning ---------------- */
+function spawnWorm(kind, count, elite, isBoss=false, bossKind=0){
+  const n = run.stage;
+  const wt = WORM_TYPES[kind]||WORM_TYPES.basic;
+  const spacing = clamp(W*0.075, 24, 44);
+  const speedF = 0.043 * Math.min(2.3, 1+0.042*n) * wt.speed * (elite?1.12:1);
+  const w = {
+    kind, elite, isBoss, bossKind,
+    segs: buildWormSegments(kind, n, count, {hpMult: elite?1.6:1}),
+    headDist: 0, spacing,
+    baseSpeed: H*speedF * (isBoss?0.8:1),
+    speedMult:1, stunT:0, phaseT:0, phased:false, phaseCycle:rand(3,6),
+    dead:false, waveHits:{}, hardened50:false, radius: clamp(spacing*0.62, 14, 30) * (isBoss?1.25:1),
+    name: isBoss ? (bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH') : wt.name,
+    bossPhase:1, shieldT:0, detached:false, ripeBonus:0,
+  };
+  if(isBoss){
+    w.segs = buildBossSegments(bossKind, n);
+  }
+  if(elite && !isBoss) w.segs.forEach(s=>{ s.hp*=1.6; s.maxHp*=1.6; if(s.armourHp){s.armourHp*=1.6;s.maxArmour*=1.6;} });
+  if(run.stats.scanner) w.segs.forEach(s=>{ if(s.type==='capsule') revealCapsule(s,false); });
+  run.worms.push(w);
+  return w;
+}
+function buildBossSegments(bossKind, n){
+  const baseHp = 22*Math.pow(HP_EXP,n-1)*2.0;
+  const segs=[ mkSeg('head', baseHp*1.2, 1) ];
+  const body = 22 + Math.min(10,n);
+  const capSlots=[Math.floor(body*0.4), body-4];
+  for(let i=1;i<=body;i++){
+    const tough = Math.pow(BODY_GROWTH, i);
+    if(capSlots.includes(i)){
+      const s=mkSeg('capsule', baseHp*1.3, tough);
+      s.pool = pickCapsulePool();
+      if(bossKind===0){ s.armourHp = baseHp*0.8*tough; s.maxArmour=s.armourHp; }   // armoured capsules
+      segs.push(s); continue;
+    }
+    let t='standard';
+    if(bossKind===1 && Math.random()<0.55) t='armoured';
+    else if(Math.random()<0.10) t='weak';
+    else if(Math.random()<0.08) t='support';
+    segs.push(mkSeg(t, baseHp, tough));
+  }
+  segs.push(mkSeg('tail', baseHp, Math.pow(BODY_GROWTH, body+1)));
+  return segs;
+}
+/* Permanently toughens whatever's left alive on a worm — used instead of ever
+   spawning a second worm entity, so the game always stays one continuous body. */
+function hardenWorm(w, pct){
+  aliveSegs(w).forEach(s=>{
+    const add = s.maxHp*pct;
+    s.maxHp += add; s.hp = Math.min(s.maxHp, s.hp+add);
+    if(s.maxArmour){ const aAdd=s.maxArmour*pct; s.maxArmour+=aAdd; s.armourHp=Math.min(s.maxArmour, s.armourHp+aAdd); }
+  });
+}
+
+/* ---------------- damage model ---------------- */
+function aliveSegs(w){ return w.segs.filter(s=>s.alive); }
+function segDist(w, seg){
+  const alive = aliveSegs(w);
+  const k = alive.indexOf(seg);
+  return k<0 ? -9999 : w.headDist - w.spacing*k;
+}
+function segPos(w, seg){
+  const d = segDist(w,seg);
+  return pathPoint(d);
+}
+/* Only segments actually visible on screen can be targeted or damaged — fixes
+   sniping segments that are still travelling above the top of the viewport. */
+function segVisiblePos(w, seg){
+  const d = segDist(w, seg);
+  if(d<=0) return null;
+  const p = pathPoint(d);
+  if(p[1] < -16 || p[1] > H+16 || p[0] < -40 || p[0] > W+40) return null;
+  return p;
+}
+function neighbours(w, seg){
+  const alive=aliveSegs(w); const k=alive.indexOf(seg); const out=[];
+  if(k>0) out.push(alive[k-1]);
+  if(k<alive.length-1) out.push(alive[k+1]);
+  return out;
+}
+function hitSegment(w, seg, raw, opts={}){
+  if(w.dead || !seg.alive || w.phased) return 0;
+  let dmg = raw;
+  // conditional groups (stack multiplicatively per spec §8)
+  if(seg.type==='capsule') dmg *= 1+run.stats.capsuleDmg;
+  if(seg.type==='head')    dmg *= 1+run.stats.headDmg;
+  // support organ aura
+  if(neighbours(w,seg).some(s=>s.type==='support')) dmg *= 0.65;
+  // boss head shield (phase 1 Devourer): front 5 segments protected while shieldT
+  if(w.isBoss && w.shieldT>0){
+    const alive=aliveSegs(w);
+    if(alive.indexOf(seg)<5 && seg.type!=='head') dmg*=0.4;
+  }
+  // predatory focus: reward holding the turret still
+  if(run.stats.focusRamp>0){
+    dmg *= 1+Math.min(run.stats.focusRamp, 0.3*(run.turretStillT||0));
+  }
+  // crit
+  let crit = false;
+  let cc = run.stats.critChance + (opts.critBonus||0);
+  if(Math.random()<cc){
+    crit=true;
+    let cm = run.stats.critMult + (seg.type==='weak'?1.0:0) + (opts.critMultBonus||0);
+    dmg *= cm;
+    if(run.stats.critSlow>0){ w.slowFxT = run.stats.critSlowDur; }
+    if(opts.arcCrit && run.stats.arcStun>0){ w.stunT = Math.max(w.stunT, run.stats.arcStun); }
+  }
+  // armour layer
+  if(seg.armourHp>0 && !opts.ignoreArmour){
+    const aDmg = dmg*(1+run.stats.armourPen)*(opts.armourMult||1);
+    seg.armourHp -= aDmg;
+    seg.hitFlash = 0.12;
+    addDnum(segPos(w,seg), Math.round(aDmg), '#b9c4d6', false);
+    if(seg.armourHp<=0){
+      seg.armourHp=0; SFX.armourBreak(); burst(segPos(w,seg), '#cfd8e6', 10);
+    } else { SFX.armour(); }
+    run.rs.dmg += aDmg;
+    return aDmg;
+  }
+  seg.hp -= dmg;
+  seg.hitFlash = 0.12;
+  run.rs.dmg += dmg;
+  if(crit && dmg>run.rs.bestCrit) run.rs.bestCrit = dmg;
+  const p = segPos(w,seg);
+  addDnum(p, Math.round(dmg), crit?'#ffe45f':'#fff', crit);
+  crit ? SFX.crit() : SFX.hit();
+  // capsule reveal at 50%
+  if(seg.type==='capsule' && !seg.revealed && seg.hp<=seg.maxHp*0.5) revealCapsule(seg,true);
+  // execute
+  if(run.stats.execute>0 && seg.type!=='head' && !w.isBoss && seg.hp>0 && seg.hp<seg.maxHp*run.stats.execute){
+    seg.hp = 0;
+  }
+  if(seg.hp<=0) destroySegment(w, seg);
+  return dmg;
+}
+function revealCapsule(seg, sound){
+  seg.revealed = true;
+  if(sound){ SFX.crack(); }
+}
+function destroySegment(w, seg){
+  if(!seg.alive) return;
+  seg.alive=false;
+  const p = segPos(w,seg);
+  run.destroyedHp += seg.maxHp + (seg.maxArmour||0);
+  run.rs.segs++;
+  burst(p, seg.type==='capsule'?POOL_COLORS[seg.pool||'power']:'#ff6f8a', 16);
+  SFX.segDie();
+  // energy
+  const e = SEG_TYPES[seg.type].energy * (1+run.stage*0.15) * (w.elite?1.5:1);
+  gainEnergy(e);
+  // chain reaction
+  if(run.stats.chainReaction>0){
+    neighbours(w,seg).forEach(nb=>{ if(nb.alive){ nb.hp -= seg.maxHp*run.stats.chainReaction;
+      if(nb.hp<=0) destroySegment(w,nb); } });
+  }
+  // Hive Worm + the Vault Matriarch: killing one segment permanently hardens
+  // what's left instead of birthing a second worm — the body itself gets
+  // more dangerous to fight through the longer the battle goes on.
+  const hardens = (WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensOnDeath) || (w.isBoss && w.bossKind===1);
+  if(hardens && seg.type!=='head' && aliveSegs(w).length){
+    hardenWorm(w, w.isBoss?0.05:0.06);
+  }
+  // capsule reward
+  if(seg.type==='capsule'){
+    run.rs.capsules++;
+    if(seg.pool==='trap'){
+      toast('TRAP CAPSULE! THE WORM HARDENS', '#ff2f5e');
+      if(aliveSegs(w).length){ hardenWorm(w, 0.20); run.coreHp = Math.max(0, run.coreHp-6); }
+    } else {
+      const pool = seg.pool||'power';
+      if(pool==='evolution' && !run.weapons.some(x=>x.level>=5&&!x.evolved)){
+        queueDraft('power');  // fallback if nothing can evolve
+      } else queueDraft(pool);
+      (pool==='evolution'?SFX.rare:SFX.reveal)();
+    }
+  }
+  // head destroyed -> whole worm collapses (partial energy for the rest)
+  if(seg.type==='head'){ killWorm(w, true); return; }
+  // Ironclad Worm: fuses and hardens at the 50% mark instead of splitting in two
+  if(WORM_TYPES[w.kind] && WORM_TYPES[w.kind].hardensAt50 && !w.hardened50){
+    const alive=aliveSegs(w);
+    const totHp = w.segs.reduce((a,s)=>a+s.maxHp,0);
+    const curHp = alive.reduce((a,s)=>a+s.hp,0);
+    if(curHp <= totHp*0.5 && alive.length){
+      w.hardened50=true; hardenWorm(w, 0.35);
+      toast('THE WORM FUSES AND HARDENS', '#ffb23d');
+    }
+  }
+  if(aliveSegs(w).length===0) killWorm(w,false);
+}
+function killWorm(w, headKill){
+  if(w.dead) return;
+  w.dead=true;
+  const alive = aliveSegs(w);
+  alive.forEach(s=>{
+    if(!s.alive) return;
+    s.alive=false;
+    run.destroyedHp += s.maxHp+(s.maxArmour||0);
+    if(headKill){ gainEnergy(SEG_TYPES[s.type].energy*0.4); }
+    burst(segPos(w,s), '#ff8fb0', 8);
+  });
+  if(w.isBoss){ onBossDead(); }
+}
+function gainEnergy(e){
+  run.energy += e;
+  while(run.energy >= run.energyThresh){
+    run.energy -= run.energyThresh;
+    run.energyThresh = Math.round(run.energyThresh*1.35+10);
+    queueDraft(null);
+  }
+}
+
+/* ---------------- boss flow ---------------- */
+function maybeSpawnBoss(){
+  if(run.bossSpawned) return;
+  const allSpawned = run.schedule.length===0;
+  const noWorms = run.worms.every(w=>w.dead);
+  if(allSpawned && noWorms){
+    run.bossSpawned=true;
+    setState('BOSSINTRO');
+    const bossKind = (run.stage%2===0)?1:0;
+    $('introTitle').textContent = bossKind===0?'THE CROWNED DEVOURER':'THE VAULT MATRIARCH';
+    $('introTitle').style.color='#ff6fa8';
+    $('introSub').textContent = bossKind===0 ? 'Its crown shields the vanguard. Break the sealed organs — or take the head.' :
+      'A vault of armoured plate. Every broken segment hardens what remains.';
+    setTimeout(()=>{
+      if(state!=='BOSSINTRO') return;
+      $('introTitle').style.color='';
+      const b = spawnWorm('basic', 24+run.stage, true, true, bossKind);
+      run.boss=b;
+      $('bossbar').style.display='block';
+      $('bossName').textContent=b.name;
+      setState('COMBAT');
+      SFX.phase();
+    }, 2400);
+  }
+}
+function bossTotHp(w){ return w.segs.reduce((a,s)=>a+(s.alive?s.hp+(s.armourHp||0):0),0); }
+function bossMaxHp(w){ return w.segs.reduce((a,s)=>a+s.maxHp+(s.maxArmour||0),0); }
+function updateBoss(w, dt){
+  const frac = bossTotHp(w)/bossMaxHp(w);
+  if(w.bossKind===0){
+    // Crowned Devourer phases
+    if(w.bossPhase===1){
+      w.shieldT = (Math.sin(run.schedT*0.7)>0)?1:0;   // periodic vanguard shield
+      if(frac<=0.6){ w.bossPhase=2; w.baseSpeed*=1.2; toast('PHASE 2 — IT ACCELERATES','#ff6fa8'); SFX.phase();
+        let conv=0; w.segs.forEach(s=>{ if(conv<2 && s.alive && s.type==='standard'){ s.type='regen'; conv++; } }); }
+    } else if(w.bossPhase===2){
+      w.shieldT=0;
+      if(frac<=0.25){ w.bossPhase=3; w.detached=true; toast('THE HEAD DETACHES AND GORGES ITSELF','#ff2f5e'); SFX.phase();
+        // the body is cast off, but the head absorbs its remaining mass instead
+        // of spawning anything — still one worm, now a smaller, tougher one
+        const alive=aliveSegs(w);
+        const head=alive[0];
+        let absorbed=0;
+        alive.slice(1).forEach(s=>{ absorbed+=s.maxHp*0.5; s.alive=false; run.destroyedHp+=s.maxHp+(s.maxArmour||0); });
+        if(head){ head.maxHp+=absorbed; head.hp=Math.min(head.maxHp, head.hp+absorbed); }
+        w.baseSpeed*=1.8; w.radius*=1.1;
+      }
+    }
+  } else {
+    // Vault Matriarch hardens on every segment death instead of brooding spawn (see destroySegment)
+    if(frac<=0.5 && w.bossPhase===1){ w.bossPhase=2; w.baseSpeed*=1.15; toast('THE VAULT CRACKS','#ffb23d'); SFX.phase(); }
+  }
+  const hb=$('bossHpBar'); if(hb) hb.style.width=(frac*100).toFixed(1)+'%';
+}
+function onBossDead(){
+  $('bossbar').style.display='none';
+  run.destroyedHp = run.totalHp; // clamp progress
+  SFX.victory();
+  setTimeout(()=>{ if(run && (state==='COMBAT'||state==='DRAFT')) showResults(true); }, 900);
+}
+
+/* ---------------- drafts ---------------- */
+/* Mutations picked here persist for the rest of THIS run (weapons, cardLevels,
+   stats) — they are only cleared when a new run begins via newRun(). Stage
+   transitions (startStage) intentionally never touch run.stats/weapons/cardLevels. */
+function queueDraft(pool){
+  run.draftsQueued.push({pool});
+  if(state==='COMBAT') openDraft();
+}
+let draftChoices=[], draftPool=null;
+function openDraft(){
+  if(!run.draftsQueued.length) return;
+  draftPool = run.draftsQueued.shift().pool;
+  draftChoices = rollCards(draftPool);
+  renderDraft();
+  setState('DRAFT');
+}
+function eligibleCards(pool){
+  let all = CARDS.concat(newWeaponCards());
+  if(pool==='evolution'){
+    const ev = evolveCards();
+    if(ev.length) return ev;
+  }
+  all = all.concat(evolveCards().filter(()=>pool===null));
+  let list = all.filter(c=>{
+    if(c.needs && !run.weapons.some(w=>w.key===c.needs)) return false;
+    if(cardLv(c.id)>=c.max) return false;
+    if(pool && !(c.pools||[]).includes(pool)) return false;
+    return true;
+  });
+  // weapon level-up cards: leveling an owned weapon
+  run.weapons.filter(w=>w.level<5).forEach(w=>{
+    const d=WEAPON_DEFS[w.key];
+    const c={ id:'lvl_'+w.key, name:d.name+' +', cat:'firing', pools:['power','speed','quantity'],
+      rarity:'common', max:99, levelUp:w.key,
+      desc:()=>d.name+' level '+(w.level+1)+' — +28% weapon damage.',
+      apply:()=>{ w.level++; renderWeaponIcons(); } };
+    if(!pool || c.pools.includes(pool)) list.push(c);
+  });
+  if(!list.length) list = CARDS.filter(c=>cardLv(c.id)<c.max);
+  return list;
+}
+function rollCards(pool){
+  const list = eligibleCards(pool);
+  // rarity weights, shifted by luck
+  const luck = run.stats.luck;
+  const weights = RARITIES.map((r,i)=>r.w * (i>0 ? (1+luck*0.06) : Math.max(0.3,1-luck*0.04)));
+  const picks=[]; const used=new Set();
+  let guard=0;
+  while(picks.length<3 && guard++<80){
+    const rk = weightedRarity(weights);
+    const cands = list.filter(c=>!used.has(c.id) && (c.rarity===rk || Math.random()<0.25));
+    const cand = cands.length? cands[rint(0,cands.length-1)] : list.filter(c=>!used.has(c.id))[0];
+    if(!cand) break;
+    used.add(cand.id); picks.push(cand);
+  }
+  return picks;
+}
+function weightedRarity(weights){
+  let tot=weights.reduce((a,b)=>a+b,0), r=Math.random()*tot;
+  for(let i=0;i<weights.length;i++){ r-=weights[i]; if(r<=0) return RARITIES[i].key; }
+  return 'common';
+}
+function renderDraft(){
+  $('draftTitle').textContent = draftPool ? (draftPool==='evolution'?'EVOLUTION UNLOCKED':'CAPSULE OPENED — '+draftPool.toUpperCase()) : 'CHOOSE A MUTATION';
+  $('draftTitle').style.color = draftPool ? (POOL_COLORS[draftPool]||'#fff') : '#fff';
+  const wrap=$('draftCards'); wrap.innerHTML='';
+  draftChoices.forEach((c)=>{
+    const rar = RARITIES.find(r=>r.key===c.rarity);
+    const col = CAT_COLORS[c.cat];
+    const el=document.createElement('div');
+    el.className='card chamfer';
+    el.style.borderColor = rar.color;
+    el.innerHTML = '<div class="cicon" style="color:'+col+'">'+(CAT_ICONS[c.cat]||'?')+'</div>'
+      +'<div class="cname" style="color:'+col+'">'+c.name+'</div>'
+      +'<div class="cdesc">'+c.desc(cardLv(c.id)+1)+'</div>'
+      +'<div class="crar" style="color:'+rar.color+'">'+rar.name+'</div>'
+      +(c.max<90?'<div class="clvl">Lv '+cardLv(c.id)+' / '+c.max+'</div>':'');
+    el.onclick=()=>pickCard(c);
+    wrap.appendChild(el);
+  });
+  $('rerollBtn').style.display = run.rerolls>0 ? '' : 'none';
+  $('rerollBtn').textContent = '↻ REROLL ('+run.rerolls+')';
+  $('draftHint').textContent = run.draftsQueued.length? (run.draftsQueued.length+' more reward'+(run.draftsQueued.length>1?'s':'')+' queued') : '';
+}
+function pickCard(c){
+  run.cardLevels[c.id]=(run.cardLevels[c.id]||0)+1;
+  if(!save.discovered.includes(c.id)){ save.discovered.push(c.id); run.newCards.add(c.name); }
+  c.apply();
+  if(c.rarity==='rare'||c.rarity==='mutant'||c.rarity==='apex') SFX.rare(); else SFX.reveal();
+  if(run.draftsQueued.length){ openDraft(); }
+  else setState('COMBAT');
+  updateHud();
+}
+$('rerollBtn').onclick=()=>{
+  if(run.rerolls<=0) return;
+  run.rerolls--;
+  draftChoices = rollCards(draftPool);
+  renderDraft();
+};
+
+/* ---------------- turret control ---------------- */
+/* No more tap-to-focus / auto-aim: the player drags (or uses ←/→) to slide
+   the turret left-right along the rail; every weapon fires straight up from
+   wherever the turret currently is. Positioning IS the aiming. */
+function turretPos(){ return [run.turretX, H*0.80]; }
+function corePos(){ return [W*0.5, H*0.90]; }
+
+let dragging=false;
+const keys = { left:false, right:false };
+function setTurretFromClientX(cx){
+  if(!run) return;
+  run.turretX = clamp(cx, turretMin(), turretMax());
+}
+cv.addEventListener('pointerdown', e=>{
+  audioInit();
+  if(state!=='COMBAT') return;
+  dragging=true;
+  setTurretFromClientX(e.clientX);
+});
+cv.addEventListener('pointermove', e=>{
+  if(!dragging || state!=='COMBAT') return;
+  setTurretFromClientX(e.clientX);
+});
+window.addEventListener('pointerup', ()=>{ dragging=false; });
+window.addEventListener('pointercancel', ()=>{ dragging=false; });
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=true;
+});
+window.addEventListener('keyup', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A') keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=false;
+});
+function updateTurret(dt){
+  const spd = W*0.95;
+  let moved=dragging;
+  if(keys.left){ run.turretX = clamp(run.turretX-spd*dt, turretMin(), turretMax()); moved=true; }
+  if(keys.right){ run.turretX = clamp(run.turretX+spd*dt, turretMin(), turretMax()); moved=true; }
+  run.turretStillT = moved ? 0 : (run.turretStillT||0)+dt;
+}
+
+/* ---------------- ability ---------------- */
+const ABILITY_CD = 28, FREEZE_DUR = 3;
+$('abilityBtn').onclick=()=>{
+  audioInit();
+  if(state!=='COMBAT'||!run) return;
+  if(run.abilityT>0) return;
+  run.abilityT = ABILITY_CD*run.stats.abilityCd;
+  run.freezeT = FREEZE_DUR;
+  SFX.freeze();
+  toast('CRYO STASIS','#6ee7ff');
+};
+
+/* ---------------- combat update ---------------- */
+function updateCombat(dt){
+  run.schedT += dt;
+  updateTurret(dt);
+  // no dead air: if the field is clear, pull the next scheduled worm forward
+  if(run.schedule.length && run.worms.every(w=>w.dead) && run.schedule[0].t > run.schedT+1.5){
+    run.schedule[0].t = run.schedT+1.5;
+  }
+  // spawn schedule
+  while(run.schedule.length && run.schedule[0].t<=run.schedT){
+    const s=run.schedule.shift();
+    spawnWorm(s.kind, s.count, s.elite);
+  }
+  maybeSpawnBoss();
+  // ability + freeze
+  if(run.abilityT>0) run.abilityT=Math.max(0,run.abilityT-dt);
+  if(run.freezeT>0) run.freezeT=Math.max(0,run.freezeT-dt);
+  // core regen
+  if(run.stats.coreRegen>0) run.coreHp=Math.min(run.coreMax, run.coreHp+run.stats.coreRegen*dt);
+
+  // worms
+  run.worms.forEach(w=>{ if(!w.dead) updateWorm(w,dt); });
+  run.worms = run.worms.filter(w=>!w.dead || w.segs.some(s=>s.hitFlash>0));
+  // weapons
+  run.weapons.forEach(w=>updateWeapon(w,dt));
+  // projectiles
+  updateProjectiles(dt);
+  updateClouds(dt);
+  updateWaves(dt);
+  run.arcs = run.arcs.filter(a=>{ a.t-=dt; return a.t>0; });
+  // fx
+  updateParticles(dt);
+  updateDnums(dt);
+  if(run.shake>0) run.shake=Math.max(0,run.shake-dt*3);
+  // defeat check
+  if(run.coreHp<=0){ gameOver(); }
+  updateHud();
+}
+function updateWorm(w, dt){
+  if(w.isBoss) updateBoss(w,dt);
+  // status
+  if(w.stunT>0){ w.stunT-=dt; }
+  if(w.slowFxT>0) w.slowFxT-=dt;
+  // phasing
+  if(WORM_TYPES[w.kind] && WORM_TYPES[w.kind].phasing){
+    w.phaseT+=dt;
+    if(!w.phased && w.phaseT>w.phaseCycle){ w.phased=true; w.phaseT=0; SFX.phase(); }
+    else if(w.phased && w.phaseT>1.4){ w.phased=false; w.phaseT=0; w.phaseCycle=rand(4,7); }
+  }
+  // speed
+  let sp=w.baseSpeed;
+  const alive=aliveSegs(w);
+  const spOrgans = alive.filter(s=>s.type==='speedorg').length;
+  sp *= 1+0.15*spOrgans;
+  sp *= 1-Math.min(0.5, run.stats.slowAura);
+  if(w.slowFxT>0) sp *= 1-run.stats.critSlow;
+  // capsule ripening: a cracked capsule left alone feeds the worm — +1.5%
+  // speed per second survived since it was revealed, capped per capsule at
+  // +40%, stacking across every capsule you've neglected. This is the whole
+  // point of "target it now, not eventually": ignoring a revealed capsule
+  // makes the worm carrying it measurably faster and harder to react to.
+  let ripeBonus=0;
+  alive.forEach(s=>{
+    if(s.type!=='capsule' || !s.revealed) return;
+    s.ripeT=(s.ripeT||0)+dt;
+    ripeBonus += Math.min(0.40, 0.015*s.ripeT);
+    if(!s._ripeWarned && s.ripeT>7){ s._ripeWarned=true; toast('A CAPSULE IS FEEDING THE WORM','#ff8f5f'); }
+  });
+  w.ripeBonus = ripeBonus;
+  sp *= 1+ripeBonus;
+  if(w.stunT>0 || run.freezeT>0) sp=0;
+  w.headDist += sp*dt*w.speedMult;
+  // regen organs heal neighbours
+  alive.forEach((s,k)=>{
+    if(s.type!=='regen') return;
+    const rate = (WORM_TYPES[w.kind]&&WORM_TYPES[w.kind].regenRate?WORM_TYPES[w.kind].regenRate:0.2);
+    [alive[k-1],alive[k+1],s].forEach(nb=>{
+      if(nb && nb.alive && nb.hp<nb.maxHp){ nb.hp=Math.min(nb.maxHp, nb.hp+nb.maxHp*rate*dt*0.15); nb.regenGlow=0.3; }
+    });
+  });
+  alive.forEach(s=>{ if(s.hitFlash>0)s.hitFlash-=dt; if(s.regenGlow>0)s.regenGlow-=dt; });
+  // burning (Cinder Gland): damage over time that can spread to a neighbour
+  alive.forEach(s=>{
+    if(!(s.burnT>0)) return;
+    s.burnT-=dt;
+    const tick = s.burnDPS*dt;
+    s.hp -= tick;
+    run.rs.dmg += tick;
+    if(s.hp<=0){ destroySegment(w,s); return; }
+    if(s._burnSpread && Math.random()<dt*0.6){
+      const nb = neighbours(w,s).find(x=>x.alive && !(x.burnT>0));
+      if(nb){ nb.burnT=s.burnT; nb.burnDPS=nb.maxHp*0.045; nb._burnSpread=true; }
+    }
+  });
+  // smoothed visual position: when a mid-body segment dies, the segments behind
+  // it glide to close the gap instead of teleporting — keeps the worm reading
+  // as one continuous body. Hit detection always uses the true instant distance.
+  alive.forEach((s,k)=>{
+    const trueD = w.headDist - w.spacing*k;
+    s._visD = (s._visD===undefined) ? trueD : lerp(s._visD, trueD, clamp(dt*9,0,1));
+  });
+  // core impact
+  if(w.headDist >= run.path.len){
+    coreImpact(w);
+  }
+}
+function coreImpact(w){
+  const alive=aliveSegs(w);
+  let dmg = (28 + 3.0*(alive.length-1) + (w.elite?14:0) + (w.isBoss?52:0)) * (1+(w.ripeBonus||0));
+  if(run.stats.barrier>0){ run.stats.barrier--; dmg=0; toast('BARRIER ABSORBED THE IMPACT','#3dffb0'); }
+  run.coreHp -= dmg;
+  run.shake = 1;
+  SFX.coreHit();
+  if(dmg>0) addDnum(corePos(), dmg, '#ff3d6e', true);
+  // count remaining hp as "destroyed" for progress so progress can't stall
+  alive.forEach(s=>{ run.destroyedHp += s.hp+(s.armourHp||0); s.alive=false; });
+  w.dead=true;
+  if(w.isBoss){ /* boss reaching the core doesn't end stage; player must survive */ $('bossbar').style.display='none'; run.destroyedHp=run.totalHp; if(run.coreHp>0) setTimeout(()=>{if(run&&state==='COMBAT')showResults(true);},600); }
+}
+
+/* ---------------- weapon behaviours ---------------- */
+function updateWeapon(w, dt){
+  if(w.key==='drones'){
+    const n = run.stats.droneCount * (w.evolved?2:1);
+    while(w.drones.length<n) w.drones.push({a:rand(0,6.28), cd:rand(0,1)});
+    w.drones.length=n;
+    w.drones.forEach(d=>{
+      d.a += dt*1.4;
+      d.cd -= dt;
+      if(d.cd<=0){
+        d.cd = weaponInterval(w);
+        const [dx,dy]=dronePos(d);
+        fireStraight(w, dx, dy, { pierce:w.evolved?1:0, small:true });
+      }
+    });
+    return;
+  }
+  if(w.key==='flyer'){
+    const n = w.evolved?2:1;
+    if(!w.flyers) w.flyers=[];
+    while(w.flyers.length<n) w.flyers.push({ x: rand(turretMin(),turretMax()), dir: Math.random()<0.5?1:-1, cd: rand(0,0.6) });
+    w.flyers.length=n;
+    const flySpeed = W*0.22;
+    w.flyers.forEach(f=>{
+      f.x += f.dir*flySpeed*dt;
+      if(f.x<turretMin()){ f.x=turretMin(); f.dir=1; }
+      if(f.x>turretMax()){ f.x=turretMax(); f.dir=-1; }
+      f.cd -= dt;
+      if(f.cd<=0){
+        f.cd = weaponInterval(w);
+        fireStraight(w, f.x, H*0.16, { pierce:w.evolved?1:0, small:true, down:true });
+      }
+    });
+    return;
+  }
+  w.cd -= dt;
+  if(w.cd>0) return;
+  w.cd = weaponInterval(w);
+  w.shots++;
+  const [tx,ty] = turretPos();
+  switch(w.key){
+    case 'needle': {
+      let n = run.stats.needleCount + (w.evolved?2:0);
+      for(let i=0;i<n;i++){
+        const off = (i-(n-1)/2) * 13;
+        fireStraight(w, tx+off, ty, { pierce:run.stats.pierce, critMultBonus:run.stats.needleCritBonus });
+      }
+      if((run.stats.needleStorm||w.evolved) && w.shots%8===0){
+        // smart munitions: straight-up shots launched under every visible capsule
+        run.worms.forEach(ww=>{ if(ww.dead)return; aliveSegs(ww).forEach(s=>{
+          if(s.type!=='capsule') return;
+          const p=segVisiblePos(ww,s); if(!p) return;
+          fireStraight(w, p[0], ty, { pierce:0 });
+        });});
+      }
+      SFX.shot();
+      break;
+    }
+    case 'orb': {
+      run.projectiles.push({ kind:'orb', x:tx, y:ty, vy:-H*0.62, w, alive:true,
+        radius: W*0.14*run.stats.orbRadius*(w.evolved?1.4:1), evolved:w.evolved, apexY: ty-H*0.58 });
+      SFX.shot();
+      break;
+    }
+    case 'arc': {
+      const chains = 3 + run.stats.arcChains + (w.evolved?3:0);
+      fireArc(w, tx, ty, chains);
+      break;
+    }
+    case 'cloud': {
+      run.projectiles.push({ kind:'cloudlob', x:tx, y:ty, vy:-H*0.5, w, alive:true, apexY: ty-H*0.52 });
+      SFX.shot();
+      break;
+    }
+    case 'wave': {
+      run.waves.push({ r: 10, id: Math.random(), w, evolved:w.evolved });
+      beep(120,0.25,'sawtooth',0.15,60);
+      break;
+    }
+    case 'roller': {
+      run.projectiles.push({ kind:'roller', x:tx, y:ty, baseX:tx, vy:-H*0.30, w, alive:true, t:0,
+        amp: W*0.30*(w.evolved?1.6:1), freq: 2.6, radius: (w.evolved?46:30), hitList:[] });
+      beep(90,0.3,'sawtooth',0.2,-40);
+      break;
+    }
+    case 'ember': {
+      run.projectiles.push({ kind:'ember', x:tx, y:ty, vy:-H*0.58, w, alive:true, apexY: ty-H*0.5 });
+      SFX.shot();
+      break;
+    }
+  }
+}
+function dronePos(d){
+  const [cx,cy]=turretPos();
+  return [cx+Math.cos(d.a)*W*0.14, cy-24+Math.sin(d.a)*18];
+}
+function fireStraight(w, x, y, opts={}){
+  run.projectiles.push({
+    kind:'needle', x, y, w, alive:true,
+    pierce: opts.pierce||0, hitList:[],
+    critBonus: opts.critBonus||0, critMultBonus: opts.critMultBonus||0,
+    vy: (opts.down?1:-1)*H*(opts.small?1.0:1.25), small:!!opts.small,
+  });
+}
+function fireArc(w, tx, ty, chains){
+  const LANE = clamp(W*0.10, 30, 70);
+  let start=null, bd=1e9;
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q)return;
+    if(Math.abs(q[0]-tx)>LANE) return;
+    const dd=Math.abs(q[1]-ty);
+    if(dd<bd){ bd=dd; start={worm:ww,seg:s}; }
+  });});
+  if(!start){
+    run.arcs.push({pts:[[tx,ty],[tx,ty-60]], t:0.15, evolved:w.evolved});
+    return;
+  }
+  const dmgBase = weaponDamage(w);
+  let cur = start, hops=[[tx,ty]];
+  const hit = new Set();
+  let dmg = dmgBase;
+  for(let i=0;i<chains && cur;i++){
+    const p=segVisiblePos(cur.worm,cur.seg); if(!p) break;
+    hops.push(p);
+    hitSegment(cur.worm, cur.seg, dmg, {arcCrit:true});
+    run.rs.weapons.arc=(run.rs.weapons.arc||0)+dmg;
+    if(w.evolved) cur.worm.stunT=Math.max(cur.worm.stunT,0.25);
+    hit.add(cur.seg);
+    dmg*=0.8;
+    // next: nearest alive on-screen segment not hit (same or other worm)
+    let best=null,bdd=1e9;
+    run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+      if(hit.has(s)) return;
+      const q=segVisiblePos(ww,s); if(!q) return;
+      const dd=dist2(p[0],p[1],q[0],q[1]);
+      if(dd<bdd && dd < (W*0.3)*(W*0.3)){ bdd=dd; best={worm:ww,seg:s}; }
+    });});
+    cur=best;
+  }
+  run.arcs.push({pts:hops, t:0.18, evolved:w.evolved});
+  beep(rand(700,900),0.08,'sawtooth',0.06,-400);
+}
+function collideAt(x,y,r){
+  for(const ww of run.worms){
+    if(ww.dead||ww.phased) continue;
+    for(const s of aliveSegs(ww)){
+      const q=segVisiblePos(ww,s); if(!q) continue;
+      if(dist2(x,y,q[0],q[1]) < (ww.radius+r)*(ww.radius+r)) return true;
+    }
+  }
+  return false;
+}
+function updateProjectiles(dt){
+  const list=run.projectiles;
+  for(let i=list.length-1;i>=0;i--){
+    const p=list[i];
+    if(!p.alive){ list.splice(i,1); continue; }
+    if(p.kind==='orb'){
+      p.y += p.vy*dt;
+      if(collideAt(p.x,p.y,14) || p.y<=p.apexY){ explodeOrb(p); list.splice(i,1); continue; }
+      if(p.y<-40){ list.splice(i,1); }
+      continue;
+    }
+    if(p.kind==='cloudlob'){
+      p.y += p.vy*dt;
+      if(p.y<=p.apexY){ deployCloud(p); list.splice(i,1); continue; }
+      continue;
+    }
+    if(p.kind==='ember'){
+      p.y += p.vy*dt;
+      if(collideAt(p.x,p.y,12) || p.y<=p.apexY){ explodeEmber(p); list.splice(i,1); continue; }
+      if(p.y<-40){ list.splice(i,1); }
+      continue;
+    }
+    if(p.kind==='roller'){
+      p.t += dt;
+      p.y += p.vy*dt;
+      p.x = clamp(p.baseX + Math.sin(p.t*p.freq)*p.amp, turretMin(), turretMax());
+      for(const ww of run.worms){
+        if(ww.dead||ww.phased) continue;
+        for(const s of aliveSegs(ww)){
+          if(p.hitList.includes(s)) continue;
+          const q=segVisiblePos(ww,s); if(!q) continue;
+          if(dist2(p.x,p.y,q[0],q[1]) < (ww.radius+p.radius)*(ww.radius+p.radius)){
+            p.hitList.push(s);
+            const dmg = weaponDamage(p.w);
+            hitSegment(ww,s,dmg,{});
+            run.rs.weapons.roller=(run.rs.weapons.roller||0)+dmg;
+          }
+        }
+      }
+      if(p.y<-60){ list.splice(i,1); }
+      continue;
+    }
+    // needle-type: straight vertical shot, fixed x (up from the turret, or down from a flyer)
+    p.y += p.vy*dt;
+    let consumed=false;
+    for(const ww of run.worms){
+      if(ww.dead||ww.phased) continue;
+      for(const s of aliveSegs(ww)){
+        if(p.hitList.includes(s)) continue;
+        const q=segVisiblePos(ww,s); if(!q) continue;
+        if(dist2(p.x,p.y,q[0],q[1]) < ww.radius*ww.radius){
+          p.hitList.push(s);
+          const dmg = weaponDamage(p.w);
+          hitSegment(ww,s,dmg,{critBonus:p.critBonus, critMultBonus:p.critMultBonus});
+          p.w.dmgDealt+=dmg; run.rs.weapons[p.w.key]=(run.rs.weapons[p.w.key]||0)+dmg;
+          if(p.pierce>0){ p.pierce--; }
+          else { consumed=true; }
+          break;
+        }
+      }
+      if(consumed) break;
+    }
+    if(consumed || p.y<-40 || p.y>H+40){ list.splice(i,1); }
+  }
+}
+function explodeEmber(p){
+  burst([p.x,p.y], WEAPON_DEFS.ember.color, 16);
+  beep(140,0.25,'sawtooth',0.2,-80);
+  const r2 = (W*0.11)*(W*0.11);
+  const dmg = weaponDamage(p.w);
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q)return;
+    if(dist2(p.x,p.y,q[0],q[1])<r2){
+      hitSegment(ww,s,dmg,{});
+      run.rs.weapons.ember=(run.rs.weapons.ember||0)+dmg;
+      if(s.alive){
+        s.burnT = Math.max(s.burnT||0, p.w.evolved?5:3);
+        s.burnDPS = s.maxHp*(p.w.evolved?0.07:0.045);
+        s._burnSpread = !!p.w.evolved;
+      }
+    }
+  });});
+}
+function explodeOrb(p){
+  burst([p.x,p.y], WEAPON_DEFS.orb.color, 20);
+  beep(160,0.2,'square',0.15,-60);
+  const r2=p.radius*p.radius;
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q)return;
+    if(dist2(p.x,p.y,q[0],q[1])<r2){
+      const dmg=weaponDamage(p.w);
+      hitSegment(ww,s,dmg,{});
+      run.rs.weapons.orb=(run.rs.weapons.orb||0)+dmg;
+    }
+  });});
+  if(p.evolved){
+    run.clouds.push({ x:p.x, y:p.y, r:p.radius*0.7, t:2.0, tick:0, w:{key:'orb',level:1,evolved:false}, evolved:false, fromOrb:true });
+  }
+}
+function deployCloud(p){
+  run.clouds.push({ x:p.x, y:p.y, r: W*0.13*run.stats.cloudRadius*(p.w.evolved?1.3:1),
+    t: 3.2*run.stats.cloudDur, tick:0, w:p.w, evolved:p.w.evolved });
+  burst([p.x,p.y], WEAPON_DEFS.cloud.color, 10);
+}
+function updateClouds(dt){
+  for(let i=run.clouds.length-1;i>=0;i--){
+    const c=run.clouds[i];
+    c.t-=dt; c.tick-=dt;
+    if(c.tick<=0){
+      c.tick=0.4;
+      const r2=c.r*c.r;
+      run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+        const q=segVisiblePos(ww,s); if(!q)return;
+        if(dist2(c.x,c.y,q[0],q[1])<r2){
+          const base = c.fromOrb ? run.stats.baseDamage*0.35*run.stats.dmgMult : weaponDamage(c.w)*0.5;
+          hitSegment(ww,s,base,{armourMult:1+run.stats.cloudArmour});
+          if(!c.fromOrb){ run.rs.weapons.cloud=(run.rs.weapons.cloud||0)+base; }
+          if(c.evolved && !s.alive){ /* bloom */ c.r=Math.min(c.r*1.15, W*0.3); c.t=Math.max(c.t,1.2); }
+        }
+      });});
+    }
+    if(c.t<=0) run.clouds.splice(i,1);
+  }
+}
+function updateWaves(dt){
+  const [cx,cy]=corePos();
+  for(let i=run.waves.length-1;i>=0;i--){
+    const wv=run.waves[i];
+    wv.r += H*0.9*dt;
+    const band=26;
+    run.worms.forEach(ww=>{
+      if(ww.dead||ww.phased)return;
+      aliveSegs(ww).forEach(s=>{
+        if(!s._waveIds) s._waveIds={};
+        if(s._waveIds[wv.id]) return;
+        const q=segVisiblePos(ww,s); if(!q)return;
+        const dd=Math.hypot(q[0]-cx,q[1]-cy);
+        if(Math.abs(dd-wv.r)<band && (wv.evolved || Math.abs(q[0]-cx)<W*0.4)){
+          s._waveIds[wv.id]=1;
+          const dmg=weaponDamage(wv.w);
+          hitSegment(ww,s,dmg,{});
+          run.rs.weapons.wave=(run.rs.weapons.wave||0)+dmg;
+          if(!ww.waveHits[wv.id]){
+            ww.waveHits[wv.id]=1;
+            ww.headDist=Math.max(0, ww.headDist - (wv.evolved?46:20));
+          }
+        }
+      });
+    });
+    if(wv.r>H*1.2) run.waves.splice(i,1);
+  }
+}
+
+/* ---------------- fx ---------------- */
+function burst(p, color, n){
+  for(let i=0;i<n;i++){
+    if(run.particles.length>220) return;
+    const a=rand(0,6.28), s=rand(30,160);
+    run.particles.push({x:p[0],y:p[1],vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:rand(0.3,0.7),color,r:rand(1.5,4)});
+  }
+}
+function updateParticles(dt){
+  for(let i=run.particles.length-1;i>=0;i--){
+    const q=run.particles[i];
+    q.t-=dt; q.x+=q.vx*dt; q.y+=q.vy*dt; q.vy+=60*dt;
+    if(q.t<=0) run.particles.splice(i,1);
+  }
+}
+function addDnum(p, val, color, big){
+  if(run.dnums.length>40) run.dnums.shift();
+  run.dnums.push({x:p[0]+rand(-10,10), y:p[1]-10, t:big?0.9:0.6, val, color, big});
+}
+function updateDnums(dt){
+  for(let i=run.dnums.length-1;i>=0;i--){
+    const d=run.dnums[i];
+    d.t-=dt; d.y-=34*dt;
+    if(d.t<=0) run.dnums.splice(i,1);
+  }
+}
+let toastT=null;
+function toast(msg,color){
+  const el=$('toast');
+  el.textContent=msg; el.style.color=color||'#fff'; el.style.opacity=1;
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>{ el.style.opacity=0; },1600);
+}
+
+/* ---------------- rendering ---------------- */
+let bgMotes=null, grainPattern=null;
+function makeGrain(){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const g=c.getContext('2d');
+  const id=g.createImageData(64,64);
+  for(let i=0;i<id.data.length;i+=4){
+    const v = Math.random()*255;
+    id.data[i]=v; id.data[i+1]=v; id.data[i+2]=v; id.data[i+3]=Math.random()*14;
+  }
+  g.putImageData(id,0,0);
+  return ctx.createPattern(c,'repeat');
+}
+function drawBg(){
+  ctx.fillStyle='#050308';
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W/2,H*0.32,40, W/2,H*0.5,H*0.95);
+  g.addColorStop(0,'rgba(48,16,58,0.55)');
+  g.addColorStop(0.55,'rgba(18,6,26,0.35)');
+  g.addColorStop(1,'rgba(3,2,6,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(!bgMotes||bgMotes.length!==30){
+    bgMotes=[]; for(let i=0;i<30;i++) bgMotes.push({x:Math.random(),y:Math.random(),r:rand(1,3.2),s:rand(3,11),h:Math.random()<0.5});
+  }
+  const t=performance.now()/1000;
+  bgMotes.forEach(m=>{
+    const y=((m.y*H + t*m.s)%(H+20))-10;
+    ctx.fillStyle = m.h?'rgba(255,80,150,0.09)':'rgba(90,220,190,0.08)';
+    ctx.beginPath(); ctx.arc(m.x*W, y, m.r, 0, 6.28); ctx.fill();
+  });
+  if(!grainPattern) grainPattern=makeGrain();
+  ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle=grainPattern; ctx.fillRect(0,0,W,H); ctx.restore();
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.3, W/2,H/2,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.55)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+}
+function drawPathLine(){
+  const pts=run.path.pts;
+  ctx.save();
+  ctx.strokeStyle='rgba(120,40,90,0.18)';
+  ctx.lineWidth=clamp(W*0.09,26,52);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i+=4) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.stroke();
+  ctx.strokeStyle='rgba(200,80,150,0.16)';
+  ctx.lineWidth=2; ctx.setLineDash([3,11]);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i+=4) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawCore(){
+  const [cx,cy]=corePos();
+  const t=performance.now()/1000;
+  const r=clamp(W*0.078,24,40)*(1+Math.sin(t*2.1)*0.035);
+  const g=ctx.createRadialGradient(cx,cy,4,cx,cy,r*1.8);
+  g.addColorStop(0,'rgba(61,255,176,0.85)');
+  g.addColorStop(0.5,'rgba(30,140,110,0.4)');
+  g.addColorStop(1,'rgba(10,40,35,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r*1.8,0,6.28); ctx.fill();
+  // spiked iris ring — the fixed "breach" the worm is crawling toward
+  ctx.fillStyle='#0a1f1a';
+  ctx.beginPath();
+  const spikes=10;
+  for(let i=0;i<spikes*2;i++){
+    const a=(i/(spikes*2))*6.28;
+    const rr = i%2===0? r : r*0.74;
+    const px=cx+Math.cos(a)*rr, py=cy+Math.sin(a)*rr;
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(157,255,224,0.85)'; ctx.lineWidth=2;
+  ctx.stroke();
+  ctx.fillStyle='rgba(200,255,230,0.92)';
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.32,0,6.28); ctx.fill();
+  if(run.freezeT>0){
+    ctx.strokeStyle='rgba(110,231,255,0.9)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(cx,cy,r*1.3,0,6.28); ctx.stroke();
+  }
+}
+function drawDrones(){
+  run.weapons.filter(w=>w.key==='drones').forEach(w=>{
+    w.drones.forEach(d=>{
+      const [dx,dy]=dronePos(d);
+      ctx.fillStyle=WEAPON_DEFS.drones.color;
+      ctx.beginPath(); ctx.arc(dx,dy,5,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(255,178,61,0.4)';
+      ctx.beginPath(); ctx.arc(dx,dy,8,0,6.28); ctx.stroke();
+    });
+  });
+}
+function drawFlyers(){
+  run.weapons.filter(w=>w.key==='flyer').forEach(w=>{
+    (w.flyers||[]).forEach(f=>{
+      const y=H*0.16;
+      ctx.save();
+      ctx.translate(f.x,y);
+      ctx.scale(f.dir,1);
+      ctx.fillStyle=WEAPON_DEFS.flyer.color;
+      ctx.beginPath();
+      ctx.moveTo(-10,0); ctx.lineTo(6,-6); ctx.lineTo(6,6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+  });
+}
+function drawTurret(){
+  const [x,y]=turretPos();
+  const t=performance.now()/1000;
+  ctx.save();
+  ctx.strokeStyle='rgba(61,255,176,0.14)';
+  ctx.lineWidth=2; ctx.setLineDash([2,10]);
+  ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x,6); ctx.stroke();
+  ctx.setLineDash([]);
+  const bob=Math.sin(t*2.4)*3;
+  ctx.translate(x,y+bob);
+  const glow=ctx.createRadialGradient(0,0,2,0,0,26);
+  glow.addColorStop(0,'rgba(61,255,176,0.55)');
+  glow.addColorStop(1,'rgba(61,255,176,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(0,0,26,0,6.28); ctx.fill();
+  ctx.fillStyle='#0f2620';
+  ctx.beginPath();
+  ctx.moveTo(0,-16); ctx.lineTo(11,8); ctx.lineTo(0,3); ctx.lineTo(-11,8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#3dffb0'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#9dffe0';
+  ctx.beginPath(); ctx.arc(0,-9,3.4,0,6.28); ctx.fill();
+  ctx.restore();
+  drawTurretLock(x,y);
+}
+function drawTurretLock(tx,ty){
+  const LANE = clamp(W*0.10,30,70);
+  let found=null,bd=1e9;
+  run.worms.forEach(ww=>{ if(ww.dead||ww.phased)return; aliveSegs(ww).forEach(s=>{
+    const q=segVisiblePos(ww,s); if(!q) return;
+    if(Math.abs(q[0]-tx)>LANE) return;
+    const dd=Math.abs(q[1]-ty);
+    if(dd<bd){ bd=dd; found={seg:s,pos:q}; }
+  });});
+  if(!found) return;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,60,120,0.55)';
+  ctx.lineWidth=1.5; ctx.setLineDash([3,5]);
+  ctx.beginPath(); ctx.moveTo(found.pos[0],found.pos[1]); ctx.lineTo(tx,ty); ctx.stroke();
+  ctx.setLineDash([]);
+  const label=(SEG_TYPES[found.seg.type].label).toUpperCase();
+  ctx.font='700 10px "Courier New", monospace';
+  const wpad=8, tw=ctx.measureText(label).width;
+  ctx.fillStyle='rgba(10,4,10,0.8)';
+  ctx.fillRect(tx-tw/2-wpad, ty-40, tw+wpad*2, 18);
+  ctx.strokeStyle='rgba(255,60,120,0.4)'; ctx.strokeRect(tx-tw/2-wpad, ty-40, tw+wpad*2, 18);
+  ctx.fillStyle='#ffdce6';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(label, tx, ty-31);
+  ctx.restore();
+}
+const SEG_COLORS = {
+  head:'#ff3d6e', standard:'#8a2f45', armoured:'#8f8a9c', capsule:'#b25fe0',
+  regen:'#3ddb8f', speedorg:'#5fc7e0', support:'#e0a13d', weak:'#ff7fa8', tail:'#5c2434',
+};
+function drawWorm(w){
+  const alive=aliveSegs(w);
+  if(!alive.length) return;
+  const t=performance.now()/1000;
+  ctx.save();
+  if(w.phased) ctx.globalAlpha=0.32;
+  // membrane connecting segments — uses the smoothed visual distance so a
+  // segment dying mid-body doesn't teleport the segments behind it forward
+  const pos = alive.map(s=>pathPoint(s._visD===undefined?segDist(w,s):s._visD));
+  ctx.strokeStyle = w.isBoss?'rgba(255,110,150,0.32)':'rgba(180,90,140,0.26)';
+  ctx.lineWidth = w.radius*1.35;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();
+  let started=false;
+  for(let k=0;k<pos.length;k++){
+    const d=w.headDist-w.spacing*k;
+    if(d<=0) continue;
+    if(!started){ ctx.moveTo(pos[k][0],pos[k][1]); started=true; }
+    else ctx.lineTo(pos[k][0],pos[k][1]);
+  }
+  if(started) ctx.stroke();
+  // segments tail->head so head on top
+  for(let k=alive.length-1;k>=0;k--){
+    const s=alive[k];
+    const d=w.headDist-w.spacing*k;
+    if(d<=0) continue;
+    const [x,y]=pos[k];
+    let r=w.radius*(s.type==='head'?1.3:s.type==='tail'?0.75:1);
+    const wob = Math.sin(t*3+k*0.8)*r*0.05;
+    r+=wob;
+    const col = SEG_COLORS[s.type]||'#8a2f45';
+    // body
+    const g=ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
+    g.addColorStop(0, shade(col, 40));
+    g.addColorStop(1, shade(col, -25));
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill();
+    // damage cracks
+    const frac=s.hp/s.maxHp;
+    if(frac<0.6){
+      ctx.strokeStyle='rgba(20,4,12,'+(0.7-frac*0.5)+')';
+      ctx.lineWidth=1.5;
+      for(let c=0;c<3;c++){
+        const a=k*2.3+c*2.1;
+        ctx.beginPath();
+        ctx.moveTo(x+Math.cos(a)*r*0.2, y+Math.sin(a)*r*0.2);
+        ctx.lineTo(x+Math.cos(a+0.5)*r*0.85, y+Math.sin(a+0.5)*r*0.85);
+        ctx.stroke();
+      }
+    }
+    // armour plate
+    if(s.armourHp>0){
+      ctx.strokeStyle='#d7dfeb'; ctx.lineWidth=3.5;
+      ctx.beginPath(); ctx.arc(x,y,r*0.92,0,6.28); ctx.stroke();
+      ctx.strokeStyle='rgba(90,100,120,0.9)'; ctx.lineWidth=1.5;
+      for(let c=0;c<3;c++){ ctx.beginPath(); ctx.arc(x,y,r*0.92, c*2.1, c*2.1+1.4); ctx.stroke(); }
+    }
+    // type decorations
+    if(s.type==='capsule'){
+      if(s.revealed){
+        const ripe = clamp((s.ripeT||0)/22, 0, 1);
+        const pulse = 1+Math.sin(t*(4+ripe*9)+k)*(0.1+ripe*0.08);
+        const col = ripe>0 ? lerpColor(POOL_COLORS[s.pool]||'#fff', '#ff3b1f', ripe) : (POOL_COLORS[s.pool]||'#fff');
+        if(ripe>0.05){
+          ctx.strokeStyle='rgba(255,80,40,'+(0.2+ripe*0.55)+')'; ctx.lineWidth=2;
+          ctx.beginPath(); ctx.arc(x,y,r*(1.15+ripe*0.18),0,6.28); ctx.stroke();
+        }
+        ctx.fillStyle=col;
+        ctx.globalAlpha=(w.phased?0.32:1)*0.9;
+        ctx.beginPath(); ctx.arc(x,y,r*0.5*pulse,0,6.28); ctx.fill();
+        ctx.globalAlpha=w.phased?0.32:1;
+        drawCapsuleGlyph(s.pool, x, y, r*0.5*pulse);
+      } else {
+        const pulse=1+Math.sin(t*4+k)*0.1;
+        ctx.strokeStyle='rgba(224,127,255,0.9)'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(x,y,r*0.55*pulse,0,6.28); ctx.stroke();
+        ctx.fillStyle='rgba(224,127,255,0.95)';
+        ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('?', x, y+1);
+      }
+    } else if(s.type==='regen'){
+      ctx.fillStyle='#aef7c8';
+      ctx.font='bold '+Math.round(r*0.9)+'px system-ui';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('✚', x, y+1);
+    } else if(s.type==='speedorg'){
+      ctx.fillStyle='#aee6f7';
+      ctx.font='bold '+Math.round(r*0.9)+'px system-ui';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('»', x, y+1);
+    } else if(s.type==='support'){
+      ctx.strokeStyle='rgba(255,200,110,0.75)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(x,y,r*1.25,0,6.28); ctx.stroke();
+      ctx.fillStyle='#ffd9a0';
+      ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('◈', x, y+1);
+    } else if(s.type==='weak'){
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(x,y,r*0.22,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(x,y,r*0.45,0,6.28); ctx.stroke();
+    } else if(s.type==='head'){
+      // eyes + mandibles
+      const nd = pathPoint(Math.max(1,d-6));
+      const ang=Math.atan2(y-nd[1], x-nd[0]); // facing direction of travel
+      ctx.fillStyle='#ffe9ec';
+      const ex=Math.cos(ang), ey=Math.sin(ang);
+      const px=-ey, py=ex;
+      ctx.beginPath(); ctx.arc(x+ex*r*0.4+px*r*0.35, y+ey*r*0.4+py*r*0.35, r*0.14,0,6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(x+ex*r*0.4-px*r*0.35, y+ey*r*0.4-py*r*0.35, r*0.14,0,6.28); ctx.fill();
+      ctx.strokeStyle='#5a1620'; ctx.lineWidth=2.5;
+      ctx.beginPath();
+      ctx.moveTo(x+ex*r*0.9+px*r*0.5, y+ey*r*0.9+py*r*0.5);
+      ctx.lineTo(x+ex*r*1.3, y+ey*r*1.3);
+      ctx.lineTo(x+ex*r*0.9-px*r*0.5, y+ey*r*0.9-py*r*0.5);
+      ctx.stroke();
+      if(w.isBoss){
+        ctx.fillStyle='#ffb23d';
+        ctx.font='bold '+Math.round(r*0.8)+'px system-ui';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('♛', x-ex*r*0.4, y-ey*r*0.4);
+      }
+    }
+    // burning
+    if(s.burnT>0){
+      ctx.fillStyle='rgba(255,106,47,'+(0.22+0.15*Math.sin(t*10+k))+')';
+      ctx.beginPath(); ctx.arc(x,y,r*1.08,0,6.28); ctx.fill();
+    }
+    // regen glow
+    if(s.regenGlow>0){
+      ctx.strokeStyle='rgba(120,255,170,'+(s.regenGlow*2)+')'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(x,y,r*1.1,0,6.28); ctx.stroke();
+    }
+    // hit flash
+    if(s.hitFlash>0){
+      ctx.fillStyle='rgba(255,255,255,'+(s.hitFlash*4)+')';
+      ctx.beginPath(); ctx.arc(x,y,r,0,6.28); ctx.fill();
+    }
+    // shield visual (boss)
+    if(w.isBoss && w.shieldT>0 && k<5 && s.type!=='head'){
+      ctx.strokeStyle='rgba(255,178,61,0.55)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(x,y,r*1.15,0,6.28); ctx.stroke();
+    }
+    // health arc for damaged segments
+    if(frac<1 && frac>0){
+      ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(x,y,r+4,-Math.PI/2,-Math.PI/2+6.28,false); ctx.stroke();
+      ctx.strokeStyle=frac>0.5?'#7eff9e':frac>0.25?'#ffb23d':'#ff3d6e';
+      ctx.beginPath(); ctx.arc(x,y,r+4,-Math.PI/2,-Math.PI/2+6.28*frac,false); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // frozen tint
+  if(run.freezeT>0 && !w.phased){
+    ctx.save(); ctx.globalAlpha=0.25; ctx.fillStyle='#6ee7ff';
+    pos.forEach((p,k)=>{ const d=w.headDist-w.spacing*k; if(d<=0)return;
+      ctx.beginPath(); ctx.arc(p[0],p[1],w.radius,0,6.28); ctx.fill(); });
+    ctx.restore();
+  }
+}
+function shade(hex, amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, g=((n>>8)&255)+amt, b=(n&255)+amt;
+  return 'rgb('+clamp(r,0,255)+','+clamp(g,0,255)+','+clamp(b,0,255)+')';
+}
+function lerpColor(a, b, t){
+  const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
+  const ar=(pa>>16)&255, ag=(pa>>8)&255, ab=pa&255;
+  const br=(pb>>16)&255, bg=(pb>>8)&255, bb=pb&255;
+  return 'rgb('+Math.round(lerp(ar,br,t))+','+Math.round(lerp(ag,bg,t))+','+Math.round(lerp(ab,bb,t))+')';
+}
+/* Each capsule pool gets its own hand-drawn silhouette instead of a flat
+   unicode glyph — meant to read at a glance and give the bonus icons some
+   actual character. */
+function drawCapsuleGlyph(pool, x, y, r){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.strokeStyle='#0a0f1e'; ctx.fillStyle='#0a0f1e';
+  ctx.lineWidth=Math.max(1.4, r*0.16);
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const s=r*0.85;
+  switch(pool){
+    case 'power':
+      for(let i=0;i<6;i++){ const a=i/6*6.28;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s); ctx.stroke(); }
+      break;
+    case 'speed':
+      ctx.beginPath();
+      ctx.moveTo(-s*0.55,-s*0.7); ctx.lineTo(s*0.15,0); ctx.lineTo(-s*0.55,s*0.7); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-s*0.05,-s*0.7); ctx.lineTo(s*0.65,0); ctx.lineTo(-s*0.05,s*0.7); ctx.stroke();
+      break;
+    case 'critical':
+      ctx.beginPath();
+      ctx.moveTo(0,-s); ctx.lineTo(s*0.72,0); ctx.lineTo(0,s); ctx.lineTo(-s*0.72,0); ctx.closePath();
+      ctx.fill();
+      break;
+    case 'quantity':
+      [[-0.42,-0.42],[0.42,-0.42],[0,0.05],[-0.4,0.6],[0.4,0.6]].forEach(([dx,dy])=>{
+        ctx.beginPath(); ctx.arc(dx*s,dy*s,s*0.2,0,6.28); ctx.fill();
+      });
+      break;
+    case 'control':
+      for(let i=0;i<3;i++){ const a=i/3*Math.PI;
+        ctx.beginPath(); ctx.moveTo(-Math.cos(a)*s,-Math.sin(a)*s); ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s); ctx.stroke(); }
+      break;
+    case 'chain':
+      ctx.lineWidth=Math.max(1.2, r*0.13);
+      ctx.beginPath(); ctx.arc(-s*0.34,0,s*0.4,0,6.28); ctx.stroke();
+      ctx.beginPath(); ctx.arc(s*0.34,0,s*0.4,0,6.28); ctx.stroke();
+      break;
+    case 'recovery':
+      ctx.lineWidth=Math.max(2, r*0.26);
+      ctx.beginPath(); ctx.moveTo(0,-s); ctx.lineTo(0,s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(s,0); ctx.stroke();
+      break;
+    case 'evolution':
+      ctx.lineWidth=Math.max(1.2, r*0.14);
+      ctx.beginPath(); ctx.arc(0,0,s*0.78,0.5,5.4); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,s*0.26,0,6.28); ctx.fill();
+      break;
+    case 'trap':
+      ctx.beginPath();
+      ctx.moveTo(-s*0.72,-s*0.15); ctx.lineTo(-s*0.28,-s*0.9); ctx.lineTo(s*0.08,-s*0.3);
+      ctx.lineTo(s*0.5,-s*0.9); ctx.lineTo(s*0.72,-s*0.05); ctx.lineTo(0,s*0.85); ctx.closePath();
+      ctx.fill();
+      break;
+    default:
+      ctx.beginPath(); ctx.arc(0,0,s*0.5,0,6.28); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawProjectiles(){
+  run.projectiles.forEach(p=>{
+    if(p.kind==='orb'){
+      ctx.fillStyle=WEAPON_DEFS.orb.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,7,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(61,255,176,0.4)';
+      ctx.beginPath(); ctx.arc(p.x,p.y,11,0,6.28); ctx.stroke();
+    } else if(p.kind==='cloudlob'){
+      ctx.fillStyle=WEAPON_DEFS.cloud.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,6,0,6.28); ctx.fill();
+    } else if(p.kind==='ember'){
+      ctx.fillStyle=WEAPON_DEFS.ember.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,6,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(255,178,61,0.5)';
+      ctx.beginPath(); ctx.arc(p.x,p.y,10,0,6.28); ctx.stroke();
+    } else if(p.kind==='roller'){
+      ctx.save();
+      ctx.translate(p.x,p.y); ctx.rotate(p.t*6);
+      ctx.fillStyle=WEAPON_DEFS.roller.color;
+      ctx.beginPath(); ctx.arc(0,0,10,0,6.28); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-9,0); ctx.lineTo(9,0); ctx.moveTo(0,-9); ctx.lineTo(0,9); ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.strokeStyle=p.small?'#ffb23d':'#6ee7ff';
+      ctx.lineWidth=p.small?2:3;
+      const L=p.small?8:13;
+      const dir = p.vy>0 ? 1 : -1; // draw the shot's length pointing in its direction of travel
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x, p.y+dir*L);
+      ctx.stroke();
+    }
+  });
+  // arcs
+  run.arcs.forEach(a=>{
+    ctx.strokeStyle=a.evolved?'rgba(224,127,255,'+(a.t*5)+')':'rgba(167,139,255,'+(a.t*5)+')';
+    ctx.lineWidth=2.5;
+    ctx.beginPath();
+    for(let i=0;i<a.pts.length;i++){
+      const [x,y]=a.pts[i];
+      const jx=x+rand(-4,4), jy=y+rand(-4,4);
+      i===0?ctx.moveTo(jx,jy):ctx.lineTo(jx,jy);
+    }
+    ctx.stroke();
+  });
+  // clouds
+  run.clouds.forEach(c=>{
+    const g=ctx.createRadialGradient(c.x,c.y,2,c.x,c.y,c.r);
+    g.addColorStop(0,'rgba(143,224,90,0.30)');
+    g.addColorStop(1,'rgba(143,224,90,0.02)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,6.28); ctx.fill();
+  });
+  // waves
+  const [cx,cy]=corePos();
+  run.waves.forEach(wv=>{
+    ctx.strokeStyle=wv.evolved?'rgba(255,111,168,0.7)':'rgba(255,111,168,0.45)';
+    ctx.lineWidth=6;
+    ctx.beginPath(); ctx.arc(cx,cy,wv.r, Math.PI, 2*Math.PI); ctx.stroke();
+  });
+}
+function drawFx(){
+  run.particles.forEach(q=>{
+    ctx.globalAlpha=clamp(q.t*2,0,1);
+    ctx.fillStyle=q.color;
+    ctx.beginPath(); ctx.arc(q.x,q.y,q.r,0,6.28); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  run.dnums.forEach(d=>{
+    ctx.globalAlpha=clamp(d.t*2,0,1);
+    ctx.fillStyle=d.color;
+    ctx.font=(d.big?'900 20px':'700 14px')+' system-ui';
+    ctx.textAlign='center';
+    ctx.fillText(fmt(d.val), d.x, d.y);
+  });
+  ctx.globalAlpha=1;
+}
+function render(){
+  ctx.save();
+  if(run && run.shake>0){
+    ctx.translate(rand(-1,1)*run.shake*7, rand(-1,1)*run.shake*7);
+  }
+  drawBg();
+  if(run && run.path && run.path.pts.length){
+    drawPathLine();
+    run.worms.forEach(w=>{ if(!w.dead) drawWorm(w); });
+    drawProjectiles();
+    drawDrones();
+    drawFlyers();
+    drawCore();
+    drawTurret();
+    drawFx();
+  }
+  ctx.restore();
+}
+
+/* ---------------- HUD ---------------- */
+function updateHud(){
+  if(!run) return;
+  $('stageName').textContent = 'S'+run.stage;
+  const prog = clamp(run.destroyedHp/run.totalHp,0,1);
+  $('progBar').style.width=(prog*100).toFixed(1)+'%';
+  $('progPct').textContent=Math.round(prog*100)+'%';
+  $('coreHpBar').style.width=clamp(run.coreHp/run.coreMax*100,0,100)+'%';
+  $('coreHpTxt').textContent=Math.max(0,Math.ceil(run.coreHp))+'/'+run.coreMax;
+  const ab=$('abilityBtn');
+  const cdFrac = run.abilityT/(ABILITY_CD*run.stats.abilityCd);
+  ab.querySelector('.cdmask').style.transform='scaleY('+clamp(cdFrac,0,1)+')';
+  ab.classList.toggle('ready', run.abilityT<=0 && state==='COMBAT');
+}
+function renderWeaponIcons(){
+  const wrap=$('weaponIcons'); wrap.innerHTML='';
+  run.weapons.forEach(w=>{
+    const d=WEAPON_DEFS[w.key];
+    const el=document.createElement('div');
+    el.className='wicon'+(w.evolved?' evolved':'');
+    el.style.color=d.color;
+    el.innerHTML='<div style="color:'+d.color+'">'+d.glyph+'</div><div class="lv">'+(w.evolved?'★':'L'+w.level)+'</div>';
+    el.title=d.name;
+    wrap.appendChild(el);
+  });
+}
+
+/* ---------------- states & overlays ---------------- */
+const OVERLAYS={ HOME:'homeOv', INTRO:'introOv', BOSSINTRO:'introOv', DRAFT:'draftOv', PAUSE:'pauseOv', RESULTS:'resultsOv', GAMEOVER:'resultsOv', HELP:'helpOv' };
+function setState(s){
+  prevState=state; state=s;
+  Object.values(OVERLAYS).forEach(id=>$(id).classList.remove('show'));
+  const ov=OVERLAYS[s]; if(ov) $(ov).classList.add('show');
+  if(s==='COMBAT' && run && run.draftsQueued.length) { openDraft(); return; }
+}
+$('pauseBtn').onclick=()=>{ audioInit(); if(state==='COMBAT') setState('PAUSE'); else if(state==='PAUSE') setState('COMBAT'); };
+$('resumeBtn').onclick=()=>setState('COMBAT');
+$('abandonBtn').onclick=()=>{ if(run) showResults(false, true); };
+let gameSpeed=1;
+$('speedBtn').onclick=()=>{ gameSpeed = gameSpeed===1?2:1; $('speedBtn').textContent=gameSpeed+'×'; };
+$('helpBtn').onclick=()=>setState('HELP');
+$('helpBack').onclick=()=>setState('HOME');
+$('soundBtn').onclick=()=>{ save.sound=!save.sound; storeSave(); $('soundBtn').textContent='SOUND: '+(save.sound?'ON':'OFF'); audioInit(); };
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && state==='COMBAT') setState('PAUSE'); });
+
+/* ---------------- results & meta ---------------- */
+function biomassReward(victory){
+  let b = 6 + run.stage*10 + run.rs.capsules*3 + Math.floor(run.rs.segs/10);
+  if(victory) b+= 15;
+  if(run.stage>save.best) b += 25;    // first-time stage bonus
+  return b;
+}
+function preferredWeapon(){
+  let best=null,bd=-1;
+  Object.entries(run.rs.weapons).forEach(([k,v])=>{ if(v>bd){bd=v;best=k;} });
+  return best?WEAPON_DEFS[best].name:'—';
+}
+function showResults(victory, abandoned=false){
+  const b=biomassReward(victory);
+  save.biomass+=b;
+  if(victory && run.stage>save.best) save.best=run.stage;
+  else if(!victory && run.stage-1>save.best) save.best=run.stage-1;
+  storeSave();
+  $('resTitle').textContent = abandoned?'RUN ABANDONED':victory?'STAGE '+run.stage+' CLEAR':'THE CORE HAS FALLEN';
+  $('resTitle').style.color = victory?'#7eff9e':'#ff3d6e';
+  const rows=[
+    ['Stage reached', run.stage],
+    ['Total damage', fmt(run.rs.dmg)],
+    ['Segments destroyed', run.rs.segs],
+    ['Capsules opened', run.rs.capsules],
+    ['Highest critical', fmt(run.rs.bestCrit)],
+    ['Preferred weapon', preferredWeapon()],
+  ];
+  if(run.newCards.size) rows.push(['New mutations found', run.newCards.size]);
+  $('resTable').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('');
+  $('resBiomass').innerHTML='Biomass earned: <b style="color:#3dffb0">⬡ '+b+'</b>';
+  $('resNextBtn').style.display = (victory&&!abandoned)?'':'none';
+  $('resNextBtn').textContent='CONTINUE → STAGE '+(run.stage+1);
+  setState(victory?'RESULTS':'GAMEOVER');
+  if(!victory && !abandoned) SFX.defeat();
+}
+function gameOver(){
+  run.coreHp=0;
+  showResults(false);
+}
+$('resNextBtn').onclick=()=>{ startStage(run.stage+1); };
+$('resHomeBtn').onclick=()=>{ run=null; $('bossbar').style.display='none'; renderHome(); setState('HOME'); };
+$('startBtn').onclick=()=>{ audioInit(); newRun(); };
+
+function renderHome(){
+  $('biomassTxt').textContent='⬡ '+save.biomass;
+  $('bestTxt').textContent = save.best>0 ? 'Best stage cleared: '+save.best : 'A worm approaches. Hold the line.';
+  $('soundBtn').textContent='SOUND: '+(save.sound?'ON':'OFF');
+  const wrap=$('metaRows'); wrap.innerHTML='';
+  META_DEFS.forEach(m=>{
+    const lv=save.meta[m.id];
+    const cost=Math.round(25*Math.pow(1.6,lv));
+    const row=document.createElement('div');
+    row.className='metaRow';
+    row.innerHTML='<div class="mname">'+m.name+'<br/><span style="font-size:10px;color:#8c7ba8;">'+m.per+' / level</span></div>'
+      +'<div class="mlv">'+lv+'/'+m.max+'</div>';
+    const btn=document.createElement('button');
+    if(lv>=m.max){ btn.textContent='MAX'; btn.disabled=true; }
+    else {
+      btn.textContent='⬡ '+cost;
+      btn.disabled = save.biomass<cost;
+      btn.onclick=()=>{ save.biomass-=cost; save.meta[m.id]++; storeSave(); renderHome(); SFX.reveal(); };
+    }
+    row.appendChild(btn);
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------------- main loop ---------------- */
+let lastT=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  const dtRaw=Math.min(0.05,(ts-lastT)/1000||0.016);
+  lastT=ts;
+  if(state==='COMBAT' && run){
+    updateCombat(dtRaw*gameSpeed);
+  }
+  render();
+}
+resize();
+renderHome();
+requestAnimationFrame(frame);
+
+/* dev hook for automated smoke tests */
+window.WD = {
+  get run(){ return run; }, get state(){ return state; },
+  setState, newRun, startStage, spawnWorm, hitSegment, segPos, segVisiblePos,
+  turretPos, corePos, setTurretX: x=>{ if(run) run.turretX = clamp(x, turretMin(), turretMax()); },
+};
+</script>
+</body>
+</html>

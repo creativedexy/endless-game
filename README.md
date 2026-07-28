@@ -2,6 +2,22 @@
 
 Top down sci-fi builder non stop game 🤟🏻
 
+## Wormline Defense
+
+A single-file, portrait **tower-defense roguelite** with a bioluminescent-abyss art direction, where the enemy is one giant segmented worm — simultaneously the threat, the run timer, the loot container and the positioning puzzle. Pure HTML/CSS/JS canvas, no dependencies, one-handed mobile play.
+
+**Play it live:** https://creativedexy.github.io/endless-game/wormline-defense/
+
+- **One continuous worm, always** — every worm is a single unbroken body for its entire life; nothing ever fractures into multiple worms. Instead, the body itself gets more dangerous the deeper you fight into it: every segment further from the head is measurably tougher than the last, so stalling partway through a worm is a losing bet. A wide zig-zag/serpentine/spiral route (a different pattern generator each stage) swings edge-to-edge across the full screen width, so you're constantly repositioning to keep up.
+- **Drag to aim, shoot straight** — there's no auto-targeting. Your organism fires on its own timer, but every shot travels straight up from wherever your turret currently sits; you drag left/right (or press ←/→) to slide underneath whatever you want to hit. A readout above the turret shows what's locked in your lane. Only segments actually visible on screen can be damaged — nothing can be sniped while it's still off-screen above the route.
+- **Rare capsules that punish hesitation** — sealed mutation capsules are deliberately scarce now (roughly one per 9–13 segments). Crack one to 50% to reveal its reward category and it starts *ripening*: every second it survives un-destroyed feeds the worm carrying it +1.5% speed (capped per capsule, stacking across several), visibly glowing hotter the longer it's ignored — so "I'll get it later" is a real, compounding cost, not a suggestion. Each of the nine reward pools has its own hand-drawn icon glyph. Trap capsules permanently harden the worm and chip the core on trigger instead of spawning anything.
+- **Head or body?** — the core decision: burn down the tanky head to collapse the whole worm fast (but forfeit most energy and every unopened capsule), or carve through the body for power. Anything that reaches the breach deals damage per surviving segment (scaled up further by any capsules you let ripen), so even partial kills matter.
+- **Six weapons, three abilities, evolutions** — Pulse Needle, Cleanse Orb, Antibody Drones, Ion Arc, Enzyme Cloud and Compression Wave, joined by Spore Wing (an airborne striker), Husk Roller (a wide sweeping crusher) and Cinder Gland (spreading fire); a short, separate pool of practical Boosts (multishot, damage%, fire rate, crit, pierce, healing) rounds out the build. Max a weapon and crack an evolution capsule to transform it (Needle Constellation, Storm Lattice, Seismic Collapse…). Everything drafted mid-run persists for the rest of that run and is lost only when the run itself ends.
+- **Worm roster & bosses** — runners, armoured worms, regenerators, a Hive Worm that hardens itself further with every segment you kill, phase worms, an Ironclad Worm that fuses and hardens at the halfway mark, plus multi-phase segmented bosses (The Crowned Devourer's head detaches at 25% health, absorbs the rest of its own body, and makes a tougher, faster run for the breach).
+- **Roguelite structure, sharply harder** — 3-card upgrade drafts with one free reroll per stage, steep stage-over-stage HP/speed/density scaling, a Cryo Stasis active ability, and permanent biomass upgrades (damage, fire rate, crit, core HP, capsule luck) between runs.
+
+Source: `wormline-defense/index.html` (single file, no build step, saves to localStorage).
+
 ## AGI Race — "The Singularity Times"
 
 A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **broadsheet** look: white newsprint, black monospace type, ASCII bars, a scrolling ticker and a blinking caret. You run an AI lab racing to *aligned* AGI before a rival gets there first. No dependencies, no build step, mobile-friendly.
