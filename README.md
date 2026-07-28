@@ -34,19 +34,20 @@ A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **bro
 
 Source: `agi-race/index.html` (pure HTML/CSS/JS canvas-free, no dependencies).
 
-## AGI Race — Evening Edition (the short cut)
+## AGI Race — Raise It (the wordless cut)
 
-The same race, stripped to the bone: **one decision at a time, sixteen decisions, about two minutes.** No tabs, no shop, no numbers on screen.
+The same race with the interface taken away. **The creature is the game.** Four taps, three meters, about ninety seconds — and nine words of interface in total.
 
 **Play it live:** https://creativedexy.github.io/endless-game/agi-race-lite/
 
-- **One card, two answers** — a headline and two buttons. Hover or hold either one to see which meters it moves, shown as arrows rather than figures.
-- **Three meters and a race** — MONEY, PUBLIC, CONTROL. Empty any of them and you're finished. A single track shows you closing on the singularity from the left while everyone else closes from the right.
-- **Control erodes as capability grows** — the smarter it gets, the harder it is to hold. Reach the singularity with control gone and you win the wrong ending.
-- **The creature is the build tree** — your choices quietly accumulate into one of six forms (SAGE, ROGUE, SWARM, TITAN, WARDEN, ORGANISM), which decides your ending. No UI, full replayability.
-- **Eleven endings**, each a title and one line. A deck of 32 cards deals ~16 per run, so no two games repeat.
+- **Four things you can give it** — COMPUTE (grows fast, harder to hold), RESTRAIN (buys control back), SELL (earns, costs goodwill), PUBLISH (wins the public, helps your rivals too). Every tap is a month.
+- **Nothing explains what they do.** The creature answers each tap visibly — it swells, settles, dims, or ripples — and the meters it moved flash green or red. That reaction *is* the tutorial.
+- **Three meters and one race.** Empty MONEY, PUBLIC or CONTROL and you're finished. A single track shows you closing on the singularity from the left while everyone else closes from the right; there is no turn counter, because the rivals are the clock.
+- **Control erodes as capability grows** — the smarter it gets, the harder it is to hold. A tick on the CONTROL bar marks the line you must finish above. Cross it and the ending stops being yours.
+- **What you feed it decides what it becomes** — six forms (SAGE, ROGUE, SWARM, TITAN, WARDEN, ORGANISM) emerge from your feeding pattern alone. There is no build menu; the creature is the build.
+- **Eleven endings**, each a title and one line.
 
-Source: `agi-race-lite/index.html`. Sprite sheets are shared with the full edition; the game logic is ~21 KB.
+Source: `agi-race-lite/index.html`. Sprite sheets are shared with the full edition; the game logic is ~15 KB.
 
 ## Mars Colony: War Front
 
