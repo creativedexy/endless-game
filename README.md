@@ -18,6 +18,20 @@ A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **bro
 
 Source: `agi-race/index.html` (pure HTML/CSS/JS canvas-free, no dependencies).
 
+## AGI Race — Evening Edition (the short cut)
+
+The same race, stripped to the bone: **one decision at a time, sixteen decisions, about two minutes.** No tabs, no shop, no numbers on screen.
+
+**Play it live:** https://creativedexy.github.io/endless-game/agi-race-lite/
+
+- **One card, two answers** — a headline and two buttons. Hover or hold either one to see which meters it moves, shown as arrows rather than figures.
+- **Three meters and a race** — MONEY, PUBLIC, CONTROL. Empty any of them and you're finished. A single track shows you closing on the singularity from the left while everyone else closes from the right.
+- **Control erodes as capability grows** — the smarter it gets, the harder it is to hold. Reach the singularity with control gone and you win the wrong ending.
+- **The creature is the build tree** — your choices quietly accumulate into one of six forms (SAGE, ROGUE, SWARM, TITAN, WARDEN, ORGANISM), which decides your ending. No UI, full replayability.
+- **Eleven endings**, each a title and one line. A deck of 32 cards deals ~16 per run, so no two games repeat.
+
+Source: `agi-race-lite/index.html`. Sprite sheets are shared with the full edition; the game logic is ~21 KB.
+
 ## Mars Colony: War Front
 
 A single-file 3D **base-builder war game** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — open `index.html` in a modern browser.
