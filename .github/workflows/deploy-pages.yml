@@ -6,12 +6,14 @@ name: Deploy to GitHub Pages
 #   - Mars Colony        -> /mars-colony/       (root index.html)
 #   - AGI Race           -> /agi-race/          (agi-race/index.html)
 #   - Wormline Defense   -> /wormline-defense/  (wormline-defense/index.html)
+#   - AGI Race (Evening) -> /agi-race-lite/      (agi-race-lite/index.html)
 on:
   push:
     branches: [main]
     paths:
       - index.html
       - agi-race/index.html
+      - agi-race-lite/index.html
       - wormline-defense/index.html
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
@@ -37,12 +39,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git worktree add ghp origin/gh-pages
-          mkdir -p ghp/mars-colony ghp/agi-race ghp/wormline-defense
+          mkdir -p ghp/mars-colony ghp/agi-race ghp/agi-race-lite ghp/wormline-defense
           cp index.html ghp/mars-colony/index.html
           cp agi-race/index.html ghp/agi-race/index.html
+          cp agi-race-lite/index.html ghp/agi-race-lite/index.html
           cp wormline-defense/index.html ghp/wormline-defense/index.html
           cd ghp
-          git add mars-colony/index.html agi-race/index.html wormline-defense/index.html
+          git add mars-colony/index.html agi-race/index.html agi-race-lite/index.html wormline-defense/index.html
           if git diff --cached --quiet; then
             echo "No changes to publish."
           else
