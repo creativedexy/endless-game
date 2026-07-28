@@ -34,6 +34,21 @@ A single-file, Plague Inc.–style **AGI strategy sim** with a distinctive **bro
 
 Source: `agi-race/index.html` (pure HTML/CSS/JS canvas-free, no dependencies).
 
+## AGI Race — Raise It (the wordless cut)
+
+The same race with the interface taken away. **The creature is the game.** Four taps, three meters, about ninety seconds — and nine words of interface in total.
+
+**Play it live:** https://creativedexy.github.io/endless-game/agi-race-lite/
+
+- **Four things you can give it** — COMPUTE (grows fast, harder to hold), RESTRAIN (buys control back), SELL (earns, costs goodwill), PUBLISH (wins the public, helps your rivals too). Every tap is a month.
+- **Nothing explains what they do.** The creature answers each tap visibly — it swells, settles, dims, or ripples — and the meters it moved flash green or red. That reaction *is* the tutorial.
+- **Three meters and one race.** Empty MONEY, PUBLIC or CONTROL and you're finished. A single track shows you closing on the singularity from the left while everyone else closes from the right; there is no turn counter, because the rivals are the clock.
+- **Control erodes as capability grows** — the smarter it gets, the harder it is to hold. A tick on the CONTROL bar marks the line you must finish above. Cross it and the ending stops being yours.
+- **What you feed it decides what it becomes** — six forms (SAGE, ROGUE, SWARM, TITAN, WARDEN, ORGANISM) emerge from your feeding pattern alone. There is no build menu; the creature is the build.
+- **Eleven endings**, each a title and one line.
+
+Source: `agi-race-lite/index.html`. Sprite sheets are shared with the full edition; the game logic is ~15 KB.
+
 ## Mars Colony: War Front
 
 A single-file 3D **base-builder war game** built with [Three.js](https://threejs.org/) (loaded via CDN). No build step — open `index.html` in a modern browser.
